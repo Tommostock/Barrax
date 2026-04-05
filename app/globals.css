@@ -1,26 +1,240 @@
 @import "tailwindcss";
 
+/* ============================================
+   BARRAX — Military Design System
+   Dark mode only. No border-radius. No gradients.
+   ============================================ */
+
+/* --- Colour Palette --- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-primary: #0C0C0C;
+  --bg-panel: #141A14;
+  --bg-panel-alt: #1A221A;
+  --bg-input: #0F150F;
+  --green-primary: #4A6B3A;
+  --green-light: #6B8F5A;
+  --green-dark: #2D4220;
+  --green-muted: #3A4F2E;
+  --camo-1: #4A6B3A;
+  --camo-2: #2D4220;
+  --camo-3: #5C7A4A;
+  --camo-4: #1A2A14;
+  --khaki: #8B7D5E;
+  --sand: #C4B090;
+  --text-primary: #D4D4C8;
+  --text-secondary: #7A7A6E;
+  --danger: #8B3232;
+  --success: #4A6B3A;
+  --xp-gold: #B8A04A;
 }
 
+/* --- Tailwind v4 Theme Integration --- */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-panel: var(--bg-panel);
+  --color-bg-panel-alt: var(--bg-panel-alt);
+  --color-bg-input: var(--bg-input);
+  --color-green-primary: var(--green-primary);
+  --color-green-light: var(--green-light);
+  --color-green-dark: var(--green-dark);
+  --color-green-muted: var(--green-muted);
+  --color-camo-1: var(--camo-1);
+  --color-camo-2: var(--camo-2);
+  --color-camo-3: var(--camo-3);
+  --color-camo-4: var(--camo-4);
+  --color-khaki: var(--khaki);
+  --color-sand: var(--sand);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-xp-gold: var(--xp-gold);
+
+  /* Font families — mapped to next/font CSS variables */
+  --font-heading: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
+  --font-body: var(--font-barlow), Arial, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* --- Global Reset & Base Styles --- */
+
+/* Kill all border-radius globally — sharp corners everywhere */
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+}
+
+html {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Typography --- */
+
+/* Headings: Barlow Condensed, uppercase, bold, letter-spaced */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--sand);
+}
+
+/* Monospace for stats and data */
+.font-data {
+  font-family: var(--font-mono);
+}
+
+/* --- Camo Pattern Background ---
+   CSS-only camo pattern using multiple layered gradients.
+   Apply with class "camo-bg" on any element. */
+.camo-bg {
+  background-color: var(--bg-panel);
+  background-image:
+    radial-gradient(ellipse 60% 40% at 20% 30%, var(--camo-1) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 70% 60%, var(--camo-2) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 40% 80%, var(--camo-3) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 30% at 80% 20%, var(--camo-4) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 50% at 10% 70%, var(--camo-2) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 55% 45%, var(--camo-1) 0%, transparent 60%);
+  background-size: 200px 200px;
+  background-repeat: repeat;
+}
+
+/* --- Scan-Line Overlay ---
+   Subtle CRT/tactical screen effect. Apply with class "scan-lines". */
+.scan-lines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  z-index: 50;
+}
+
+/* --- Utility Classes --- */
+
+/* Classification-style tags */
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border: 1px solid var(--green-dark);
+  color: var(--text-secondary);
+  display: inline-block;
+  line-height: 1.4;
+}
+
+.tag-active {
+  color: var(--green-light);
+  border-color: var(--green-primary);
+}
+
+.tag-complete {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.tag-locked {
+  color: var(--text-secondary);
+  border-color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.tag-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* Micro-interaction: subtle press effect */
+.press-scale {
+  transition: transform 0.1s ease;
+}
+.press-scale:active {
+  transform: scale(0.98);
+}
+
+/* Safe area padding for notched devices */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Hide scrollbars but keep scroll functionality */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* --- Skeleton Loading Animation --- */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-panel) 25%,
+    var(--bg-panel-alt) 50%,
+    var(--bg-panel) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* --- Toast slide-up animation --- */
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* --- Bottom sheet animation --- */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-sheet-up {
+  animation: sheet-up 0.3s ease-out;
+}
+
+/* --- Fade transition --- */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
 }
