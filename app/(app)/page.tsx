@@ -57,7 +57,7 @@ export default async function DashboardPage() {
         freezeAvailable={!streak?.freeze_used_this_week}
       />
 
-      {/* Today's mission card (placeholder until Phase 2) */}
+      {/* Today's mission card — pulls real workout data */}
       <TodayMission />
 
       {/* Today's rations card (placeholder until Phase 4) */}

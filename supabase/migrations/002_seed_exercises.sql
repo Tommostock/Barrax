@@ -1,0 +1,17 @@
+-- ============================================
+-- BARRAX — Seed Exercise Library
+-- This inserts exercises into the exercise_library
+-- table for a specific user. Run AFTER 001_initial_schema.sql.
+--
+-- IMPORTANT: Since exercise_library is per-user (RLS),
+-- these exercises will be inserted by the app code
+-- during onboarding, not via this SQL directly.
+-- This file serves as the reference data set.
+--
+-- To use: the app calls an API route that inserts
+-- these exercises for the authenticated user.
+-- ============================================
+
+-- This is the reference data. The actual seeding happens
+-- via the /api/seed-exercises API route which inserts
+-- these for the authenticated user's ID.
