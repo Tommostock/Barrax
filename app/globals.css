@@ -286,3 +286,14 @@ h1, h2, h3, h4, h5, h6 {
 .empty-state-icon {
   animation: pulse-subtle 3s ease-in-out infinite;
 }
+
+/* --- Barcode scan line animation --- */
+@keyframes scan-line-move {
+  0% { top: 0; }
+  50% { top: calc(100% - 2px); }
+  100% { top: 0; }
+}
+
+.animate-scan-line {
+  animation: scan-line-move 2s ease-in-out infinite;
+}

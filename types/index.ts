@@ -347,3 +347,37 @@ export interface OnboardingData {
   unit_preference: UnitPreference;
   notification_settings: NotificationSettings;
 }
+
+// --- Food Diary ---
+export type FoodSource = "manual" | "barcode" | "meal_plan" | "search";
+
+export interface FoodDiaryEntry {
+  id: string;
+  user_id: string;
+  food_name: string;
+  brand: string | null;
+  barcode: string | null;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  serving_size: string | null;
+  meal_type: MealType;
+  source: FoodSource;
+  logged_at: string;
+}
+
+export interface FoodLookupResult {
+  food_name: string;
+  brand: string;
+  barcode: string;
+  image_url: string;
+  serving_size: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fibre_g: number;
+  sugar_g: number;
+  salt_g: number;
+}

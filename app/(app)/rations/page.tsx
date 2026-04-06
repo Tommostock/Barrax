@@ -19,7 +19,7 @@ import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import {
   Utensils, Plus, ChevronDown, ChevronUp, Heart,
-  Check, Clock, Flame, Droplets, ShoppingCart, Loader2,
+  Check, Clock, Flame, Droplets, ShoppingCart, Loader2, PieChart,
 } from "lucide-react";
 
 interface MealIngredient { name: string; quantity: string; checked: boolean; }
@@ -153,6 +153,17 @@ export default function RationsPage() {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
+      {/* Food diary quick link */}
+      <button onClick={() => router.push("/rations/diary")}
+        className="w-full flex items-center gap-3 p-3 bg-green-primary/10 border border-green-primary
+                   hover:bg-green-primary/20 transition-colors min-h-[44px]">
+        <PieChart size={18} className="text-green-primary" />
+        <div className="flex-1 text-left">
+          <span className="text-sm font-heading uppercase tracking-wider text-sand">Food Diary</span>
+          <p className="text-[0.6rem] text-text-secondary">Track macros, scan barcodes, log food</p>
+        </div>
+      </button>
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Weekly Rations</h2>
         <Button onClick={generatePlan} disabled={generating} className="text-xs px-3 py-2">
