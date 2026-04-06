@@ -15,7 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2 } from "lucide-react";
+import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench } from "lucide-react";
 import type { Workout } from "@/types";
 
 const DAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -225,6 +225,19 @@ export default function MissionsPage() {
             <p className="text-xs text-text-secondary">GPS run tracking with live map</p>
           </div>
           <Play size={16} className="text-green-primary" />
+        </div>
+      </Card>
+
+      {/* Custom workout builder card */}
+      <Card onClick={() => router.push("/missions/builder")} className="press-scale">
+        <div className="flex items-center gap-3">
+          <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
+            <Wrench size={18} className="text-green-primary" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Custom Workout</h4>
+            <p className="text-xs text-text-secondary">Build your own from the exercise library</p>
+          </div>
         </div>
       </Card>
 

@@ -12,7 +12,8 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
-import { ArrowLeft, Play, Clock, Zap, Swords } from "lucide-react";
+import { ArrowLeft, Play, Clock, Zap, Swords, Flame } from "lucide-react";
+import { estimateCaloriesBurned } from "@/lib/calories";
 import type { Workout, WorkoutData } from "@/types";
 
 export default function WorkoutDetailPage() {
@@ -76,6 +77,9 @@ export default function WorkoutDetailPage() {
             </span>
             <span className="flex items-center gap-1 text-sm font-mono text-xp-gold">
               <Zap size={14} /> +{wd.xp_value} XP
+            </span>
+            <span className="flex items-center gap-1 text-sm font-mono text-khaki">
+              <Flame size={14} /> ~{estimateCaloriesBurned(wd.type, (wd.duration_minutes ?? 30) * 60)} kcal
             </span>
             <span className="flex items-center gap-1 text-sm font-mono text-text-secondary">
               <Swords size={14} /> {wd.exercises?.length ?? 0} exercises

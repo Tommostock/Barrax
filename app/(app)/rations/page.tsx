@@ -18,8 +18,8 @@ import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import {
-  Utensils, Plus, ChevronDown, ChevronUp, Heart,
-  Check, Clock, Flame, Droplets, ShoppingCart, Loader2, PieChart,
+  Utensils, Plus, ChevronDown, ChevronUp, Heart, RefreshCw,
+  Check, Clock, Flame, Droplets, ShoppingCart, Loader2, PieChart, CircleCheck,
 } from "lucide-react";
 
 interface MealIngredient { name: string; quantity: string; checked: boolean; }
@@ -56,6 +56,8 @@ export default function RationsPage() {
   const [expandedDay, setExpandedDay] = useState<string | null>(todayAutoExpand);
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [savedMeals, setSavedMeals] = useState<Set<string>>(new Set());
+  const [eatenMeals, setEatenMeals] = useState<Set<string>>(new Set());
+  const [swapping, setSwapping] = useState<string | null>(null);
 
   const loadPlan = useCallback(async () => {
     setLoading(true);
@@ -136,6 +138,77 @@ export default function RationsPage() {
     });
 
     setSavedMeals(prev => new Set(prev).add(meal.name));
+  }
+
+  // Mark a meal as eaten — inserts into food_diary with the meal's macros
+  async function markAsEaten(meal: Meal, dayName: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const mealKey = `${dayName}-${meal.meal_type}`;
+    const isEaten = eatenMeals.has(mealKey);
+
+    if (isEaten) {
+      // Remove from food_diary (un-eat)
+      const today = new Date().toISOString().split("T")[0];
+      await supabase.from("food_diary")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("food_name", meal.name)
+        .eq("source", "meal_plan")
+        .gte("logged_at", `${today}T00:00:00`)
+        .lte("logged_at", `${today}T23:59:59`);
+      setEatenMeals(prev => { const s = new Set(prev); s.delete(mealKey); return s; });
+    } else {
+      // Insert into food_diary
+      await supabase.from("food_diary").insert({
+        user_id: user.id,
+        food_name: meal.name,
+        calories: meal.calories,
+        protein_g: meal.protein_g,
+        carbs_g: meal.carbs_g,
+        fat_g: meal.fat_g,
+        meal_type: meal.meal_type,
+        source: "meal_plan",
+      });
+      setEatenMeals(prev => new Set(prev).add(mealKey));
+      navigator.vibrate?.(50);
+    }
+  }
+
+  // Swap a single meal — regenerate via AI
+  async function swapMeal(meal: Meal, dayName: string) {
+    const mealKey = `${dayName}-${meal.meal_type}`;
+    setSwapping(mealKey);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: prefs } = await supabase.from("food_preferences").select("food_name, category").eq("user_id", user.id);
+      const noGo = prefs?.filter(p => p.category === "no_go").map(p => p.food_name) ?? [];
+      const approved = prefs?.filter(p => p.category === "approved").map(p => p.food_name) ?? [];
+      const { data: profile } = await supabase.from("profiles").select("calorie_target").eq("id", user.id).single();
+
+      const { callGemini } = await import("@/lib/gemini");
+      const newMeal = await callGemini<Meal>({
+        systemPrompt: `You are a nutritionist. Generate a single ${meal.meal_type} meal replacement. Respond ONLY in valid JSON matching: { "meal_type": string, "name": string, "ingredients": [{"name": string, "quantity": string}], "method": [string], "prep_time_minutes": number, "calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, "is_maybe_food": false }. UK ingredients, budget-friendly, max 30 min prep. NEVER use these foods: ${noGo.join(", ")}. Prefer these: ${approved.join(", ")}.`,
+        userPrompt: `Replace this ${meal.meal_type}: "${meal.name}". Generate a different meal for ~${Math.round((profile?.calorie_target ?? 2000) / 4)} calories. Do NOT suggest the same meal.`,
+      });
+
+      // Update the meal in the plan data
+      if (plan && newMeal) {
+        const updatedDays = plan.plan_data.map(d => {
+          if (d.day !== dayName) return d;
+          return { ...d, meals: d.meals.map(m => m.meal_type === meal.meal_type ? { ...newMeal, meal_type: meal.meal_type, is_maybe_food: false } : m) };
+        });
+        await supabase.from("meal_plans").update({ plan_data: updatedDays }).eq("id", plan.id);
+        setPlan({ ...plan, plan_data: updatedDays });
+      }
+    } catch (err) {
+      console.error("Swap failed:", err);
+    } finally {
+      setSwapping(null);
+    }
   }
 
   // Get today's day name for highlighting
@@ -292,15 +365,34 @@ export default function RationsPage() {
                           </div>
 
                           {/* Actions */}
-                          <div className="flex gap-2 pt-1">
+                          <div className="flex gap-2 pt-1 flex-wrap">
+                            {/* Mark as eaten — logs to food_diary */}
                             <button
-                              onClick={() => saveFavourite(meal)}
+                              onClick={(e) => { e.stopPropagation(); markAsEaten(meal, dayName); }}
+                              className={`flex items-center gap-1 px-3 py-2 border text-xs font-mono uppercase min-h-[44px]
+                                ${eatenMeals.has(mealKey) ? "border-green-primary bg-green-primary/20 text-green-light" : "border-green-dark text-text-secondary hover:text-green-light"}`}
+                            >
+                              <CircleCheck size={14} fill={eatenMeals.has(mealKey) ? "currentColor" : "none"} />
+                              {eatenMeals.has(mealKey) ? "EATEN" : "ATE THIS"}
+                            </button>
+                            {/* Save favourite */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); saveFavourite(meal); }}
                               disabled={isSaved}
                               className={`flex items-center gap-1 px-3 py-2 border text-xs font-mono uppercase min-h-[44px]
                                 ${isSaved ? "border-green-primary text-green-light" : "border-green-dark text-text-secondary hover:text-green-light"}`}
                             >
                               <Heart size={14} fill={isSaved ? "currentColor" : "none"} />
                               {isSaved ? "SAVED" : "SAVE"}
+                            </button>
+                            {/* Swap meal */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); swapMeal(meal, dayName); }}
+                              disabled={swapping === mealKey}
+                              className="flex items-center gap-1 px-3 py-2 border border-green-dark text-xs font-mono uppercase text-text-secondary hover:text-green-light min-h-[44px]"
+                            >
+                              <RefreshCw size={14} className={swapping === mealKey ? "animate-spin" : ""} />
+                              {swapping === mealKey ? "SWAPPING..." : "SWAP"}
                             </button>
                           </div>
                         </div>

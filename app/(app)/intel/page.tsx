@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 import Card from "@/components/ui/Card";
-import { TrendingUp, Trophy, Activity } from "lucide-react";
+import { TrendingUp, Trophy, Activity, PieChart, FileText, Calendar } from "lucide-react";
 import { formatDistance, formatDuration } from "@/lib/geolocation";
 import Link from "next/link";
 
@@ -49,8 +49,10 @@ export default async function IntelPage() {
 
   const sections = [
     { href: "/intel/body", icon: Activity, title: "Body Tracking", description: "Weight and body measurements" },
+    { href: "/intel/nutrition", icon: PieChart, title: "Nutrition Trends", description: "Calorie and macro trends" },
     { href: "/intel/runs", icon: TrendingUp, title: "Run Stats", description: "Distance, pace, and trends" },
     { href: "/intel/records", icon: Trophy, title: "Personal Records", description: "Your all-time bests" },
+    { href: "/intel/report", icon: FileText, title: "Weekly Report", description: "Performance summary and rating" },
   ];
 
   return (
