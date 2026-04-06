@@ -1,8 +1,9 @@
 /* ============================================
    MISSIONS Page
-   Weekly workout programme view. Shows a 7-day
-   calendar with workout details, and allows
-   generating a new programme via AI.
+   Weekly programme view. The calendar at the top
+   lets you select a day — only that day's workout
+   shows below. Clicking a day selects it; clicking
+   the actual workout card navigates to the detail.
    ============================================ */
 
 "use client";
@@ -14,9 +15,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench } from "lucide-react";
-import type { Workout } from "@/types";
+import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon } from "lucide-react";
+import { estimateCaloriesBurned } from "@/lib/calories";
+import type { Workout, WorkoutData } from "@/types";
 
 const DAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -36,6 +39,11 @@ export default function MissionsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Selected day in the calendar — defaults to today
+  const todayIndex = new Date().getDay();
+  const todayName = DAY_NAMES[todayIndex === 0 ? 6 : todayIndex - 1];
+  const [selectedDay, setSelectedDay] = useState(todayName);
 
   const loadProgramme = useCallback(async () => {
     setLoading(true);
@@ -76,7 +84,6 @@ export default function MissionsPage() {
       const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
       const { data: rank } = await supabase.from("ranks").select("current_rank").eq("user_id", user.id).single();
 
-      // Seed exercises if not done
       await fetch("/api/seed-exercises", { method: "POST" });
 
       const response = await fetch("/api/generate-programme", {
@@ -102,15 +109,19 @@ export default function MissionsPage() {
     }
   }
 
-  const todayIndex = new Date().getDay();
-  const todayName = DAY_NAMES[todayIndex === 0 ? 6 : todayIndex - 1];
+  // Get the programme data and workout for the selected day
+  const selectedDayData = programme?.programme_data?.find((d) => d.day === selectedDay);
+  const selectedWorkout = workouts.find((w) => {
+    const wd = new Date(w.scheduled_date);
+    return DAY_NAMES[wd.getDay() === 0 ? 6 : wd.getDay() - 1] === selectedDay;
+  });
 
   if (loading) {
     return (
       <div className="px-4 py-4 space-y-4">
         <div className="skeleton h-6 w-48" />
         <div className="grid grid-cols-7 gap-1">{DAY_LABELS.map((d) => <div key={d} className="skeleton h-16" />)}</div>
-        <SkeletonCard /><SkeletonCard />
+        <SkeletonCard />
       </div>
     );
   }
@@ -124,7 +135,7 @@ export default function MissionsPage() {
         </Button>
       </div>
 
-      {/* Week calendar */}
+      {/* Week calendar — tap a day to SELECT it (not navigate) */}
       {programme && (
         <div className="grid grid-cols-7 gap-1">
           {DAY_NAMES.map((dayName, i) => {
@@ -134,23 +145,30 @@ export default function MissionsPage() {
               return DAY_NAMES[wd.getDay() === 0 ? 6 : wd.getDay() - 1] === dayName;
             });
             const isToday = dayName === todayName;
+            const isSelected = dayName === selectedDay;
             const isRest = dayData?.is_rest_day;
             const isComplete = workout?.status === "complete";
 
             return (
-              <div key={dayName}
-                className={`p-2 text-center border cursor-pointer transition-colors
-                  ${isToday ? "border-green-primary bg-bg-panel-alt" : "border-green-dark bg-bg-panel"}
-                  ${isComplete ? "border-green-light" : ""}`}
-                onClick={() => workout && router.push(`/missions/${workout.id}`)}
+              <button key={dayName}
+                onClick={() => setSelectedDay(dayName)}
+                className={`p-2 text-center border transition-all min-h-[56px]
+                  ${isSelected ? "border-green-primary bg-green-primary/15 scale-[1.02]"
+                    : isComplete ? "border-green-light/50 bg-bg-panel"
+                    : "border-green-dark bg-bg-panel hover:bg-bg-panel-alt"}`}
               >
-                <p className={`text-[0.55rem] font-mono ${isToday ? "text-green-light" : "text-text-secondary"}`}>{DAY_LABELS[i]}</p>
+                <p className={`text-[0.55rem] font-mono ${isSelected ? "text-green-light font-bold" : isToday ? "text-green-light" : "text-text-secondary"}`}>
+                  {DAY_LABELS[i]}
+                </p>
                 <div className="w-6 h-6 mx-auto mt-1 flex items-center justify-center">
-                  {isRest ? <span className="text-[0.5rem] font-mono text-text-secondary">REST</span>
-                    : isComplete ? <Check size={14} className="text-green-light" />
-                    : <Swords size={12} className={isToday ? "text-green-primary" : "text-text-secondary"} />}
+                  {isRest
+                    ? <Moon size={11} className="text-text-secondary" />
+                    : isComplete
+                    ? <Check size={14} className="text-green-light" />
+                    : <Swords size={12} className={isSelected || isToday ? "text-green-primary" : "text-text-secondary"} />}
                 </div>
-              </div>
+                {isToday && <div className="w-1 h-1 mx-auto mt-0.5 bg-green-light" />}
+              </button>
             );
           })}
         </div>
@@ -171,7 +189,7 @@ export default function MissionsPage() {
       {!programme && !generating && (
         <Card tag="NO PROGRAMME" tagVariant="default">
           <div className="text-center py-6">
-            <Swords size={32} className="text-text-secondary mx-auto mb-3" />
+            <Swords size={32} className="text-text-secondary mx-auto mb-3 empty-state-icon" />
             <h3 className="text-sm font-heading uppercase tracking-wider text-sand mb-2">No Active Programme</h3>
             <p className="text-xs text-text-secondary mb-4">Generate a weekly workout programme tailored to your fitness level and goals.</p>
             <Button onClick={generateProgramme} disabled={generating}>
@@ -181,65 +199,130 @@ export default function MissionsPage() {
         </Card>
       )}
 
-      {/* Workout list */}
-      {programme && workouts.length > 0 && (
+      {/* Selected day's workout — only shows ONE day at a time */}
+      {programme && selectedDayData && (
         <div className="space-y-3">
-          <h3 className="text-sm font-heading uppercase tracking-wider text-text-secondary">This Week&apos;s Missions</h3>
-          {workouts.map((workout) => {
-            const wd = workout.workout_data as { name: string; type: string; duration_minutes: number; xp_value: number; focus?: string };
-            const isComplete = workout.status === "complete";
-            const isToday = workout.scheduled_date === new Date().toISOString().split("T")[0];
+          <h3 className="text-sm font-heading uppercase tracking-wider text-text-secondary">
+            {DAY_LABELS[DAY_NAMES.indexOf(selectedDay)]}&apos;s Mission
+          </h3>
 
-            return (
-              <Card key={workout.id}
-                tag={isComplete ? "COMPLETE" : isToday ? "TODAY" : "PENDING"}
-                tagVariant={isComplete ? "complete" : isToday ? "active" : "default"}
-                onClick={() => router.push(`/missions/${workout.id}`)}
-                className="press-scale"
-              >
-                <div className="flex items-center justify-between">
+          {selectedDayData.is_rest_day ? (
+            /* Rest day */
+            <Card tag="REST DAY" tagVariant="default">
+              <div className="text-center py-6">
+                <Moon size={28} className="text-text-secondary mx-auto mb-3" />
+                <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">Stand Down</h4>
+                <p className="text-xs text-text-secondary">
+                  Rest and recovery. Your body builds strength during rest days.
+                </p>
+              </div>
+            </Card>
+          ) : selectedWorkout ? (
+            /* Workout card — clicking THIS navigates to detail */
+            <Card
+              tag={selectedWorkout.status === "complete" ? "COMPLETE" : selectedDay === todayName ? "TODAY" : "PENDING"}
+              tagVariant={selectedWorkout.status === "complete" ? "complete" : selectedDay === todayName ? "active" : "default"}
+              onClick={() => router.push(`/missions/${selectedWorkout.id}`)}
+              className="press-scale"
+            >
+              {(() => {
+                const wd = selectedWorkout.workout_data as WorkoutData;
+                const isComplete = selectedWorkout.status === "complete";
+                return (
                   <div>
-                    <h4 className="text-sm font-heading uppercase tracking-wider text-sand">{wd.name}</h4>
-                    <p className="text-xs text-text-secondary mt-1">{wd.type?.replace("_", " ")} {wd.focus ? `- ${wd.focus}` : ""}</p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-text-secondary"><Clock size={12} /> {wd.duration_minutes} min</span>
-                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-xp-gold"><Zap size={12} /> +{wd.xp_value} XP</span>
+                    <h4 className="text-lg font-heading uppercase tracking-wider text-sand">{wd.name}</h4>
+                    <p className="text-xs text-text-secondary mt-1 capitalize">{wd.type?.replace("_", " ")} {wd.focus ? `- ${wd.focus}` : ""}</p>
+
+                    {/* Stats row */}
+                    <div className="flex items-center gap-4 mt-3">
+                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-text-secondary">
+                        <Clock size={12} /> {wd.duration_minutes} min
+                      </span>
+                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-xp-gold">
+                        <Zap size={12} /> +{wd.xp_value} XP
+                      </span>
+                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-khaki">
+                        <Flame size={12} /> ~{estimateCaloriesBurned(wd.type, (wd.duration_minutes ?? 30) * 60)} kcal
+                      </span>
                     </div>
+
+                    {/* Exercise preview */}
+                    {wd.exercises && wd.exercises.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-green-dark/50">
+                        <p className="text-[0.6rem] font-mono text-text-secondary uppercase mb-2">
+                          {wd.exercises.length} EXERCISES
+                        </p>
+                        <div className="space-y-1">
+                          {wd.exercises.slice(0, 4).map((ex, i) => (
+                            <p key={i} className="text-xs text-text-primary">
+                              {ex.name} — {ex.sets}x{ex.reps ?? `${ex.duration_seconds}s`}
+                            </p>
+                          ))}
+                          {wd.exercises.length > 4 && (
+                            <p className="text-[0.6rem] text-text-secondary font-mono">
+                              +{wd.exercises.length - 4} more
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action button */}
+                    {!isComplete ? (
+                      <button className="mt-4 w-full py-2.5 bg-green-primary text-text-primary font-heading text-xs uppercase tracking-widest font-bold hover:bg-green-light active:scale-[0.98] transition-all min-h-[44px]"
+                        onClick={(e) => { e.stopPropagation(); router.push(`/missions/player/${selectedWorkout.id}`); }}>
+                        <span className="flex items-center justify-center gap-2"><Play size={14} /> DEPLOY</span>
+                      </button>
+                    ) : (
+                      <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-light">
+                        <Check size={16} /> <span className="text-xs font-heading uppercase tracking-wider">MISSION COMPLETE</span>
+                      </div>
+                    )}
                   </div>
-                  {isComplete ? <Check size={20} className="text-green-light" /> : <Play size={20} className="text-green-primary" />}
-                </div>
-              </Card>
-            );
-          })}
+                );
+              })()}
+            </Card>
+          ) : (
+            /* Day has a workout in programme but no workout record yet */
+            <Card tag="SCHEDULED" tagVariant="default">
+              <div className="text-center py-4">
+                <Swords size={24} className="text-text-secondary mx-auto mb-2" />
+                <p className="text-xs text-text-secondary">
+                  {selectedDayData.workout?.name ?? "Workout scheduled"} — {selectedDayData.workout?.type?.replace("_", " ")}
+                </p>
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
-      {/* Run tracker card */}
-      <Card onClick={() => router.push("/missions/run")} className="press-scale">
-        <div className="flex items-center gap-3">
-          <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
-            <MapPin size={18} className="text-green-primary" />
+      {/* Quick links — always visible */}
+      <div className="space-y-2 pt-2">
+        <Card onClick={() => router.push("/missions/run")} className="press-scale">
+          <div className="flex items-center gap-3">
+            <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
+              <MapPin size={18} className="text-green-primary" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Run Tracker</h4>
+              <p className="text-xs text-text-secondary">GPS run tracking with live map</p>
+            </div>
+            <Play size={16} className="text-green-primary" />
           </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Run Tracker</h4>
-            <p className="text-xs text-text-secondary">GPS run tracking with live map</p>
-          </div>
-          <Play size={16} className="text-green-primary" />
-        </div>
-      </Card>
+        </Card>
 
-      {/* Custom workout builder card */}
-      <Card onClick={() => router.push("/missions/builder")} className="press-scale">
-        <div className="flex items-center gap-3">
-          <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
-            <Wrench size={18} className="text-green-primary" />
+        <Card onClick={() => router.push("/missions/builder")} className="press-scale">
+          <div className="flex items-center gap-3">
+            <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
+              <Wrench size={18} className="text-green-primary" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Custom Workout</h4>
+              <p className="text-xs text-text-secondary">Build your own from the exercise library</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Custom Workout</h4>
-            <p className="text-xs text-text-secondary">Build your own from the exercise library</p>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       <div className="pt-1">
         <button onClick={() => router.push("/missions/library")}

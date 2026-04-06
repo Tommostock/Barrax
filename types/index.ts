@@ -104,6 +104,7 @@ export interface WorkoutData {
   name: string;
   type: string;
   duration_minutes: number;
+  focus?: string;
   warmup: WorkoutExercise[];
   exercises: WorkoutExercise[];
   cooldown: WorkoutExercise[];

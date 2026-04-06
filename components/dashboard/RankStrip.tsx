@@ -26,10 +26,10 @@ const RANK_STYLES: Record<number, { bg: string; border: string; accent: string }
   5:  { bg: "from-[#142A30] to-[#183640]", border: "border-[#2A5A6B]", accent: "bg-[#3A7A8B]" },       // Sergeant — teal
   6:  { bg: "from-[#141E30] to-[#182840]", border: "border-[#2A4A6B]", accent: "bg-[#3A6A9B]" },       // Staff Sgt — steel blue
   7:  { bg: "from-[#1A1430] to-[#241840]", border: "border-[#3A2A6B]", accent: "bg-[#5A3A9B]" },       // Warrant — deep purple
-  8:  { bg: "from-[#2A1430] to-[#3A1840]", border: "border-[#6B2A5A]", accent: "bg-[#8B3A6A]" },       // Lieutenant — magenta
-  9:  { bg: "from-[#301A1A] to-[#401820]", border: "border-[#6B2A2A]", accent: "bg-[#9B3A3A]" },       // Captain — crimson
-  10: { bg: "from-[#302014] to-[#402A18]", border: "border-[#6B4A2A]", accent: "bg-[#9B6A3A]" },       // Major — bronze
-  11: { bg: "from-[#302814] to-[#403618]", border: "border-[#8B6A2A]", accent: "bg-[#B08A3A]" },       // Colonel — amber
+  8:  { bg: "from-[#301A1A] to-[#401820]", border: "border-[#6B2A2A]", accent: "bg-[#9B3A3A]" },       // Lieutenant — crimson
+  9:  { bg: "from-[#302014] to-[#402A18]", border: "border-[#6B4A2A]", accent: "bg-[#9B6A3A]" },       // Captain — bronze
+  10: { bg: "from-[#302814] to-[#403618]", border: "border-[#8B6A2A]", accent: "bg-[#B08A3A]" },       // Major — amber
+  11: { bg: "from-[#2A2A30] to-[#38383E]", border: "border-[#8A8A96]", accent: "bg-[#A8A8B4]" },       // Colonel — SILVER
   12: { bg: "from-[#3A3018] to-[#4A3E20]", border: "border-[#B8A04A]", accent: "bg-[#D4B850]" },       // General — GOLD
 };
 
@@ -44,6 +44,7 @@ export default function RankStrip({ currentRank, totalXp }: RankStripProps) {
 
   // Progress bar colour also changes with rank
   const progressColor = currentRank >= 12 ? "bg-[#D4B850]"
+    : currentRank >= 11 ? "bg-[#A8A8B4]"
     : currentRank >= 10 ? "bg-[#B08A3A]"
     : currentRank >= 7 ? "bg-[#5A3A9B]"
     : currentRank >= 5 ? "bg-[#3A7A8B]"
