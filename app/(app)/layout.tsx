@@ -19,7 +19,7 @@ export default function AppLayout({
     <>
       <Header />
       {/* Main content area — padded at bottom for the fixed nav bar */}
-      <main className="flex-1 pb-20">{children}</main>
+      <main className="flex-1 pb-20 animate-page-enter">{children}</main>
       <BottomNav />
       <InstallPrompt />
     </>

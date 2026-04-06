@@ -20,7 +20,7 @@ export default function Header() {
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-40 bg-bg-primary/95 backdrop-blur-sm border-b border-green-dark safe-top">
+    <header className="sticky top-0 z-40 bg-bg-primary/95 backdrop-blur-sm border-b border-green-dark safe-top scan-line-header relative overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3">
         {/* Title and date */}
         <div>

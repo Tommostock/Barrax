@@ -111,6 +111,7 @@ h1, h2, h3, h4, h5, h6 {
     radial-gradient(ellipse 50% 40% at 55% 45%, var(--camo-1) 0%, transparent 60%);
   background-size: 200px 200px;
   background-repeat: repeat;
+  opacity: 0.85; /* Slightly toned down for subtlety */
 }
 
 /* --- Scan-Line Overlay ---
@@ -237,4 +238,51 @@ h1, h2, h3, h4, h5, h6 {
 
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
+}
+
+/* --- Page transition --- */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-page-enter {
+  animation: page-enter 0.25s ease-out;
+}
+
+/* --- Spin animation for loaders --- */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* --- Scan-line overlay applied to header ---
+   Gives a subtle CRT/tactical screen feel */
+.scan-line-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0, 0, 0, 0.04) 3px,
+    rgba(0, 0, 0, 0.04) 6px
+  );
+  z-index: 1;
+}
+
+/* --- Empty state icon pulse --- */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+.empty-state-icon {
+  animation: pulse-subtle 3s ease-in-out infinite;
 }

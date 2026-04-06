@@ -19,7 +19,7 @@ import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import {
   Utensils, Plus, ChevronDown, ChevronUp, Heart,
-  Check, Clock, Flame, Droplets, ShoppingCart,
+  Check, Clock, Flame, Droplets, ShoppingCart, Loader2,
 } from "lucide-react";
 
 interface MealIngredient { name: string; quantity: string; checked: boolean; }
@@ -51,7 +51,9 @@ export default function RationsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  // Auto-expand today's meals by default
+  const todayAutoExpand = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][new Date().getDay()];
+  const [expandedDay, setExpandedDay] = useState<string | null>(todayAutoExpand);
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [savedMeals, setSavedMeals] = useState<Set<string>>(new Set());
 
@@ -159,6 +161,15 @@ export default function RationsPage() {
           </span>
         </Button>
       </div>
+
+      {/* Loading overlay when generating */}
+      {generating && (
+        <div className="fixed inset-0 z-[100] bg-black/70 flex flex-col items-center justify-center">
+          <Loader2 size={32} className="text-green-primary animate-spin mb-4" />
+          <p className="text-sm font-heading uppercase tracking-wider text-sand">Generating Meal Plan</p>
+          <p className="text-xs text-text-secondary mt-1">AI is planning your rations...</p>
+        </div>
+      )}
 
       {error && <p className="text-danger text-sm font-mono">{error}</p>}
 

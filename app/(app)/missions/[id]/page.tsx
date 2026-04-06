@@ -138,7 +138,7 @@ export default function WorkoutDetailPage() {
 
       {/* Deploy button */}
       {!isComplete && (
-        <div className="fixed bottom-20 left-4 right-4 safe-bottom">
+        <div className="sticky bottom-0 left-0 right-0 p-4 bg-bg-primary/95 backdrop-blur-sm border-t border-green-dark safe-bottom">
           <Button fullWidth onClick={() => router.push(`/missions/player/${workoutId}`)}>
             <span className="flex items-center justify-center gap-2">
               <Play size={18} /> DEPLOY

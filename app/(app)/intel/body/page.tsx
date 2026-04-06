@@ -14,7 +14,8 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { ArrowLeft, Plus, Scale, TrendingDown } from "lucide-react";
+import { ArrowLeft, Plus, Scale } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import type { WeightLog } from "@/types";
 
 export default function BodyTrackingPage() {
@@ -119,6 +120,24 @@ export default function BodyTrackingPage() {
         )}
         <p className="text-[0.6rem] font-mono text-text-secondary mt-1">CURRENT WEIGHT</p>
       </div>
+
+      {/* Weight trend chart */}
+      {weightLogs.length >= 2 && (
+        <div className="bg-bg-panel border border-green-dark p-4">
+          <h3 className="text-xs font-heading uppercase tracking-wider text-text-secondary mb-3">Weight Trend</h3>
+          <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={[...weightLogs].reverse().map((log) => ({
+              date: new Date(log.logged_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+              weight: log.weight_kg,
+            }))}>
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#7A7A6E" }} axisLine={{ stroke: "#2D4220" }} tickLine={false} />
+              <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 10, fill: "#7A7A6E" }} axisLine={{ stroke: "#2D4220" }} tickLine={false} width={35} />
+              <Tooltip contentStyle={{ backgroundColor: "#141A14", border: "1px solid #2D4220", fontSize: 12 }} labelStyle={{ color: "#C4B090" }} />
+              <Line type="monotone" dataKey="weight" stroke="#4A6B3A" strokeWidth={2} dot={{ fill: "#4A6B3A", r: 3 }} activeDot={{ fill: "#6B8F5A", r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Weight history */}
       <h3 className="text-sm font-heading uppercase tracking-wider text-text-secondary">History</h3>
