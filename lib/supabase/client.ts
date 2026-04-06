@@ -7,18 +7,11 @@
 import { createBrowserClient } from "@supabase/ssr";
 
 // Create a Supabase client for use in the browser.
-// This reads the public env vars (NEXT_PUBLIC_*) which are
-// safe to expose to the client — they only have anon-level access.
+// During build/prerender, env vars may not exist — return a
+// dummy client that will be replaced on the real client render.
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
-      "Check your .env.local file or Vercel environment variables."
-    );
-  }
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
   return createBrowserClient(url, key);
 }
