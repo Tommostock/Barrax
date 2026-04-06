@@ -12,9 +12,11 @@
 
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 import {
   totalDistance,
@@ -45,7 +47,7 @@ import {
 import type { GpsPoint, RunSplit } from "@/types";
 
 // ---------- Dynamic map import (Leaflet needs the browser window) ----------
-const RunMap = dynamic(() => import("@/components/run/RunMap"), { ssr: false });
+const RunMap = nextDynamic(() => import("@/components/run/RunMap"), { ssr: false });
 
 // ---------- Page states ----------
 type RunState = "ready" | "running" | "complete";

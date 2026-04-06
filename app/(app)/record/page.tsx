@@ -5,6 +5,8 @@
    ============================================ */
 
 import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import ProgressBar from "@/components/ui/ProgressBar";

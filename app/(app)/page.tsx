@@ -6,6 +6,9 @@
    ============================================ */
 
 import { createClient } from "@/lib/supabase/server";
+
+// Force dynamic rendering — this page needs auth cookies and DB access
+export const dynamic = "force-dynamic";
 import RankStrip from "@/components/dashboard/RankStrip";
 import StreakCounter from "@/components/dashboard/StreakCounter";
 import TodayMission from "@/components/dashboard/TodayMission";

@@ -6,8 +6,10 @@
 
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect, useCallback } from "react";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
@@ -18,7 +20,7 @@ import { ArrowLeft, MapPin, Clock, TrendingUp, Zap, Calendar } from "lucide-reac
 import type { Run, GpsPoint } from "@/types";
 
 // Dynamic import for the map (Leaflet needs browser APIs)
-const RunMap = dynamic(() => import("@/components/run/RunMap"), { ssr: false });
+const RunMap = nextDynamic(() => import("@/components/run/RunMap"), { ssr: false });
 
 export default function RunHistoryPage() {
   const router = useRouter();

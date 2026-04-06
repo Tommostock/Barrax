@@ -5,6 +5,8 @@
    ============================================ */
 
 import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 import Card from "@/components/ui/Card";
 import { TrendingUp, Trophy, Activity } from "lucide-react";
 import { formatDistance, formatDuration } from "@/lib/geolocation";
