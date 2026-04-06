@@ -7,6 +7,7 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Barlow, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import ServiceWorkerRegister from "@/components/layout/ServiceWorkerRegister";
 
 // Heading font: Barlow Condensed — uppercase, bold, military stencil feel
 const barlowCondensed = Barlow_Condensed({
@@ -63,6 +64,7 @@ export default function RootLayout({
       className={`${barlowCondensed.variable} ${barlow.variable} ${jetbrainsMono.variable}`}
     >
       <body className="min-h-dvh flex flex-col bg-bg-primary text-text-primary">
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

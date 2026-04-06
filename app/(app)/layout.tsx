@@ -8,6 +8,7 @@
 
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
+import InstallPrompt from "@/components/layout/InstallPrompt";
 
 export default function AppLayout({
   children,
@@ -20,6 +21,7 @@ export default function AppLayout({
       {/* Main content area — padded at bottom for the fixed nav bar */}
       <main className="flex-1 pb-20">{children}</main>
       <BottomNav />
+      <InstallPrompt />
     </>
   );
 }
