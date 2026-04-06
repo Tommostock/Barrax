@@ -54,13 +54,86 @@ Rules:
 - Include 3-4 warmup and 3-4 cooldown exercises per workout
 - Scale difficulty by rank (1=easiest, 12=hardest) and fitness level
 - Use creative military operation codenames
-- XP: 30 for <15min, 50 for 15-30min, 80 for 30+min workouts`;
+- XP: 30 for <15min, 50 for 15-30min, 80 for 30+min workouts
+- The "days" array MUST contain exactly 7 entries, one for each day of the week`;
+
+const DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 interface GenerateProgrammeRequest {
   availableMinutes: number;
   currentRank: number;
   fitnessLevel: string;
   goals: string[];
+}
+
+// The AI sometimes returns data in different structures.
+// This function normalises whatever we get into a clean 7-day array.
+interface ProgrammeDay {
+  day: string;
+  is_rest_day: boolean;
+  workout: Record<string, unknown> | null;
+}
+
+function normaliseProgramme(raw: Record<string, unknown>): ProgrammeDay[] {
+  // Case 1: { days: [...] } — the expected format
+  if (Array.isArray(raw.days)) {
+    const days = raw.days as ProgrammeDay[];
+    if (days.length >= 7) return days.slice(0, 7);
+    // If less than 7, pad with rest days
+    while (days.length < 7) {
+      days.push({
+        day: DAY_NAMES[days.length],
+        is_rest_day: true,
+        workout: null,
+      });
+    }
+    return days;
+  }
+
+  // Case 2: { programme: { days: [...] } } — nested wrapper
+  if (raw.programme && typeof raw.programme === "object") {
+    const prog = raw.programme as Record<string, unknown>;
+    if (Array.isArray(prog.days)) {
+      return normaliseProgramme(prog as Record<string, unknown>);
+    }
+  }
+
+  // Case 3: { week: [...] } — alternate key name
+  if (Array.isArray(raw.week)) {
+    return normaliseProgramme({ days: raw.week });
+  }
+
+  // Case 4: { monday: {...}, tuesday: {...}, ... } — object with day keys
+  const dayEntries: ProgrammeDay[] = [];
+  for (const dayName of DAY_NAMES) {
+    const dayData = raw[dayName] as Record<string, unknown> | undefined;
+    if (dayData) {
+      dayEntries.push({
+        day: dayName,
+        is_rest_day: dayData.is_rest_day === true || dayData.rest === true || dayData.workout === null,
+        workout: (dayData.workout as Record<string, unknown>) ?? (dayData.is_rest_day ? null : dayData),
+      });
+    }
+  }
+  if (dayEntries.length >= 5) {
+    // Pad missing days as rest days
+    for (const dayName of DAY_NAMES) {
+      if (!dayEntries.find(d => d.day === dayName)) {
+        dayEntries.push({ day: dayName, is_rest_day: true, workout: null });
+      }
+    }
+    // Sort by day order
+    dayEntries.sort((a, b) => DAY_NAMES.indexOf(a.day) - DAY_NAMES.indexOf(b.day));
+    return dayEntries.slice(0, 7);
+  }
+
+  // Case 5: The response itself is an array
+  if (Array.isArray(raw)) {
+    return normaliseProgramme({ days: raw });
+  }
+
+  // Nothing worked — throw so the caller knows
+  throw new Error("Could not parse programme structure from AI response");
 }
 
 export async function POST(request: Request) {
@@ -80,43 +153,16 @@ export async function POST(request: Request) {
 - Fitness level: ${body.fitnessLevel}
 - Goals: ${body.goals.join(", ") || "general fitness"}
 
-Create a balanced week that fits these parameters.`;
+IMPORTANT: Return exactly 7 days in the "days" array (monday through sunday). This is critical.`;
 
     // Generate the full programme
-    const programme = await callGemini<{
-      days: {
-        day: string;
-        is_rest_day: boolean;
-        workout: {
-          name: string;
-          type: string;
-          duration_minutes: number;
-          focus: string;
-          warmup: { name: string; description: string; duration_seconds: number }[];
-          exercises: {
-            name: string;
-            description: string;
-            form_cue: string;
-            sets: number;
-            reps: number | null;
-            duration_seconds: number | null;
-            rest_seconds: number;
-            difficulty: number;
-            muscles: string[];
-          }[];
-          cooldown: { name: string; description: string; duration_seconds: number }[];
-          xp_value: number;
-        } | null;
-      }[];
-    }>({
+    const rawResponse = await callGemini<Record<string, unknown>>({
       systemPrompt: SYSTEM_PROMPT,
       userPrompt,
     });
 
-    // Validate we got 7 days
-    if (!programme.days || programme.days.length !== 7) {
-      throw new Error("Programme must have exactly 7 days");
-    }
+    // Normalise whatever the AI returned into a clean 7-day array
+    const days = normaliseProgramme(rawResponse);
 
     // Calculate the week start date (Monday of this week)
     const now = new Date();
@@ -132,7 +178,7 @@ Create a balanced week that fits these parameters.`;
       .insert({
         user_id: user.id,
         week_start: weekStartStr,
-        programme_data: programme.days,
+        programme_data: days,
       })
       .select()
       .single();
@@ -140,12 +186,12 @@ Create a balanced week that fits these parameters.`;
     if (saveError) throw saveError;
 
     // Create individual workout rows for each non-rest day
-    const workoutRows = programme.days
+    const workoutRows = days
       .filter((d) => !d.is_rest_day && d.workout)
-      .map((d, index) => {
-        const dayIndex = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].indexOf(d.day);
+      .map((d) => {
+        const dayIndex = DAY_NAMES.indexOf(d.day.toLowerCase());
         const scheduledDate = new Date(weekStart);
-        scheduledDate.setDate(weekStart.getDate() + dayIndex);
+        scheduledDate.setDate(weekStart.getDate() + (dayIndex >= 0 ? dayIndex : 0));
 
         return {
           user_id: user.id,
