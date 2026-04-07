@@ -124,7 +124,6 @@ export default function TodayRations() {
   // Macro data for the mini rings (from food diary)
   const [macros, setMacros] = useState<MacroTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [targets, setTargets] = useState<MacroTargets>({ calories: 2000, protein: 150, carbs: 200, fat: 67 });
-  const [hasMacros, setHasMacros] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -188,7 +187,6 @@ export default function TodayRations() {
           carbs: entries.reduce((sum, e) => sum + (e.carbs_g || 0), 0),
           fat: entries.reduce((sum, e) => sum + (e.fat_g || 0), 0),
         });
-        setHasMacros(true);
       }
 
       setLoading(false);
@@ -219,35 +217,33 @@ export default function TodayRations() {
           <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Today&apos;s Rations</h3>
         </div>
 
-        {/* Mini macro rings — only show when food diary has entries */}
-        {hasMacros && (
-          <div className="flex items-center gap-2">
-            <MiniRing
-              value={macros.protein}
-              max={targets.protein}
-              size={32}
-              strokeWidth={3}
-              color="var(--green-light)"
-              label="P"
-            />
-            <MiniRing
-              value={macros.carbs}
-              max={targets.carbs}
-              size={32}
-              strokeWidth={3}
-              color="var(--xp-gold)"
-              label="C"
-            />
-            <MiniRing
-              value={macros.fat}
-              max={targets.fat}
-              size={32}
-              strokeWidth={3}
-              color="var(--khaki)"
-              label="F"
-            />
-          </div>
-        )}
+        {/* Mini macro rings — always visible, empty rings show targets at a glance */}
+        <div className="flex items-center gap-2">
+          <MiniRing
+            value={macros.protein}
+            max={targets.protein}
+            size={32}
+            strokeWidth={3}
+            color="var(--green-light)"
+            label="P"
+          />
+          <MiniRing
+            value={macros.carbs}
+            max={targets.carbs}
+            size={32}
+            strokeWidth={3}
+            color="var(--xp-gold)"
+            label="C"
+          />
+          <MiniRing
+            value={macros.fat}
+            max={targets.fat}
+            size={32}
+            strokeWidth={3}
+            color="var(--khaki)"
+            label="F"
+          />
+        </div>
       </div>
 
       {/* Meal rows */}
