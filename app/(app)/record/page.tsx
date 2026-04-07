@@ -77,7 +77,7 @@ export default async function RecordPage() {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
-      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Service Record</h2>
+      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Military Dossier</h2>
 
       {/* Profile + Rank card — matches Command tab RankStrip style */}
       <div className={`bg-gradient-to-r ${style.bg} border ${style.border} p-4 relative overflow-hidden`}>
