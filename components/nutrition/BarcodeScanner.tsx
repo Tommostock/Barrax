@@ -1,108 +1,90 @@
 /* ============================================
    BarcodeScanner Component
    Opens the device camera and scans barcodes
-   using the Barcode Detection API (Chrome) or
-   manual input fallback for unsupported browsers.
+   using html5-qrcode (works on all browsers
+   including Safari/iOS). Falls back to manual
+   barcode entry if camera access fails.
    ============================================ */
 
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Camera, X, Keyboard } from "lucide-react";
+import { X, Keyboard, Camera } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { Html5Qrcode } from "html5-qrcode";
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
   onClose: () => void;
 }
 
+// Unique ID for the scanner container div — html5-qrcode needs a DOM element ID
+const SCANNER_ELEMENT_ID = "barrax-barcode-reader";
+
 export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [manualMode, setManualMode] = useState(false);
   const [manualBarcode, setManualBarcode] = useState("");
-  const streamRef = useRef<MediaStream | null>(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
 
-  // Start the camera and begin scanning
+  // Start the camera scanner on mount
   useEffect(() => {
     if (manualMode) return;
 
-    let animationId: number;
-    let detector: BarcodeDetector | null = null;
-
-    async function startCamera() {
-      try {
-        // Check if BarcodeDetector API is available
-        if (!("BarcodeDetector" in window)) {
-          setError("Barcode scanning not supported in this browser. Use manual entry.");
-          setManualMode(true);
-          return;
-        }
-
-        // Request camera access
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        });
-        streamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-
-        // Create barcode detector
-        detector = new BarcodeDetector({
-          formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"],
-        });
-
-        setScanning(true);
-
-        // Scan loop — check for barcodes every 500ms
-        async function scanFrame() {
-          if (!videoRef.current || !detector) return;
-
-          try {
-            const barcodes = await detector.detect(videoRef.current);
-            if (barcodes.length > 0) {
-              const code = barcodes[0].rawValue;
-              if (code) {
-                // Haptic feedback on successful scan
-                navigator.vibrate?.(200);
-                stopCamera();
-                onScan(code);
-                return;
-              }
-            }
-          } catch {
-            // Detection can fail on some frames — just try again
-          }
-
-          animationId = requestAnimationFrame(() => {
-            setTimeout(scanFrame, 300);
-          });
-        }
-
-        scanFrame();
-
-      } catch (err) {
-        console.error("Camera error:", err);
-        setError("Could not access camera. Check permissions or use manual entry.");
-        setManualMode(true);
-      }
-    }
-
-    startCamera();
+    // Small delay to ensure the DOM element exists before html5-qrcode binds to it
+    const timeout = setTimeout(() => {
+      startScanner();
+    }, 100);
 
     return () => {
-      cancelAnimationFrame(animationId);
-      stopCamera();
+      clearTimeout(timeout);
+      stopScanner();
     };
-  }, [manualMode, onScan]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manualMode]);
 
-  function stopCamera() {
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+  async function startScanner() {
+    try {
+      const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 280, height: 150 },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => {
+          // Barcode detected — haptic feedback and return result
+          navigator.vibrate?.(200);
+          stopScanner();
+          onScan(decodedText);
+        },
+        () => {
+          // Scan failure on this frame — normal, just keep scanning
+        }
+      );
+
+      setScanning(true);
+    } catch (err) {
+      console.error("Scanner error:", err);
+      setError("Could not access camera. Check permissions or use manual entry.");
+      setManualMode(true);
+    }
+  }
+
+  async function stopScanner() {
+    try {
+      if (scannerRef.current?.isScanning) {
+        await scannerRef.current.stop();
+      }
+      scannerRef.current?.clear();
+    } catch {
+      // Ignore cleanup errors
+    }
+    scannerRef.current = null;
     setScanning(false);
   }
 
@@ -113,6 +95,21 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
     }
   }
 
+  function handleClose() {
+    stopScanner();
+    onClose();
+  }
+
+  function switchToManual() {
+    stopScanner();
+    setManualMode(true);
+  }
+
+  function switchToCamera() {
+    setError(null);
+    setManualMode(false);
+  }
+
   return (
     <div className="fixed inset-0 z-[200] bg-bg-primary flex flex-col">
       {/* Header */}
@@ -120,7 +117,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
         <h3 className="text-sm font-heading uppercase tracking-wider text-sand">
           {manualMode ? "ENTER BARCODE" : "SCAN BARCODE"}
         </h3>
-        <button onClick={() => { stopCamera(); onClose(); }}
+        <button onClick={handleClose}
           className="text-text-secondary hover:text-text-primary min-w-[44px] min-h-[44px] flex items-center justify-center">
           <X size={20} />
         </button>
@@ -138,53 +135,44 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
             inputMode="numeric"
             value={manualBarcode}
             onChange={(e) => setManualBarcode(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
             placeholder="e.g. 5000159461122"
             className="w-full max-w-xs px-4 py-3 bg-bg-input border border-green-dark text-text-primary
                        focus:border-green-primary focus:outline-none text-sm text-center font-mono tracking-wider"
+            autoFocus
           />
           <Button onClick={handleManualSubmit} disabled={manualBarcode.length < 8}>
             LOOK UP
           </Button>
-          {error && <p className="text-danger text-xs font-mono">{error}</p>}
+          {error && <p className="text-danger text-xs font-mono text-center">{error}</p>}
+
+          {/* Switch back to camera */}
+          <button
+            onClick={switchToCamera}
+            className="flex items-center gap-2 px-3 py-2 text-xs font-mono text-text-secondary
+                       uppercase tracking-wider hover:text-green-light transition-colors min-h-[44px]"
+          >
+            <Camera size={14} /> USE CAMERA
+          </button>
         </div>
       ) : (
-        /* Camera view */
-        <div className="flex-1 relative">
-          <video
-            ref={videoRef}
-            className="w-full h-full object-cover"
-            playsInline
-            muted
-          />
+        /* Camera view — html5-qrcode renders into this container */
+        <div className="flex-1 relative overflow-hidden">
+          {/* html5-qrcode injects the video element into this div */}
+          <div id={SCANNER_ELEMENT_ID} className="w-full h-full" />
 
-          {/* Scanning overlay with target frame */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-64 h-32 border-2 border-green-primary relative">
-              {/* Corner markers */}
-              <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-green-light" />
-              <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-green-light" />
-              <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-green-light" />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-green-light" />
-
-              {/* Scan line animation */}
-              {scanning && (
-                <div className="absolute left-0 right-0 h-0.5 bg-green-primary animate-scan-line" />
-              )}
-            </div>
-          </div>
-
-          {/* Status text */}
-          <div className="absolute bottom-8 left-0 right-0 text-center">
+          {/* Status text overlay */}
+          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
             <p className="text-xs font-mono text-text-primary bg-black/50 inline-block px-3 py-1">
-              {scanning ? "SCANNING..." : "INITIALIZING CAMERA..."}
+              {scanning ? "POINT AT BARCODE" : "STARTING CAMERA..."}
             </p>
           </div>
 
           {/* Switch to manual mode */}
           <button
-            onClick={() => { stopCamera(); setManualMode(true); }}
+            onClick={switchToManual}
             className="absolute top-4 right-4 px-3 py-2 bg-bg-panel/80 border border-green-dark
-                       text-xs font-mono text-text-secondary"
+                       text-xs font-mono text-text-secondary min-h-[44px] z-10"
           >
             TYPE BARCODE
           </button>
@@ -192,13 +180,4 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       )}
     </div>
   );
-}
-
-// TypeScript declaration for BarcodeDetector API
-// (not in lib.dom.d.ts yet for all browsers)
-declare global {
-  class BarcodeDetector {
-    constructor(options?: { formats: string[] });
-    detect(source: HTMLVideoElement | HTMLImageElement | ImageBitmap): Promise<{ rawValue: string }[]>;
-  }
 }
