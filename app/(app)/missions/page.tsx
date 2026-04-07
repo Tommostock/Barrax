@@ -209,9 +209,9 @@ export default function MissionsPage() {
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Weekly Programme</h2>
+        <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Battle Plan</h2>
         <Button onClick={generateProgramme} disabled={generating} className="text-xs px-3 py-2">
-          <span className="flex items-center gap-1"><Plus size={14} />{generating ? "GENERATING..." : "NEW"}</span>
+          <span className="flex items-center gap-1"><Plus size={14} />{generating ? "DEPLOYING..." : "ATTACK"}</span>
         </Button>
       </div>
 
@@ -264,8 +264,8 @@ export default function MissionsPage() {
       {generating && (
         <div className="fixed inset-0 z-[100] bg-black/70 flex flex-col items-center justify-center">
           <Loader2 size={32} className="text-green-primary animate-spin mb-4" />
-          <p className="text-sm font-heading uppercase tracking-wider text-sand">Generating Programme</p>
-          <p className="text-xs text-text-secondary mt-1">AI is building your week...</p>
+          <p className="text-sm font-heading uppercase tracking-wider text-sand">Deploying Battle Plan</p>
+          <p className="text-xs text-text-secondary mt-1">AI is crafting your assault schedule...</p>
         </div>
       )}
 
@@ -273,13 +273,13 @@ export default function MissionsPage() {
 
       {/* No programme state */}
       {!programme && !generating && (
-        <Card tag="NO PROGRAMME" tagVariant="default">
+        <Card tag="NO ORDERS" tagVariant="default">
           <div className="text-center py-6">
             <Swords size={32} className="text-text-secondary mx-auto mb-3 empty-state-icon" />
-            <h3 className="text-sm font-heading uppercase tracking-wider text-sand mb-2">No Active Programme</h3>
-            <p className="text-xs text-text-secondary mb-4">Generate a weekly workout programme tailored to your fitness level and goals.</p>
+            <h3 className="text-sm font-heading uppercase tracking-wider text-sand mb-2">No Battle Plan Active</h3>
+            <p className="text-xs text-text-secondary mb-4">Stop wasting time. Build your battle plan tailored to YOUR fitness level and goals. MOVE!</p>
             <Button onClick={generateProgramme} disabled={generating}>
-              <span className="flex items-center gap-2"><Plus size={16} />{generating ? "GENERATING..." : "GENERATE PROGRAMME"}</span>
+              <span className="flex items-center gap-2"><Plus size={16} />{generating ? "DEPLOYING..." : "DEPLOY BATTLE PLAN"}</span>
             </Button>
           </div>
         </Card>
@@ -304,15 +304,15 @@ export default function MissionsPage() {
               // Run day — prompt to go to the run tracker
               if (scheduleRule?.type === "run") {
                 return (
-                  <Card tag="RUN DAY" tagVariant="active">
+                  <Card tag="COMBAT RUN" tagVariant="active">
                     <div className="text-center py-6">
                       <Route size={28} className="text-green-primary mx-auto mb-3" />
-                      <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">Run Day</h4>
+                      <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">Combat Run Scheduled</h4>
                       <p className="text-xs text-text-secondary mb-4">
-                        Head out and track your run with GPS.
+                        Get your boots laced. Track your route with GPS. No excuses.
                       </p>
                       <Button onClick={() => router.push("/missions/run")}>
-                        <span className="flex items-center gap-2"><Route size={14} /> OPEN RUN TRACKER</span>
+                        <span className="flex items-center gap-2"><Route size={14} /> DEPLOY TRACKER</span>
                       </Button>
                     </div>
                   </Card>
@@ -321,12 +321,12 @@ export default function MissionsPage() {
 
               // Default rest day
               return (
-                <Card tag="REST DAY" tagVariant="default">
+                <Card tag="RECOVERY DAY" tagVariant="default">
                   <div className="text-center py-6">
                     <Moon size={28} className="text-text-secondary mx-auto mb-3" />
-                    <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">Stand Down</h4>
+                    <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">Regroup and Recover</h4>
                     <p className="text-xs text-text-secondary">
-                      Rest and recovery. Your body builds strength during rest days.
+                      That&apos;s right—your body repairs itself on rest days. Don&apos;t slack off, though. Stay ready.
                     </p>
                   </div>
                 </Card>
@@ -396,10 +396,10 @@ export default function MissionsPage() {
                     {/* Action area */}
                     {isComplete ? (
                       <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-light">
-                        <Check size={16} /> <span className="text-xs font-heading uppercase tracking-wider">MISSION COMPLETE</span>
+                        <Check size={16} /> <span className="text-xs font-heading uppercase tracking-wider">TARGET NEUTRALIZED</span>
                       </div>
                     ) : wd.is_activity ? (
-                      /* Activity — one-tap LOG COMPLETE button right on the card */
+                      /* Activity — one-tap CONFIRM MISSION button right on the card */
                       <button
                         className="mt-4 w-full py-2.5 bg-green-primary text-text-primary font-heading
                                    text-xs uppercase tracking-widest font-bold hover:bg-green-light
@@ -411,12 +411,12 @@ export default function MissionsPage() {
                         }}
                       >
                         <span className="flex items-center justify-center gap-2">
-                          <Trophy size={14} /> {completingActivity ? "LOGGING..." : "LOG COMPLETE"}
+                          <Trophy size={14} /> {completingActivity ? "CONFIRMING..." : "MISSION COMPLETE"}
                         </span>
                       </button>
                     ) : (
                       <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-primary">
-                        <Play size={14} /> <span className="text-xs font-heading uppercase tracking-wider">TAP TO DEPLOY</span>
+                        <Play size={14} /> <span className="text-xs font-heading uppercase tracking-wider">TAP TO ENGAGE</span>
                       </div>
                     )}
                   </div>
@@ -445,8 +445,8 @@ export default function MissionsPage() {
               <MapPin size={18} className="text-green-primary" />
             </div>
             <div className="flex-1">
-              <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Run Tracker</h4>
-              <p className="text-xs text-text-secondary">GPS run tracking with live map</p>
+              <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Combat Run Tracker</h4>
+              <p className="text-xs text-text-secondary">GPS-tracked assault routes. Crush 'em.</p>
             </div>
             <Play size={16} className="text-green-primary" />
           </div>
@@ -458,8 +458,8 @@ export default function MissionsPage() {
               <Wrench size={18} className="text-green-primary" />
             </div>
             <div className="flex-1">
-              <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Custom Workout</h4>
-              <p className="text-xs text-text-secondary">Build your own from the exercise library</p>
+              <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Assemble Your Loadout</h4>
+              <p className="text-xs text-text-secondary">Build your custom assault from the arsenal</p>
             </div>
           </div>
         </Card>

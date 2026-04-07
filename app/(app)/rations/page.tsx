@@ -232,7 +232,7 @@ export default function RationsPage() {
         <div className="bg-bg-panel border border-green-dark p-3">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-wider">
-              Today&apos;s Food Log ({diaryEntries.length} items)
+              Today&apos;s Consumption ({diaryEntries.length} items)
             </p>
             <button onClick={() => router.push("/rations/diary")}
               className="text-[0.6rem] font-mono text-green-light hover:text-green-primary">
@@ -274,30 +274,30 @@ export default function RationsPage() {
 
       {/* ========== WEEKLY MEAL PLAN ========== */}
       <div className="flex items-center justify-between pt-2">
-        <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Weekly Rations</h2>
+        <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Weekly Arsenal</h2>
         <Button onClick={generatePlan} disabled={generating} className="text-xs px-3 py-2">
-          <span className="flex items-center gap-1"><Plus size={14} />{generating ? "GENERATING..." : "NEW PLAN"}</span>
+          <span className="flex items-center gap-1"><Plus size={14} />{generating ? "DEPLOYING..." : "REBUILD"}</span>
         </Button>
       </div>
 
       {generating && (
         <div className="fixed inset-0 z-[100] bg-black/70 flex flex-col items-center justify-center">
           <Loader2 size={32} className="text-green-primary animate-spin mb-4" />
-          <p className="text-sm font-heading uppercase tracking-wider text-sand">Generating Meal Plan</p>
-          <p className="text-xs text-text-secondary mt-1">AI is planning your rations...</p>
+          <p className="text-sm font-heading uppercase tracking-wider text-sand">Assembling Rations</p>
+          <p className="text-xs text-text-secondary mt-1">AI is building your meal arsenal...</p>
         </div>
       )}
 
       {error && <p className="text-danger text-sm font-mono">{error}</p>}
 
       {!plan && !generating && (
-        <Card tag="NO PLAN" tagVariant="default">
+        <Card tag="NO RATIONS" tagVariant="default">
           <div className="text-center py-6">
             <Utensils size={32} className="text-text-secondary mx-auto mb-3 empty-state-icon" />
-            <h3 className="text-sm font-heading uppercase tracking-wider text-sand mb-2">No Active Meal Plan</h3>
-            <p className="text-xs text-text-secondary mb-4">Generate a weekly meal plan based on your food preferences.</p>
+            <h3 className="text-sm font-heading uppercase tracking-wider text-sand mb-2">No Meal Arsenal</h3>
+            <p className="text-xs text-text-secondary mb-4">Build your weekly meal arsenal based on YOUR food preferences. Get to it.</p>
             <Button onClick={generatePlan} disabled={generating}>
-              <span className="flex items-center gap-2"><Plus size={16} />{generating ? "GENERATING..." : "GENERATE MEAL PLAN"}</span>
+              <span className="flex items-center gap-2"><Plus size={16} />{generating ? "DEPLOYING..." : "ASSEMBLE RATIONS"}</span>
             </Button>
           </div>
         </Card>
@@ -370,7 +370,7 @@ export default function RationsPage() {
                               className={`flex items-center gap-1 px-3 py-2 border text-xs font-mono uppercase min-h-[44px]
                                 ${eatenMeals.has(mealKey) ? "border-green-primary bg-green-primary/20 text-green-light" : "border-green-dark text-text-secondary hover:text-green-light"}`}>
                               <CircleCheck size={14} fill={eatenMeals.has(mealKey) ? "currentColor" : "none"} />
-                              {eatenMeals.has(mealKey) ? "EATEN" : "ATE THIS"}
+                              {eatenMeals.has(mealKey) ? "CONSUMED" : "DOWN THE HATCH"}
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); saveFavourite(meal); }} disabled={isSaved}
                               className={`flex items-center gap-1 px-3 py-2 border text-xs font-mono uppercase min-h-[44px]

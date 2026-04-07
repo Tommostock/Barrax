@@ -416,7 +416,7 @@ export default function WorkoutPlayerPage() {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
         <p className="font-mono text-text-secondary text-sm uppercase tracking-wider animate-pulse">
-          Loading mission data...
+          Preparing orders, soldier...
         </p>
       </div>
     );
@@ -426,10 +426,10 @@ export default function WorkoutPlayerPage() {
   if (error || !workoutData) {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center gap-4 px-4">
-        <p className="font-mono text-danger text-sm">{error ?? "Unknown error"}</p>
+        <p className="font-mono text-danger text-sm">{error ?? "Mission failed to load"}</p>
         <Button variant="secondary" onClick={() => router.push("/missions")}>
           <span className="flex items-center gap-2">
-            <ChevronLeft size={16} /> BACK TO MISSIONS
+            <ChevronLeft size={16} /> RETURN TO BASE
           </span>
         </Button>
       </div>
@@ -452,7 +452,7 @@ export default function WorkoutPlayerPage() {
           >
             <ChevronLeft size={24} />
           </button>
-          <Tag variant="active">MISSION BRIEFING</Tag>
+          <Tag variant="active">COMBAT BRIEFING</Tag>
         </div>
 
         {/* Scrollable content area */}
@@ -526,11 +526,11 @@ export default function WorkoutPlayerPage() {
           </div>
         </div>
 
-        {/* Fixed bottom DEPLOY button */}
+        {/* Fixed bottom ENGAGE button */}
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg-primary border-t border-green-dark">
           <Button fullWidth onClick={handleDeploy}>
             <span className="flex items-center justify-center gap-2 text-base">
-              <Play size={20} /> DEPLOY
+              <Play size={20} /> ENGAGE ENEMY
             </span>
           </Button>
         </div>
@@ -591,16 +591,16 @@ export default function WorkoutPlayerPage() {
         {/* ── Pause overlay ── */}
         {paused && (
           <div className="fixed inset-0 bg-bg-primary/90 z-50 flex flex-col items-center justify-center gap-6">
-            <Tag variant="danger">PAUSED</Tag>
+            <Tag variant="danger">HOLD POSITION</Tag>
             <h2 className="text-2xl font-heading uppercase tracking-wider text-sand">
-              Mission Paused
+              Mission on Hold
             </h2>
             <p className="font-mono text-sm text-text-secondary">
-              {formatTime(elapsedSeconds)} elapsed
+              {formatTime(elapsedSeconds)} on the clock
             </p>
             <Button onClick={handleTogglePause}>
               <span className="flex items-center gap-2">
-                <Play size={18} /> RESUME
+                <Play size={18} /> RESUME ASSAULT
               </span>
             </Button>
           </div>
@@ -609,14 +609,14 @@ export default function WorkoutPlayerPage() {
         {/* ── Rest timer between exercises / sets ── */}
         {subPhase === "rest" && (
           <div className="flex-1 flex flex-col items-center justify-center gap-6 px-4">
-            <Tag variant="default">REST</Tag>
+            <Tag variant="default">CATCH YOUR BREATH</Tag>
             <h2 className="text-xl font-heading uppercase tracking-wider text-sand">
-              Rest Period
+              Recovery Timer
             </h2>
 
             {/* Show what's coming up next */}
             <p className="text-xs font-mono text-text-secondary uppercase tracking-wider">
-              Next: {currentExercise.name} — Set {currentSet} of {currentExercise.sets}
+              INCOMING: {currentExercise.name} — Round {currentSet} of {currentExercise.sets}
             </p>
 
             {/* key={restKey} forces the Timer to remount and reset even if
@@ -631,7 +631,7 @@ export default function WorkoutPlayerPage() {
             />
             <Button variant="secondary" fullWidth onClick={handleSkipRest}>
               <span className="flex items-center justify-center gap-2">
-                <SkipForward size={16} /> SKIP REST
+                <SkipForward size={16} /> NO TIME FOR REST
               </span>
             </Button>
           </div>
@@ -643,7 +643,7 @@ export default function WorkoutPlayerPage() {
             {/* Set indicator */}
             <div className="text-center mb-2">
               <Tag variant="active">
-                {`SET ${currentSet} OF ${currentExercise.sets}`}
+                {`ROUND ${currentSet} / ${currentExercise.sets}`}
               </Tag>
             </div>
 
@@ -710,21 +710,21 @@ export default function WorkoutPlayerPage() {
         {subPhase === "exercise" && (
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg-primary border-t border-green-dark space-y-2">
             {/* Primary: complete set or exercise.
-                Shows "COMPLETE SET X/Y" when more sets remain,
-                "COMPLETE EXERCISE" on the final set. */}
+                Shows "CRUSH ROUND X/Y" when more sets remain,
+                "FINISH EXERCISE" on the final set. */}
             <Button fullWidth onClick={handleCompleteExercise}>
               <span className="flex items-center justify-center gap-2 text-base">
                 <Check size={20} />
                 {currentSet < currentExercise.sets
-                  ? `COMPLETE SET ${currentSet}/${currentExercise.sets}`
-                  : "COMPLETE EXERCISE"}
+                  ? `CRUSH ROUND ${currentSet}/${currentExercise.sets}`
+                  : "FINISH EXERCISE"}
               </span>
             </Button>
 
             {/* Secondary: skip exercise */}
             <Button variant="secondary" fullWidth onClick={handleSkipExercise}>
               <span className="flex items-center justify-center gap-2">
-                <SkipForward size={16} /> SKIP EXERCISE
+                <SkipForward size={16} /> ABANDON (shame on you)
               </span>
             </Button>
           </div>
@@ -741,7 +741,7 @@ export default function WorkoutPlayerPage() {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center px-4">
         {/* Tag */}
-        <Tag variant="complete">MISSION COMPLETE</Tag>
+        <Tag variant="complete">HOSTILE ELIMINATED</Tag>
 
         {/* Heading */}
         <h1 className="text-3xl font-heading uppercase tracking-wider text-sand mt-6 mb-8 text-center">
@@ -794,7 +794,7 @@ export default function WorkoutPlayerPage() {
         {/* Saving indicator */}
         {saving && (
           <p className="font-mono text-xs text-text-secondary mb-4 animate-pulse">
-            Saving results...
+            Logging your victory...
           </p>
         )}
 
@@ -805,7 +805,7 @@ export default function WorkoutPlayerPage() {
           onClick={() => router.push("/missions")}
           disabled={saving}
         >
-          DISMISS
+          RETURN TO BASE
         </Button>
       </div>
     );

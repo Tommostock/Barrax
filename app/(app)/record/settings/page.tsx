@@ -321,7 +321,7 @@ export default function SettingsPage() {
       <Button onClick={saveProfile} disabled={saving} fullWidth>
         <span className="flex items-center justify-center gap-2">
           <Save size={16} />
-          {saving ? "SAVING..." : "SAVE CHANGES"}
+          {saving ? "LOCKING IN..." : "LOCK IN CHANGES"}
         </span>
       </Button>
       {message && <p className="text-xs text-green-light font-mono text-center">{message}</p>}
@@ -331,29 +331,29 @@ export default function SettingsPage() {
         <div className="space-y-3">
           <button onClick={() => setShowResetSheet(true)} className="w-full flex items-center gap-3 p-3 bg-bg-panel-alt border border-danger/50 hover:bg-danger/10 transition-colors min-h-[44px]">
             <Trash2 size={16} className="text-danger" />
-            <span className="text-sm text-danger">Reset All Progress</span>
+            <span className="text-sm text-danger">Wipe the Slate Clean</span>
           </button>
           <button onClick={handleSignOut} className="w-full flex items-center gap-3 p-3 bg-bg-panel-alt border border-green-dark hover:bg-bg-input transition-colors min-h-[44px]">
             <LogOut size={16} className="text-text-secondary" />
-            <span className="text-sm text-text-secondary">Sign Out</span>
+            <span className="text-sm text-text-secondary">Dismiss from Duty</span>
           </button>
         </div>
       </Card>
 
       {/* Reset confirmation sheet */}
-      <BottomSheet isOpen={showResetSheet} onClose={() => setShowResetSheet(false)} title="Confirm Reset">
+      <BottomSheet isOpen={showResetSheet} onClose={() => setShowResetSheet(false)} title="Acknowledge the Wipe">
         <div className="space-y-4">
           <p className="text-sm text-text-primary">
-            This will permanently delete all your progress, including XP, rank, streaks, badges, workout history, runs, food diary, and weight logs. This cannot be undone.
+            This will PERMANENTLY DELETE all your progress: XP, rank, streaks, badges, workouts, runs, food logs, weight history. EVERYTHING. There&apos;s NO coming back from this.
           </p>
           <p className="text-sm text-text-secondary">
-            Your profile settings and food preferences will be kept.
+            Your profile and food preferences stay. You&apos;ll start from ZERO.
           </p>
           <Button variant="danger" fullWidth onClick={resetAllProgress} disabled={resetting}>
-            {resetting ? "RESETTING..." : "CONFIRM RESET"}
+            {resetting ? "WIPING..." : "WIPE IT ALL"}
           </Button>
           <Button variant="secondary" fullWidth onClick={() => setShowResetSheet(false)} disabled={resetting}>
-            CANCEL
+            HOLD ON
           </Button>
         </div>
       </BottomSheet>

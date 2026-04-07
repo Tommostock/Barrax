@@ -61,7 +61,7 @@ export default function SignUpPage() {
           BARRAX
         </h1>
         <p className="text-text-secondary text-sm mt-2 font-mono tracking-wide">
-          ENLISTMENT FORM
+          RECRUITMENT CHALLENGE
         </p>
       </div>
 
@@ -145,13 +145,13 @@ export default function SignUpPage() {
                      disabled:opacity-50 disabled:cursor-not-allowed
                      min-h-[44px]"
         >
-          {loading ? "PROCESSING..." : "ENLIST"}
+          {loading ? "PROCESSING..." : "REPORT FOR DUTY"}
         </button>
       </form>
 
       {/* Link to sign in */}
       <p className="mt-6 text-text-secondary text-sm">
-        Already enlisted?{" "}
+        Already in the ranks?{" "}
         <Link
           href="/auth/sign-in"
           className="text-green-light hover:text-green-primary transition-colors"

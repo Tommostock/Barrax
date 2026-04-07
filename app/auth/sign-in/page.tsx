@@ -111,7 +111,7 @@ export default function SignInPage() {
             href="/auth/forgot-password"
             className="text-xs text-text-secondary hover:text-green-light transition-colors font-mono"
           >
-            Forgot password?
+            Lost your credentials, soldier?
           </Link>
         </div>
 

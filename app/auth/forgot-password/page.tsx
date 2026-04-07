@@ -57,10 +57,10 @@ export default function ForgotPasswordPage() {
         <div className="w-full max-w-sm text-center space-y-4">
           <div className="border border-green-dark bg-bg-panel p-6">
             <p className="text-sm text-text-primary mb-2">
-              Reset link sent.
+              Link dispatched, soldier.
             </p>
             <p className="text-xs text-text-secondary">
-              Check your email for a password reset link. It may take a minute to arrive.
+              Check your email. The reset link will arrive momentarily. Move it.
             </p>
           </div>
           <Link
@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
         /* Email form */
         <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
           <p className="text-xs text-text-secondary font-mono text-center mb-2">
-            Enter your email and we will send a reset link.
+            Provide your email, soldier. Let&apos;s get you sorted.
           </p>
 
           <div>

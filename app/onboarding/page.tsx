@@ -208,8 +208,8 @@ export default function OnboardingPage() {
               BARRAX
             </h1>
             <p className="text-text-secondary text-sm max-w-xs">
-              Your training begins now. No gym. No excuses. Just you, the ground,
-              and the will to be better.
+              Your assault begins NOW, soldier. No gym, no equipment, no excuses.
+              Just your body, the ground, and YOUR willpower. Let&apos;s go.
             </p>
           </div>
         )}
@@ -556,7 +556,7 @@ export default function OnboardingPage() {
         )}
         {step < TOTAL_STEPS ? (
           <Button onClick={nextStep} fullWidth={step === 1} className={step > 1 ? "flex-1" : ""}>
-            {step === 1 ? "BEGIN ENLISTMENT" : "CONTINUE"}
+            {step === 1 ? "SOUND OFF" : "MOVE OUT"}
           </Button>
         ) : (
           <Button onClick={handleComplete} disabled={loading || !data.name} className="flex-1">

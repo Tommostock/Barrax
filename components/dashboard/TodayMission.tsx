@@ -51,7 +51,7 @@ export default function TodayMission() {
   // No workout today — show placeholder
   if (!todayWorkout) {
     return (
-      <Card tag="NO MISSION" tagVariant="default">
+      <Card tag="NO ORDERS" tagVariant="default">
         <div className="flex items-start gap-3">
           <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
             <Swords size={20} className="text-text-secondary" />
@@ -59,7 +59,7 @@ export default function TodayMission() {
           <div className="flex-1">
             <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Today&apos;s Mission</h3>
             <p className="text-xs text-text-secondary mt-1">
-              No workout scheduled for today. Head to MISSIONS to generate a programme.
+              No workout assigned. Get to MISSIONS and build yourself a programme. NOW.
             </p>
           </div>
         </div>
@@ -98,7 +98,7 @@ export default function TodayMission() {
           {!isComplete && (
             <button className="mt-3 w-full py-2 bg-green-primary text-text-primary font-heading text-xs uppercase tracking-widest font-bold hover:bg-green-light active:scale-[0.98] transition-all min-h-[44px]"
               onClick={(e) => { e.stopPropagation(); router.push(`/missions/player/${todayWorkout.id}`); }}>
-              <span className="flex items-center justify-center gap-2"><Play size={14} /> BEGIN MISSION</span>
+              <span className="flex items-center justify-center gap-2"><Play size={14} /> MOVE OUT, SOLDIER</span>
             </button>
           )}
         </div>

@@ -78,10 +78,10 @@ export default function ResetPasswordPage() {
         <div className="w-full max-w-sm text-center">
           <div className="border border-green-primary bg-bg-panel p-6">
             <p className="text-sm text-green-light mb-2">
-              Password updated.
+              Password locked in, soldier.
             </p>
             <p className="text-xs text-text-secondary">
-              Redirecting to dashboard...
+              Return to duty, NOW.
             </p>
           </div>
         </div>

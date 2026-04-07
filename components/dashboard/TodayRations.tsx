@@ -251,7 +251,7 @@ export default function TodayRations() {
           <Utensils size={16} className="text-text-secondary" />
           <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Today&apos;s Rations</h3>
         </div>
-        <p className="text-xs text-text-secondary">Generate a meal plan to see your rations here.</p>
+        <p className="text-xs text-text-secondary">Build yourself a meal plan, soldier. I&apos;m waiting.</p>
       </Card>
     );
   }
@@ -323,7 +323,7 @@ export default function TodayRations() {
                              border border-green-dark hover:bg-green-primary/20
                              active:scale-95 transition-all"
                 >
-                  ATE
+                  CONSUMED
                 </button>
               )}
             </div>

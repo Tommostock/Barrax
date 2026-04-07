@@ -165,13 +165,13 @@ export default function QuickActions() {
       <BottomSheet
         isOpen={weightSheetOpen}
         onClose={() => setWeightSheetOpen(false)}
-        title="Log Weight"
+        title="Record Your Stats"
       >
         <div className="space-y-3">
           {weightSaved ? (
             <div className="text-center py-4">
               <p className="text-sm font-heading uppercase tracking-wider text-green-light">
-                Weight Logged (+10 XP)
+                Weight recorded, soldier. (+10 XP)
               </p>
             </div>
           ) : (
@@ -197,7 +197,7 @@ export default function QuickActions() {
                 onClick={handleLogWeight}
                 disabled={weightSaving || !newWeight}
               >
-                {weightSaving ? "SAVING..." : "LOG WEIGHT"}
+                {weightSaving ? "RECORDING..." : "RECORD STATS"}
               </Button>
             </>
           )}
