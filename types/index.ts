@@ -381,10 +381,25 @@ export interface FoodDiaryEntry {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  quantity: number;
   serving_size: string | null;
   meal_type: MealType;
   source: FoodSource;
   logged_at: string;
+}
+
+export interface SavedFood {
+  id: string;
+  user_id: string;
+  food_name: string;
+  brand: string | null;
+  barcode: string | null;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  serving_size: string | null;
+  created_at: string;
 }
 
 export interface FoodLookupResult {

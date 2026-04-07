@@ -112,16 +112,17 @@ export default function RationsPage() {
     fat: acc.fat + (e.fat_g || 0),
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-  // Add food to diary
+  // Add food to diary (with quantity support)
   async function addToDiary(food: {
     food_name: string; brand?: string; barcode?: string; calories: number;
     protein_g: number; carbs_g: number; fat_g: number; serving_size?: string;
-    source: "manual" | "barcode" | "search" | "meal_plan";
+    quantity?: number; source: "manual" | "barcode" | "search" | "meal_plan";
   }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    const qty = food.quantity ?? 1;
     const { data } = await supabase.from("food_diary").insert({
-      user_id: user.id, ...food, meal_type: addFoodMealType,
+      user_id: user.id, ...food, quantity: qty, meal_type: addFoodMealType,
     }).select().single();
     if (data) setDiaryEntries(prev => [...prev, data as FoodDiaryEntry]);
     navigator.vibrate?.(50);
@@ -243,7 +244,9 @@ export default function RationsPage() {
             {diaryEntries.map((entry) => (
               <div key={entry.id} className="flex items-center justify-between py-1">
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs text-text-primary truncate block">{entry.food_name}</span>
+                  <span className="text-xs text-text-primary truncate block">
+                    {entry.food_name}{(entry.quantity ?? 1) > 1 ? ` x${entry.quantity}` : ""}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2 ml-2">
                   <span className="text-xs font-mono text-text-secondary">{Math.round(entry.calories)} kcal</span>
