@@ -3,6 +3,21 @@
    Central type definitions for the entire app.
    ============================================ */
 
+// --- Training Schedule ---
+// Defines what each day of the week should be: workout, rest, run,
+// or a custom activity (e.g. football).  Stored in profiles.training_schedule.
+export type DayType = "workout" | "rest" | "run" | "activity";
+
+export interface ScheduleDay {
+  type: DayType;
+  activity_name?: string;      // Required when type is "activity" (e.g. "Football")
+  duration_minutes?: number;   // Duration for activities (e.g. 60 for football)
+}
+
+export type TrainingSchedule = {
+  [day in "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"]?: ScheduleDay;
+};
+
 // --- User Profile ---
 export type FitnessLevel = "beginner" | "intermediate" | "advanced";
 export type UnitPreference = "metric" | "imperial";
@@ -18,6 +33,7 @@ export interface Profile {
   calorie_target: number;
   unit_preference: UnitPreference;
   notification_settings: NotificationSettings;
+  training_schedule: TrainingSchedule;
   created_at: string;
   updated_at: string;
 }

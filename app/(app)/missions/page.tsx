@@ -17,9 +17,9 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon } from "lucide-react";
+import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon, Route, Trophy } from "lucide-react";
 import { estimateCaloriesBurned } from "@/lib/calories";
-import type { Workout, WorkoutData } from "@/types";
+import type { Workout, WorkoutData, TrainingSchedule } from "@/types";
 
 const DAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -36,6 +36,7 @@ export default function MissionsPage() {
 
   const [programme, setProgramme] = useState<{ id: string; programme_data: ProgrammeDay[] } | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [trainingSchedule, setTrainingSchedule] = useState<TrainingSchedule>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,21 +51,34 @@ export default function MissionsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: prog } = await supabase
-      .from("workout_programmes")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("week_start", { ascending: false })
-      .limit(1)
-      .single();
+    // Fetch programme and training schedule in parallel
+    const [progResult, profileResult] = await Promise.all([
+      supabase
+        .from("workout_programmes")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("week_start", { ascending: false })
+        .limit(1)
+        .single(),
+      supabase
+        .from("profiles")
+        .select("training_schedule")
+        .eq("id", user.id)
+        .single(),
+    ]);
 
-    if (prog) {
-      setProgramme(prog as { id: string; programme_data: ProgrammeDay[] });
+    // Store the training schedule so the calendar can show correct icons
+    if (profileResult.data?.training_schedule) {
+      setTrainingSchedule(profileResult.data.training_schedule as TrainingSchedule);
+    }
+
+    if (progResult.data) {
+      setProgramme(progResult.data as { id: string; programme_data: ProgrammeDay[] });
 
       const { data: workoutData } = await supabase
         .from("workouts")
         .select("*")
-        .eq("programme_id", prog.id)
+        .eq("programme_id", progResult.data.id)
         .order("scheduled_date", { ascending: true });
 
       if (workoutData) setWorkouts(workoutData as Workout[]);
@@ -94,6 +108,7 @@ export default function MissionsPage() {
           currentRank: rank?.current_rank ?? 1,
           fitnessLevel: profile?.fitness_level ?? "beginner",
           goals: profile?.goals ?? ["general fitness"],
+          trainingSchedule: profile?.training_schedule ?? {},
         }),
       });
 
@@ -161,11 +176,17 @@ export default function MissionsPage() {
                   {DAY_LABELS[i]}
                 </p>
                 <div className="w-6 h-6 mx-auto mt-1 flex items-center justify-center">
-                  {isRest
-                    ? <Moon size={11} className="text-text-secondary" />
-                    : isComplete
-                    ? <Check size={14} className="text-green-light" />
-                    : <Swords size={12} className={isSelected || isToday ? "text-green-primary" : "text-text-secondary"} />}
+                  {(() => {
+                    // Use the training schedule to pick the right icon
+                    const scheduleRule = trainingSchedule[dayName as keyof TrainingSchedule];
+                    const activeColor = isSelected || isToday ? "text-green-primary" : "text-text-secondary";
+
+                    if (isComplete) return <Check size={14} className="text-green-light" />;
+                    if (scheduleRule?.type === "run") return <Route size={12} className={activeColor} />;
+                    if (scheduleRule?.type === "activity") return <Trophy size={12} className={isSelected || isToday ? "text-khaki" : "text-text-secondary"} />;
+                    if (isRest) return <Moon size={11} className="text-text-secondary" />;
+                    return <Swords size={12} className={activeColor} />;
+                  })()}
                 </div>
                 {isToday && <div className="w-1 h-1 mx-auto mt-0.5 bg-green-light" />}
               </button>
@@ -206,17 +227,42 @@ export default function MissionsPage() {
             {DAY_LABELS[DAY_NAMES.indexOf(selectedDay)]}&apos;s Mission
           </h3>
 
-          {selectedDayData.is_rest_day ? (
-            /* Rest day */
-            <Card tag="REST DAY" tagVariant="default">
-              <div className="text-center py-6">
-                <Moon size={28} className="text-text-secondary mx-auto mb-3" />
-                <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">Stand Down</h4>
-                <p className="text-xs text-text-secondary">
-                  Rest and recovery. Your body builds strength during rest days.
-                </p>
-              </div>
-            </Card>
+          {selectedDayData.is_rest_day && !selectedWorkout ? (
+            /* Rest day or run day (no workout row) */
+            (() => {
+              const scheduleRule = trainingSchedule[selectedDay as keyof TrainingSchedule];
+
+              // Run day — prompt to go to the run tracker
+              if (scheduleRule?.type === "run") {
+                return (
+                  <Card tag="RUN DAY" tagVariant="active">
+                    <div className="text-center py-6">
+                      <Route size={28} className="text-green-primary mx-auto mb-3" />
+                      <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">Run Day</h4>
+                      <p className="text-xs text-text-secondary mb-4">
+                        Head out and track your run with GPS.
+                      </p>
+                      <Button onClick={() => router.push("/missions/run")}>
+                        <span className="flex items-center gap-2"><Route size={14} /> OPEN RUN TRACKER</span>
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              }
+
+              // Default rest day
+              return (
+                <Card tag="REST DAY" tagVariant="default">
+                  <div className="text-center py-6">
+                    <Moon size={28} className="text-text-secondary mx-auto mb-3" />
+                    <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">Stand Down</h4>
+                    <p className="text-xs text-text-secondary">
+                      Rest and recovery. Your body builds strength during rest days.
+                    </p>
+                  </div>
+                </Card>
+              );
+            })()
           ) : selectedWorkout ? (
             /* Workout card — clicking THIS navigates to detail */
             <Card
@@ -242,7 +288,9 @@ export default function MissionsPage() {
                         <Zap size={12} /> +{wd.xp_value} XP
                       </span>
                       <span className="flex items-center gap-1 text-[0.65rem] font-mono text-khaki">
-                        <Flame size={12} /> ~{estimateCaloriesBurned(wd.type, (wd.duration_minutes ?? 30) * 60)} kcal
+                        <Flame size={12} /> ~{(wd as Record<string, unknown>).estimated_calories
+                          ? `${(wd as Record<string, unknown>).estimated_calories}`
+                          : estimateCaloriesBurned(wd.type, (wd.duration_minutes ?? 30) * 60)} kcal
                       </span>
                     </div>
 
@@ -267,11 +315,15 @@ export default function MissionsPage() {
                       </div>
                     )}
 
-                    {/* Action button */}
+                    {/* Action button — shows LOG ACTIVITY for activities, DEPLOY for workouts */}
                     {!isComplete ? (
                       <button className="mt-4 w-full py-2.5 bg-green-primary text-text-primary font-heading text-xs uppercase tracking-widest font-bold hover:bg-green-light active:scale-[0.98] transition-all min-h-[44px]"
                         onClick={(e) => { e.stopPropagation(); router.push(`/missions/player/${selectedWorkout.id}`); }}>
-                        <span className="flex items-center justify-center gap-2"><Play size={14} /> DEPLOY</span>
+                        <span className="flex items-center justify-center gap-2">
+                          {(wd as Record<string, unknown>).is_activity
+                            ? <><Trophy size={14} /> LOG ACTIVITY</>
+                            : <><Play size={14} /> DEPLOY</>}
+                        </span>
                       </button>
                     ) : (
                       <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-light">

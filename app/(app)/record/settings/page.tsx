@@ -16,7 +16,7 @@ import Card from "@/components/ui/Card";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { ArrowLeft, Save, Trash2, Download, LogOut } from "lucide-react";
 import Link from "next/link";
-import type { Profile, FoodPreference } from "@/types";
+import type { Profile, FoodPreference, TrainingSchedule, ScheduleDay, DayType } from "@/types";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -72,6 +72,7 @@ export default function SettingsPage() {
       calorie_target: profile.calorie_target,
       unit_preference: profile.unit_preference,
       notification_settings: profile.notification_settings,
+      training_schedule: profile.training_schedule ?? {},
       updated_at: new Date().toISOString(),
     }).eq("id", user.id);
 
@@ -278,6 +279,12 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {/* Training schedule — define what each day of the week should be */}
+      <TrainingScheduleEditor
+        schedule={(profile.training_schedule ?? {}) as TrainingSchedule}
+        onChange={(schedule) => setProfile({ ...profile, training_schedule: schedule })}
+      />
+
       {/* Save button */}
       <Button onClick={saveProfile} disabled={saving} fullWidth>
         <span className="flex items-center justify-center gap-2">
@@ -320,5 +327,146 @@ export default function SettingsPage() {
         </div>
       </BottomSheet>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Training Schedule Editor
+// Lets the user assign a type to each day of the
+// week: workout, rest, run, or a custom activity.
+// ──────────────────────────────────────────────
+
+const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"] as const;
+const DAY_LABELS: Record<string, string> = {
+  monday: "MON", tuesday: "TUE", wednesday: "WED",
+  thursday: "THU", friday: "FRI", saturday: "SAT", sunday: "SUN",
+};
+
+// Available day types and their display colours
+const DAY_TYPES: { value: DayType; label: string; color: string }[] = [
+  { value: "workout", label: "WORKOUT", color: "bg-green-primary" },
+  { value: "rest",    label: "REST",    color: "bg-bg-panel-alt" },
+  { value: "run",     label: "RUN",     color: "bg-green-muted" },
+  { value: "activity", label: "ACTIVITY", color: "bg-khaki/30" },
+];
+
+function TrainingScheduleEditor({
+  schedule,
+  onChange,
+}: {
+  schedule: TrainingSchedule;
+  onChange: (schedule: TrainingSchedule) => void;
+}) {
+  // Which day is expanded for editing (null = none)
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+
+  // Update a single day's config
+  function updateDay(day: string, updates: Partial<ScheduleDay>) {
+    const current = schedule[day as keyof TrainingSchedule] ?? { type: "workout" as DayType };
+    onChange({
+      ...schedule,
+      [day]: { ...current, ...updates },
+    });
+  }
+
+  // Get the display info for a day
+  function getDayInfo(day: string): { label: string; color: string } {
+    const dayData = schedule[day as keyof TrainingSchedule];
+    if (!dayData) return { label: "WORKOUT", color: "bg-green-primary" };
+
+    if (dayData.type === "activity" && dayData.activity_name) {
+      return { label: dayData.activity_name.toUpperCase(), color: "bg-khaki/30" };
+    }
+
+    const typeInfo = DAY_TYPES.find((t) => t.value === dayData.type);
+    return { label: typeInfo?.label ?? "WORKOUT", color: typeInfo?.color ?? "bg-green-primary" };
+  }
+
+  return (
+    <Card tag="TRAINING SCHEDULE" tagVariant="active">
+      <p className="text-[0.6rem] font-mono text-text-secondary mb-3">
+        Set what each day should be. The programme generator will follow these rules.
+      </p>
+
+      {/* Day grid — tap to expand */}
+      <div className="space-y-1">
+        {DAYS.map((day) => {
+          const info = getDayInfo(day);
+          const isExpanded = expandedDay === day;
+          const dayData = schedule[day as keyof TrainingSchedule];
+
+          return (
+            <div key={day}>
+              {/* Day row — tap to toggle editor */}
+              <button
+                onClick={() => setExpandedDay(isExpanded ? null : day)}
+                className="w-full flex items-center justify-between p-2 border border-green-dark
+                           hover:bg-bg-panel-alt transition-colors min-h-[44px]"
+              >
+                <span className="text-xs font-mono text-sand uppercase tracking-wider w-10">
+                  {DAY_LABELS[day]}
+                </span>
+                <span className={`text-[0.6rem] font-mono uppercase tracking-wider px-2 py-0.5
+                                  ${info.color} text-text-primary`}>
+                  {info.label}
+                </span>
+              </button>
+
+              {/* Expanded editor for this day */}
+              {isExpanded && (
+                <div className="border border-green-dark border-t-0 bg-bg-panel p-3 space-y-2">
+                  {/* Type selector — row of buttons */}
+                  <div className="flex border border-green-dark">
+                    {DAY_TYPES.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => updateDay(day, { type: opt.value })}
+                        className={`flex-1 py-2 text-[0.55rem] font-mono uppercase tracking-wider transition-colors
+                          ${(dayData?.type ?? "workout") === opt.value
+                            ? "bg-green-primary text-text-primary"
+                            : "bg-bg-panel text-text-secondary"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Activity-specific fields (name + duration) */}
+                  {dayData?.type === "activity" && (
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-[0.55rem] uppercase tracking-wider text-text-secondary mb-1 font-mono">
+                          Activity Name
+                        </label>
+                        <input
+                          type="text"
+                          value={dayData.activity_name ?? ""}
+                          onChange={(e) => updateDay(day, { activity_name: e.target.value })}
+                          placeholder="e.g. Football"
+                          className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary
+                                     focus:border-green-primary focus:outline-none text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[0.55rem] uppercase tracking-wider text-text-secondary mb-1 font-mono">
+                          Duration (minutes)
+                        </label>
+                        <input
+                          type="number"
+                          value={dayData.duration_minutes ?? 60}
+                          onChange={(e) => updateDay(day, { duration_minutes: Number(e.target.value) })}
+                          className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary
+                                     focus:border-green-primary focus:outline-none text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
