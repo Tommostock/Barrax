@@ -105,6 +105,16 @@ export default function SignInPage() {
           />
         </div>
 
+        {/* Forgot password link */}
+        <div className="text-right">
+          <Link
+            href="/auth/forgot-password"
+            className="text-xs text-text-secondary hover:text-green-light transition-colors font-mono"
+          >
+            Forgot password?
+          </Link>
+        </div>
+
         {/* Error message */}
         {error && (
           <p className="text-danger text-sm font-mono">{error}</p>
