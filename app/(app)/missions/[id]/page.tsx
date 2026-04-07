@@ -64,8 +64,8 @@ export default function WorkoutDetailPage() {
       </button>
 
       {/* Mission briefing header */}
-      <div className="camo-bg relative overflow-hidden border border-green-dark p-4">
-        <div className="relative z-10">
+      <div className="bg-bg-panel border border-green-dark p-4">
+        <div>
           <Tag variant={isComplete ? "complete" : "active"}>
             {isComplete ? "COMPLETE" : "MISSION BRIEFING"}
           </Tag>
