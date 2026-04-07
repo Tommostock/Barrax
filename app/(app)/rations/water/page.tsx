@@ -92,7 +92,7 @@ export default function WaterTrackerPage() {
         <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Rations</span>
       </button>
 
-      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Water Intake</h2>
+      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Hydration Protocol</h2>
 
       {/* Visual fill indicator — canteen style */}
       <div className="bg-bg-panel border border-green-dark p-6">
@@ -118,14 +118,14 @@ export default function WaterTrackerPage() {
         {/* Target info */}
         <div className="text-center mt-4">
           <p className="text-xs font-mono text-text-secondary">
-            TARGET: {dailyTarget >= 1000 ? `${(dailyTarget / 1000).toFixed(1)}L` : `${dailyTarget}ml`}
+            QUOTA: {dailyTarget >= 1000 ? `${(dailyTarget / 1000).toFixed(1)}L` : `${dailyTarget}ml`}
           </p>
-          {goalHit && <Tag variant="complete" className="mt-2">GOAL HIT</Tag>}
+          {goalHit && <Tag variant="complete" className="mt-2">QUOTA ACHIEVED</Tag>}
           {!goalHit && (
             <p className="text-xs font-mono text-text-secondary mt-1">
               {dailyTarget - todayTotal >= 1000
-                ? `${((dailyTarget - todayTotal) / 1000).toFixed(1)}L remaining`
-                : `${dailyTarget - todayTotal}ml remaining`}
+                ? `${((dailyTarget - todayTotal) / 1000).toFixed(1)}L to go. DRINK UP.`
+                : `${dailyTarget - todayTotal}ml to go. DRINK UP.`}
             </p>
           )}
         </div>

@@ -64,7 +64,7 @@ export default function FavouriteMealsPage() {
         <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Rations</span>
       </button>
 
-      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Favourite Meals</h2>
+      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Proven Rations</h2>
 
       {/* Search */}
       <div className="relative">
@@ -73,17 +73,17 @@ export default function FavouriteMealsPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search saved meals..."
+          placeholder="Search your arsenal..."
           className="w-full pl-10 pr-4 py-3 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm"
         />
       </div>
 
       {filtered.length === 0 ? (
-        <Card tag="NO FAVOURITES" tagVariant="default">
+        <Card tag="EMPTY ARSENAL" tagVariant="default">
           <div className="text-center py-6">
             <Heart size={32} className="text-text-secondary mx-auto mb-3" />
             <p className="text-xs text-text-secondary">
-              {search ? "No meals match your search." : "Save meals from your meal plan to see them here."}
+              {search ? "No matches in your arsenal." : "Save meals from your meal plan. Build your rations arsenal."}
             </p>
           </div>
         </Card>

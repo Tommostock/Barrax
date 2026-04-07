@@ -102,8 +102,8 @@ export default function ShoppingListPage() {
       </button>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Shopping List</h2>
-        <span className="text-xs font-mono text-text-secondary">{checkedCount}/{totalCount}</span>
+        <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Supply Requisition</h2>
+        <span className="text-xs font-mono text-text-secondary">{checkedCount}/{totalCount} ACQUIRED</span>
       </div>
 
       {/* Progress bar */}
@@ -115,10 +115,10 @@ export default function ShoppingListPage() {
       )}
 
       {items.length === 0 ? (
-        <Card tag="NO LIST" tagVariant="default">
+        <Card tag="NO MANIFEST" tagVariant="default">
           <div className="text-center py-6">
             <ShoppingCart size={32} className="text-text-secondary mx-auto mb-3" />
-            <p className="text-xs text-text-secondary">Generate a meal plan first to see your shopping list.</p>
+            <p className="text-xs text-text-secondary">Build your meal arsenal first. Then you can requisition supplies.</p>
           </div>
         </Card>
       ) : (
