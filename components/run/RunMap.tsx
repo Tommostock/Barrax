@@ -8,15 +8,15 @@
 
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { MapContainer, TileLayer, Polyline, useMap } from "react-leaflet";
 import type { GpsPoint } from "@/types";
 import "leaflet/dist/leaflet.css";
 
 // Dark map tiles from CartoDB — free, no API key needed
-// Stadia AlidadeSmoothDark — fully dark tiles with minimal labels
-const DARK_TILES = "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png";
-const ATTRIBUTION = '&copy; <a href="https://stadiamaps.com/">Stadia</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>';
+// CartoDB Dark Matter — fully dark tiles, perfect for the military aesthetic
+const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>';
 
 interface RunMapProps {
   points: GpsPoint[];        // GPS points to draw on the map

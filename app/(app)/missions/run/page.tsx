@@ -81,6 +81,10 @@ export default function RunTrackerPage() {
   // Is the run paused? (GPS still tracking but timer stops)
   const [paused, setPaused] = useState(false);
 
+  // Ref mirror of paused — the GPS watcher callback captures a stale
+  // closure, so we read from this ref to always get the current value.
+  const pausedRef = useRef(false);
+
   // Lock mode prevents accidental button taps
   const [locked, setLocked] = useState(false);
 
@@ -151,13 +155,16 @@ export default function RunTrackerPage() {
 
   // Called every time the browser gets a new position fix.
   // Adds the point to state (only while not paused).
+  // Uses pausedRef instead of the paused state directly because
+  // watchPosition keeps a reference to the original callback —
+  // reading from a ref ensures we always see the latest value.
   const handleGpsPosition = useCallback(
     (position: GeolocationPosition) => {
       // Clear any previous error — GPS is working again
       setGpsError(null);
 
-      // Don't record points while paused
-      if (paused) return;
+      // Don't record points while paused (read from ref, not state)
+      if (pausedRef.current) return;
 
       const newPoint: GpsPoint = {
         lat: position.coords.latitude,
@@ -169,7 +176,7 @@ export default function RunTrackerPage() {
 
       setPoints((prev) => [...prev, newPoint]);
     },
-    [paused]
+    []
   );
 
   // Called when the GPS encounters an error (signal lost, denied, etc.)
@@ -203,6 +210,7 @@ export default function RunTrackerPage() {
     setPoints([]);
     setElapsed(0);
     setPaused(false);
+    pausedRef.current = false;
     setLocked(false);
     setStats(null);
     setSaved(false);
@@ -231,6 +239,7 @@ export default function RunTrackerPage() {
 
   function pauseRun() {
     setPaused(true);
+    pausedRef.current = true;
     pauseStartRef.current = Date.now();
     stopTimer();
   }
@@ -239,6 +248,7 @@ export default function RunTrackerPage() {
     // Add the time spent paused to our offset
     pausedDurationRef.current += Date.now() - pauseStartRef.current;
     setPaused(false);
+    pausedRef.current = false;
     startTimer();
   }
 
