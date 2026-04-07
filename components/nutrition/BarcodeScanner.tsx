@@ -54,7 +54,6 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
         {
           fps: 10,
           qrbox: { width: 280, height: 150 },
-          aspectRatio: 1.0,
         },
         (decodedText) => {
           // Barcode detected — haptic feedback and return result

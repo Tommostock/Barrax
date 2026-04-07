@@ -297,3 +297,26 @@ h1, h2, h3, h4, h5, h6 {
 .animate-scan-line {
   animation: scan-line-move 2s ease-in-out infinite;
 }
+
+/* --- Barcode scanner overrides ---
+   html5-qrcode injects its own container styles that constrain the
+   video feed. These overrides force it to fill the available space
+   so there's no black bar at the bottom on mobile. */
+#barrax-barcode-reader {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+}
+
+#barrax-barcode-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* Hide the library's built-in UI elements (scan region border, etc.)
+   since we have our own overlay styling */
+#barrax-barcode-reader img[alt="Info icon"],
+#barrax-barcode-reader br {
+  display: none !important;
+}
