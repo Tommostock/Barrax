@@ -158,9 +158,9 @@ export default function MissionsPage() {
   async function completeActivity(workout: Workout) {
     setCompletingActivity(true);
     try {
-      const wd = workout.workout_data as Record<string, unknown>;
-      const duration = (wd.duration_minutes as number) ?? 60;
-      const xp = (wd.xp_value as number) ?? (duration < 15 ? 30 : duration < 30 ? 50 : 80);
+      const wd = workout.workout_data as WorkoutData;
+      const duration = wd.duration_minutes ?? 60;
+      const xp = wd.xp_value ?? (duration < 15 ? 30 : duration < 30 ? 50 : 80);
 
       // Mark as complete in the database
       await supabase
@@ -339,7 +339,7 @@ export default function MissionsPage() {
               tagVariant={selectedWorkout.status === "complete" ? "complete" : selectedDay === todayName ? "active" : "default"}
               onClick={() => {
                 // Don't navigate for activity cards — they have an inline LOG COMPLETE button
-                const isActivity = (selectedWorkout.workout_data as Record<string, unknown>).is_activity;
+                const isActivity = (selectedWorkout.workout_data as WorkoutData).is_activity;
                 if (isActivity && selectedWorkout.status !== "complete") return;
                 router.push(
                   selectedWorkout.status === "complete"
@@ -366,8 +366,8 @@ export default function MissionsPage() {
                         <Zap size={12} /> +{wd.xp_value} XP
                       </span>
                       <span className="flex items-center gap-1 text-[0.65rem] font-mono text-khaki">
-                        <Flame size={12} /> ~{(wd as Record<string, unknown>).estimated_calories
-                          ? `${(wd as Record<string, unknown>).estimated_calories}`
+                        <Flame size={12} /> ~{wd.estimated_calories
+                          ? wd.estimated_calories
                           : estimateCaloriesBurned(wd.type, (wd.duration_minutes ?? 30) * 60)} kcal
                       </span>
                     </div>
@@ -398,7 +398,7 @@ export default function MissionsPage() {
                       <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-light">
                         <Check size={16} /> <span className="text-xs font-heading uppercase tracking-wider">MISSION COMPLETE</span>
                       </div>
-                    ) : (wd as Record<string, unknown>).is_activity ? (
+                    ) : wd.is_activity ? (
                       /* Activity — one-tap LOG COMPLETE button right on the card */
                       <button
                         className="mt-4 w-full py-2.5 bg-green-primary text-text-primary font-heading

@@ -125,6 +125,9 @@ export interface WorkoutData {
   exercises: WorkoutExercise[];
   cooldown: WorkoutExercise[];
   xp_value: number;
+  // Activity-only fields (set by generate-programme for custom activities)
+  is_activity?: boolean;
+  estimated_calories?: number;
 }
 
 export interface WorkoutExercise {
