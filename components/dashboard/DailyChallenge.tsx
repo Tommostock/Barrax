@@ -108,8 +108,8 @@ export default function DailyChallenge() {
         <div className="flex items-start gap-3">
           <Trophy size={20} className="text-text-secondary mt-1" />
           <div>
-            <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Daily Challenge</h3>
-            <p className="text-xs text-text-secondary mt-1">Challenges unlock at Rank 2 (Private). Keep training.</p>
+            <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Daily Gauntlet</h3>
+            <p className="text-xs text-text-secondary mt-1">Unlock at Rank 2 (Private). Prove yourself first.</p>
           </div>
         </div>
       </Card>
@@ -119,14 +119,14 @@ export default function DailyChallenge() {
   // No challenge yet — offer to generate one
   if (!challenge) {
     return (
-      <Card tag="CHALLENGE" tagVariant="gold">
+      <Card tag="GAUNTLET" tagVariant="gold">
         <div className="flex items-start gap-3">
           <Trophy size={20} className="text-xp-gold mt-1" />
           <div className="flex-1">
-            <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Daily Challenge</h3>
-            <p className="text-xs text-text-secondary mt-1">Accept a bonus mission for extra XP.</p>
+            <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Today&apos;s Gauntlet</h3>
+            <p className="text-xs text-text-secondary mt-1">Face a bonus challenge. Extra XP for the brave.</p>
             <Button onClick={generateChallenge} className="mt-2 text-xs px-3 py-2">
-              ROLL CHALLENGE
+              TAKE THE CHALLENGE
             </Button>
           </div>
         </div>
@@ -153,12 +153,12 @@ export default function DailyChallenge() {
           {/* Action buttons */}
           {!challenge.accepted && !challenge.completed && (
             <Button onClick={acceptChallenge} className="mt-2 text-xs px-3 py-2">
-              ACCEPT CHALLENGE
+              I ACCEPT
             </Button>
           )}
           {challenge.accepted && !challenge.completed && (
             <Button onClick={completeChallenge} className="mt-2 text-xs px-3 py-2">
-              <span className="flex items-center gap-1"><Check size={14} /> MARK COMPLETE</span>
+              <span className="flex items-center gap-1"><Check size={14} /> DONE. VERIFIED.</span>
             </Button>
           )}
         </div>

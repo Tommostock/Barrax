@@ -48,11 +48,11 @@ export default async function IntelPage() {
   const totalMins = Math.floor((totalTrainingSecs % 3600) / 60);
 
   const sections = [
-    { href: "/intel/body", icon: Activity, title: "Body Tracking", description: "Weight and body measurements" },
-    { href: "/intel/nutrition", icon: PieChart, title: "Nutrition Trends", description: "Calorie and macro trends" },
-    { href: "/intel/runs", icon: TrendingUp, title: "Run Stats", description: "Distance, pace, and trends" },
-    { href: "/intel/records", icon: Trophy, title: "Personal Records", description: "Your all-time bests" },
-    { href: "/intel/report", icon: FileText, title: "Weekly Report", description: "Performance summary and rating" },
+    { href: "/intel/body", icon: Activity, title: "Physical Condition", description: "Weight, measurements. Stay sharp." },
+    { href: "/intel/nutrition", icon: PieChart, title: "Fuel Analysis", description: "Calories and macros. No excuses." },
+    { href: "/intel/runs", icon: TrendingUp, title: "Combat Running", description: "Distance, pace, territory covered" },
+    { href: "/intel/records", icon: Trophy, title: "Elite Achievements", description: "Your maximum performance records" },
+    { href: "/intel/report", icon: FileText, title: "Mission Debrief", description: "Weekly performance evaluation" },
   ];
 
   return (

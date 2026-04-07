@@ -446,13 +446,13 @@ export default function RunTrackerPage() {
           >
             <span className="flex items-center justify-center gap-2">
               <Play size={20} />
-              START RUN
+              LIGHTS OUT, MOVE OUT
             </span>
           </Button>
 
           {/* Tip for the user */}
           <p className="text-[0.65rem] text-text-secondary font-mono text-center">
-            Ensure GPS is enabled. Stay outdoors for best accuracy.
+            GPS ARMED. Outdoors only. No cheating.
           </p>
         </div>
       )}
@@ -595,10 +595,10 @@ export default function RunTrackerPage() {
           {/* Header */}
           <div>
             <Tag variant="complete" className="mb-2">
-              MISSION COMPLETE
+              TERRAIN CONQUERED
             </Tag>
             <h1 className="text-lg font-heading uppercase tracking-wider text-sand">
-              Run Summary
+              Combat Run Debrief
             </h1>
           </div>
 

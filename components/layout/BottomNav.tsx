@@ -13,11 +13,11 @@ import { Crosshair, Swords, Utensils, BarChart3, Shield } from "lucide-react";
 
 // Define the 5 main navigation tabs
 const tabs = [
-  { href: "/", label: "COMMAND", icon: Crosshair },
-  { href: "/missions", label: "MISSIONS", icon: Swords },
-  { href: "/rations", label: "RATIONS", icon: Utensils },
-  { href: "/intel", label: "INTEL", icon: BarChart3 },
-  { href: "/record", label: "RECORD", icon: Shield },
+  { href: "/", label: "HQ", icon: Crosshair },
+  { href: "/missions", label: "ASSAULT", icon: Swords },
+  { href: "/rations", label: "FUEL UP", icon: Utensils },
+  { href: "/intel", label: "DEBRIEF", icon: BarChart3 },
+  { href: "/record", label: "REPORTS", icon: Shield },
 ] as const;
 
 export default function BottomNav() {
