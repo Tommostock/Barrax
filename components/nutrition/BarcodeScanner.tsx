@@ -111,9 +111,9 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
   }
 
   return (
-    <div className="fixed inset-0 z-[200] bg-bg-primary flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-green-dark">
+    <div className="fixed inset-0 z-[200] bg-bg-primary flex flex-col safe-top">
+      {/* Header — padded below the iOS status bar */}
+      <div className="flex items-center justify-between p-4 pt-2 border-b border-green-dark">
         <h3 className="text-sm font-heading uppercase tracking-wider text-sand">
           {manualMode ? "ENTER BARCODE" : "SCAN BARCODE"}
         </h3>
