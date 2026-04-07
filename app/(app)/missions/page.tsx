@@ -10,7 +10,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
@@ -40,6 +40,35 @@ export default function MissionsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completingActivity, setCompletingActivity] = useState(false);
+
+  // --- Swipe detection for day navigation ---
+  const touchStartX = useRef<number>(0);
+  const touchStartY = useRef<number>(0);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+
+    // Only trigger if horizontal swipe is dominant and exceeds threshold
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+
+    setSelectedDay((prev) => {
+      const currentIdx = DAY_NAMES.indexOf(prev);
+      if (dx < 0) {
+        // Swipe left → next day
+        return DAY_NAMES[Math.min(currentIdx + 1, 6)];
+      } else {
+        // Swipe right → previous day
+        return DAY_NAMES[Math.max(currentIdx - 1, 0)];
+      }
+    });
+  }
 
   // Selected day in the calendar — defaults to today
   const todayIndex = new Date().getDay();
@@ -121,6 +150,42 @@ export default function MissionsPage() {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  // Quick-complete an activity day (e.g. Football) in one tap.
+  // Marks the workout as complete, awards XP, and refreshes.
+  async function completeActivity(workout: Workout) {
+    setCompletingActivity(true);
+    try {
+      const wd = workout.workout_data as Record<string, unknown>;
+      const duration = (wd.duration_minutes as number) ?? 60;
+      const xp = (wd.xp_value as number) ?? (duration < 15 ? 30 : duration < 30 ? 50 : 80);
+
+      // Mark as complete in the database
+      await supabase
+        .from("workouts")
+        .update({
+          status: "complete",
+          completed_at: new Date().toISOString(),
+          duration_seconds: duration * 60,
+          xp_earned: xp,
+        })
+        .eq("id", workout.id);
+
+      // Award XP
+      await fetch("/api/award-xp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: xp, source: "workout_complete" }),
+      });
+
+      // Refresh the data so the UI updates
+      await loadProgramme();
+    } catch (err) {
+      console.error("Failed to complete activity:", err);
+    } finally {
+      setCompletingActivity(false);
     }
   }
 
@@ -222,7 +287,11 @@ export default function MissionsPage() {
 
       {/* Selected day's workout — only shows ONE day at a time */}
       {programme && selectedDayData && (
-        <div className="space-y-3">
+        <div
+          className="space-y-3"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <h3 className="text-sm font-heading uppercase tracking-wider text-text-secondary">
             {DAY_LABELS[DAY_NAMES.indexOf(selectedDay)]}&apos;s Mission
           </h3>
@@ -264,11 +333,20 @@ export default function MissionsPage() {
               );
             })()
           ) : selectedWorkout ? (
-            /* Workout card — clicking THIS navigates to detail */
+            /* Workout card — activities stay on this page, workouts go to player */
             <Card
               tag={selectedWorkout.status === "complete" ? "COMPLETE" : selectedDay === todayName ? "TODAY" : "PENDING"}
               tagVariant={selectedWorkout.status === "complete" ? "complete" : selectedDay === todayName ? "active" : "default"}
-              onClick={() => router.push(`/missions/${selectedWorkout.id}`)}
+              onClick={() => {
+                // Don't navigate for activity cards — they have an inline LOG COMPLETE button
+                const isActivity = (selectedWorkout.workout_data as Record<string, unknown>).is_activity;
+                if (isActivity && selectedWorkout.status !== "complete") return;
+                router.push(
+                  selectedWorkout.status === "complete"
+                    ? `/missions/${selectedWorkout.id}`
+                    : `/missions/player/${selectedWorkout.id}`
+                );
+              }}
               className="press-scale"
             >
               {(() => {
@@ -315,19 +393,30 @@ export default function MissionsPage() {
                       </div>
                     )}
 
-                    {/* Action button — shows LOG ACTIVITY for activities, DEPLOY for workouts */}
-                    {!isComplete ? (
-                      <button className="mt-4 w-full py-2.5 bg-green-primary text-text-primary font-heading text-xs uppercase tracking-widest font-bold hover:bg-green-light active:scale-[0.98] transition-all min-h-[44px]"
-                        onClick={(e) => { e.stopPropagation(); router.push(`/missions/player/${selectedWorkout.id}`); }}>
+                    {/* Action area */}
+                    {isComplete ? (
+                      <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-light">
+                        <Check size={16} /> <span className="text-xs font-heading uppercase tracking-wider">MISSION COMPLETE</span>
+                      </div>
+                    ) : (wd as Record<string, unknown>).is_activity ? (
+                      /* Activity — one-tap LOG COMPLETE button right on the card */
+                      <button
+                        className="mt-4 w-full py-2.5 bg-green-primary text-text-primary font-heading
+                                   text-xs uppercase tracking-widest font-bold hover:bg-green-light
+                                   active:scale-[0.98] transition-all min-h-[44px]"
+                        disabled={completingActivity}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          completeActivity(selectedWorkout);
+                        }}
+                      >
                         <span className="flex items-center justify-center gap-2">
-                          {(wd as Record<string, unknown>).is_activity
-                            ? <><Trophy size={14} /> LOG ACTIVITY</>
-                            : <><Play size={14} /> DEPLOY</>}
+                          <Trophy size={14} /> {completingActivity ? "LOGGING..." : "LOG COMPLETE"}
                         </span>
                       </button>
                     ) : (
-                      <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-light">
-                        <Check size={16} /> <span className="text-xs font-heading uppercase tracking-wider">MISSION COMPLETE</span>
+                      <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-primary">
+                        <Play size={14} /> <span className="text-xs font-heading uppercase tracking-wider">TAP TO DEPLOY</span>
                       </div>
                     )}
                   </div>

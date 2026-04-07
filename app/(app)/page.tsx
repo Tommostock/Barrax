@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 import RankStrip from "@/components/dashboard/RankStrip";
 import StreakCounter from "@/components/dashboard/StreakCounter";
+import QuickActions from "@/components/dashboard/QuickActions";
 import TodayMission from "@/components/dashboard/TodayMission";
 import TodayRations from "@/components/dashboard/TodayRations";
 import QuickStats from "@/components/dashboard/QuickStats";
@@ -60,6 +61,9 @@ export default async function DashboardPage() {
         longestStreak={streak?.longest_streak ?? 0}
         freezeAvailable={!streak?.freeze_used_this_week}
       />
+
+      {/* Quick actions: start run, log food, log weight — one tap each */}
+      <QuickActions />
 
       {/* Today's mission card — pulls real workout data */}
       <TodayMission />

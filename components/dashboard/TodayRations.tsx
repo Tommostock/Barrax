@@ -11,7 +11,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
-import { Utensils } from "lucide-react";
+import { Utensils, Check } from "lucide-react";
+import type { MealType } from "@/types";
 
 interface MealData {
   meal_type: string;
@@ -125,6 +126,12 @@ export default function TodayRations() {
   const [macros, setMacros] = useState<MacroTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0 });
   const [targets, setTargets] = useState<MacroTargets>({ calories: 2000, protein: 150, carbs: 200, fat: 67 });
 
+  // Track which meals have been quick-logged via "Ate This"
+  const [loggedMeals, setLoggedMeals] = useState<Set<string>>(new Set());
+
+  // Track which meals already have food diary entries today
+  const [diaryMealTypes, setDiaryMealTypes] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -189,10 +196,51 @@ export default function TodayRations() {
         });
       }
 
+      // Check which meal types already have diary entries today
+      // so we can show a check mark instead of "ATE THIS"
+      const { data: mealEntries } = await supabase
+        .from("food_diary")
+        .select("meal_type")
+        .eq("user_id", user.id)
+        .gte("logged_at", todayStart.toISOString())
+        .lte("logged_at", todayEnd.toISOString());
+
+      if (mealEntries && mealEntries.length > 0) {
+        setDiaryMealTypes(new Set(mealEntries.map((e) => e.meal_type)));
+      }
+
       setLoading(false);
     }
     load();
   }, [supabase]);
+
+  // Quick-log a meal from the plan to the food diary.
+  // Uses the meal's planned calories as the entry (approximation).
+  async function handleAteThis(meal: MealData) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from("food_diary").insert({
+      user_id: user.id,
+      food_name: meal.name,
+      calories: meal.calories,
+      protein_g: 0,
+      carbs_g: 0,
+      fat_g: 0,
+      meal_type: meal.meal_type as MealType,
+      source: "meal_plan",
+      logged_at: new Date().toISOString(),
+    });
+
+    // Update local state immediately so the button becomes a checkmark
+    setLoggedMeals((prev) => new Set(prev).add(meal.meal_type));
+
+    // Update macro totals locally (just calories for this quick path)
+    setMacros((prev) => ({
+      ...prev,
+      calories: prev.calories + meal.calories,
+    }));
+  }
 
   if (loading) return <div className="skeleton h-28 w-full" />;
 
@@ -246,20 +294,41 @@ export default function TodayRations() {
         </div>
       </div>
 
-      {/* Meal rows */}
-      <div className="space-y-2">
-        {todayMeals.length > 0 ? todayMeals.map((meal) => (
-          <div key={meal.meal_type}
-            className="flex items-center justify-between py-1 border-b border-green-dark/50 last:border-0">
-            <span className="text-[0.65rem] font-mono text-text-secondary uppercase tracking-wider">
-              {meal.meal_type}
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-text-primary truncate max-w-[160px]">{meal.name}</span>
-              <span className="text-[0.55rem] font-mono text-text-secondary">{meal.calories} kcal</span>
+      {/* Meal rows with one-tap "Ate This" logging */}
+      <div className="space-y-1">
+        {todayMeals.length > 0 ? todayMeals.map((meal) => {
+          const isLogged = loggedMeals.has(meal.meal_type) || diaryMealTypes.has(meal.meal_type);
+
+          return (
+            <div key={meal.meal_type}
+              className="flex items-center justify-between py-1.5 border-b border-green-dark/50 last:border-0">
+              <span className="text-[0.65rem] font-mono text-text-secondary uppercase tracking-wider w-20 flex-shrink-0">
+                {meal.meal_type}
+              </span>
+              <span className="text-xs text-text-primary truncate flex-1 text-right mr-2">{meal.name}</span>
+
+              {/* Ate This / Logged indicator */}
+              {isLogged ? (
+                <div className="flex items-center justify-center w-8 h-8 flex-shrink-0">
+                  <Check size={14} className="text-green-light" />
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Don't trigger the card's onClick
+                    handleAteThis(meal);
+                  }}
+                  className="flex-shrink-0 px-2 py-1 min-h-[32px] min-w-[32px]
+                             text-[0.5rem] font-mono text-green-light uppercase tracking-wider
+                             border border-green-dark hover:bg-green-primary/20
+                             active:scale-95 transition-all"
+                >
+                  ATE
+                </button>
+              )}
             </div>
-          </div>
-        )) : (
+          );
+        }) : (
           <p className="text-xs text-text-secondary">No meals for today.</p>
         )}
       </div>
