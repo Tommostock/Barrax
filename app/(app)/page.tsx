@@ -16,7 +16,6 @@ import TodayMission from "@/components/dashboard/TodayMission";
 import TodayRations from "@/components/dashboard/TodayRations";
 import QuickStats from "@/components/dashboard/QuickStats";
 import DailyChallenge from "@/components/dashboard/DailyChallenge";
-import MacroSummary from "@/components/dashboard/MacroSummary";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -68,11 +67,8 @@ export default async function DashboardPage() {
       {/* Today's mission card — pulls real workout data */}
       <TodayMission />
 
-      {/* Today's rations card */}
+      {/* Today's rations card (includes mini macro rings) */}
       <TodayRations />
-
-      {/* Macro summary — shows when food diary has entries today */}
-      <MacroSummary />
 
       {/* Quick stats row */}
       <QuickStats />
