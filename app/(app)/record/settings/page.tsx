@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import BottomSheet from "@/components/ui/BottomSheet";
-import { ArrowLeft, Save, Trash2, Download, LogOut } from "lucide-react";
+import { ArrowLeft, Save, Trash2, LogOut } from "lucide-react";
 import Link from "next/link";
 import type { Profile, FoodPreference, TrainingSchedule, ScheduleDay, DayType } from "@/types";
 
@@ -107,26 +107,58 @@ export default function SettingsPage() {
     setFoods((prev) => prev.filter((f) => f.id !== id));
   }
 
-  // Export data as JSON
-  async function exportData() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  // Reset all user progress — deletes XP, rank, streaks, badges,
+  // workouts, runs, programmes, food diary, and weight logs.
+  // Profile and food preferences are kept so they don't have to
+  // re-enter their settings.
+  const [resetting, setResetting] = useState(false);
 
-    const tables = ["profiles", "weight_logs", "workouts", "runs", "ranks", "streaks", "badges"];
-    const exported: Record<string, unknown> = {};
+  async function resetAllProgress() {
+    setResetting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    for (const table of tables) {
-      const { data } = await supabase.from(table).select("*");
-      exported[table] = data;
+      // Delete progress data from all tables in parallel.
+      // Order doesn't matter because RLS scopes to the user
+      // and there are no cross-table FK constraints blocking deletes.
+      await Promise.all([
+        supabase.from("workouts").delete().eq("user_id", user.id),
+        supabase.from("workout_programmes").delete().eq("user_id", user.id),
+        supabase.from("workout_exercises").delete().in(
+          "workout_id",
+          // Sub-select: get all workout IDs for this user first
+          (await supabase.from("workouts").select("id").eq("user_id", user.id)).data?.map((w) => w.id) ?? []
+        ),
+        supabase.from("runs").delete().eq("user_id", user.id),
+        supabase.from("weight_logs").delete().eq("user_id", user.id),
+        supabase.from("food_diary").delete().eq("user_id", user.id),
+        supabase.from("badges").delete().eq("user_id", user.id),
+        // Reset rank to defaults (rank 1, 0 XP) rather than deleting
+        supabase.from("ranks").update({
+          current_rank: 1,
+          total_xp: 0,
+          rank_history: [],
+        }).eq("user_id", user.id),
+        // Reset streak to zero rather than deleting
+        supabase.from("streaks").update({
+          current_streak: 0,
+          longest_streak: 0,
+          last_activity_date: null,
+          freeze_used_this_week: false,
+        }).eq("user_id", user.id),
+      ]);
+
+      setShowResetSheet(false);
+      setMessage("All progress has been reset.");
+      setTimeout(() => setMessage(null), 4000);
+    } catch (err) {
+      console.error("Reset failed:", err);
+      setMessage("Reset failed. Please try again.");
+      setTimeout(() => setMessage(null), 4000);
+    } finally {
+      setResetting(false);
     }
-
-    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `barrax-export-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   // Sign out
@@ -294,13 +326,9 @@ export default function SettingsPage() {
       </Button>
       {message && <p className="text-xs text-green-light font-mono text-center">{message}</p>}
 
-      {/* Data management */}
-      <Card tag="DATA" tagVariant="default">
+      {/* Account management */}
+      <Card tag="ACCOUNT" tagVariant="default">
         <div className="space-y-3">
-          <button onClick={exportData} className="w-full flex items-center gap-3 p-3 bg-bg-panel-alt border border-green-dark hover:bg-bg-input transition-colors min-h-[44px]">
-            <Download size={16} className="text-green-primary" />
-            <span className="text-sm text-text-primary">Export Data (JSON)</span>
-          </button>
           <button onClick={() => setShowResetSheet(true)} className="w-full flex items-center gap-3 p-3 bg-bg-panel-alt border border-danger/50 hover:bg-danger/10 transition-colors min-h-[44px]">
             <Trash2 size={16} className="text-danger" />
             <span className="text-sm text-danger">Reset All Progress</span>
@@ -316,12 +344,15 @@ export default function SettingsPage() {
       <BottomSheet isOpen={showResetSheet} onClose={() => setShowResetSheet(false)} title="Confirm Reset">
         <div className="space-y-4">
           <p className="text-sm text-text-primary">
-            This will permanently delete all your progress, including XP, rank, streaks, badges, and workout history. This cannot be undone.
+            This will permanently delete all your progress, including XP, rank, streaks, badges, workout history, runs, food diary, and weight logs. This cannot be undone.
           </p>
-          <Button variant="danger" fullWidth onClick={() => setShowResetSheet(false)}>
-            CONFIRM RESET
+          <p className="text-sm text-text-secondary">
+            Your profile settings and food preferences will be kept.
+          </p>
+          <Button variant="danger" fullWidth onClick={resetAllProgress} disabled={resetting}>
+            {resetting ? "RESETTING..." : "CONFIRM RESET"}
           </Button>
-          <Button variant="secondary" fullWidth onClick={() => setShowResetSheet(false)}>
+          <Button variant="secondary" fullWidth onClick={() => setShowResetSheet(false)} disabled={resetting}>
             CANCEL
           </Button>
         </div>
