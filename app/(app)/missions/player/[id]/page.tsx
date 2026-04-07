@@ -21,6 +21,7 @@ import Tag from "@/components/ui/Tag";
 import {
   Play,
   Pause,
+  Square,
   SkipForward,
   Check,
   Clock,
@@ -113,6 +114,10 @@ export default function WorkoutPlayerPage() {
   const [subPhase, setSubPhase] = useState<ActiveSubPhase>("exercise");
   const [paused, setPaused] = useState(false);
 
+  // Unique key that increments each time a rest period starts,
+  // so the Timer component always resets even if the duration is the same.
+  const [restKey, setRestKey] = useState(0);
+
   // ── Timing state ──
   // Total elapsed seconds — tracked manually so we can pause it.
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -121,6 +126,10 @@ export default function WorkoutPlayerPage() {
 
   // ── Results tracking ──
   const [results, setResults] = useState<ExerciseResult[]>([]);
+
+  // ── Finish confirmation ──
+  // Two-tap safety: first tap shows "confirm?", second tap ends the workout
+  const [confirmFinish, setConfirmFinish] = useState(false);
 
   // ── Debrief state ──
   const [xpEarned, setXpEarned] = useState(0);
@@ -212,17 +221,21 @@ export default function WorkoutPlayerPage() {
     setPhase("active");
   }, [workoutId, supabase]);
 
-  /** Complete the current set / exercise */
+  /** Complete the current set (or final set of the exercise) */
   const handleCompleteExercise = useCallback(() => {
     const exercise = allExercises[currentExIndex];
     if (!exercise) return;
 
-    // If there are more sets left, move to the next set
+    // Haptic feedback on supported devices
+    navigator.vibrate?.(100);
+
+    // If there are more sets left, show rest screen then advance
     if (currentSet < exercise.sets) {
-      // If there is a rest period between sets, show rest timer
-      if (exercise.rest_seconds && exercise.rest_seconds > 0) {
-        setSubPhase("rest");
-      }
+      // Always show a rest screen between sets so the user gets
+      // clear feedback that the set was recorded. Uses the exercise's
+      // rest_seconds or defaults to 30s if none specified.
+      setSubPhase("rest");
+      setRestKey((k) => k + 1);
       setCurrentSet((prev) => prev + 1);
       return;
     }
@@ -275,12 +288,10 @@ export default function WorkoutPlayerPage() {
       return;
     }
 
-    // If there is a rest period between exercises, show rest timer
-    if (currentExercise.rest_seconds && currentExercise.rest_seconds > 0) {
-      setSubPhase("rest");
-    } else {
-      setSubPhase("exercise");
-    }
+    // Always show a rest screen between exercises so the user
+    // has a clear transition point before the next exercise starts.
+    setSubPhase("rest");
+    setRestKey((k) => k + 1);
 
     setCurrentExIndex(nextIndex);
     setCurrentSet(1);
@@ -295,6 +306,21 @@ export default function WorkoutPlayerPage() {
   const handleTogglePause = useCallback(() => {
     setPaused((prev) => !prev);
   }, []);
+
+  /** Finish the workout early — records completed exercises,
+      marks remaining as skipped, and transitions to debrief. */
+  const handleFinishEarly = useCallback(() => {
+    if (!confirmFinish) {
+      // First tap: show confirmation
+      setConfirmFinish(true);
+      // Auto-reset after 3 seconds if user doesn't confirm
+      setTimeout(() => setConfirmFinish(false), 3000);
+      return;
+    }
+    // Second tap: actually finish
+    setConfirmFinish(false);
+    finishWorkout();
+  }, [confirmFinish]);
 
   // ────────────────────────────────────────────
   // 4. Finish & save results
@@ -519,7 +545,7 @@ export default function WorkoutPlayerPage() {
   if (phase === "active" && currentExercise) {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col">
-        {/* ── Top bar: elapsed time + pause ── */}
+        {/* ── Top bar: elapsed time, pause, and finish ── */}
         <div className="px-4 pt-4 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock size={16} className="text-text-secondary" />
@@ -527,13 +553,30 @@ export default function WorkoutPlayerPage() {
               {formatTime(elapsedSeconds)}
             </span>
           </div>
-          <button
-            onClick={handleTogglePause}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-text-secondary hover:text-green-light transition-colors"
-            aria-label={paused ? "Resume" : "Pause"}
-          >
-            {paused ? <Play size={22} /> : <Pause size={22} />}
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Finish workout early — two-tap safety */}
+            <button
+              onClick={handleFinishEarly}
+              className={`min-h-[44px] px-3 flex items-center justify-center gap-1
+                         text-xs font-mono uppercase tracking-wider transition-colors
+                         ${confirmFinish
+                           ? "text-danger border border-danger"
+                           : "text-text-secondary hover:text-sand"}`}
+              aria-label="Finish workout"
+            >
+              <Square size={14} />
+              {confirmFinish ? "CONFIRM?" : "FINISH"}
+            </button>
+
+            {/* Pause/resume toggle */}
+            <button
+              onClick={handleTogglePause}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-text-secondary hover:text-green-light transition-colors"
+              aria-label={paused ? "Resume" : "Pause"}
+            >
+              {paused ? <Play size={22} /> : <Pause size={22} />}
+            </button>
+          </div>
         </div>
 
         {/* ── Progress bar ── */}
@@ -570,7 +613,16 @@ export default function WorkoutPlayerPage() {
             <h2 className="text-xl font-heading uppercase tracking-wider text-sand">
               Rest Period
             </h2>
+
+            {/* Show what's coming up next */}
+            <p className="text-xs font-mono text-text-secondary uppercase tracking-wider">
+              Next: {currentExercise.name} — Set {currentSet} of {currentExercise.sets}
+            </p>
+
+            {/* key={restKey} forces the Timer to remount and reset even if
+                the duration is the same as the previous rest period */}
             <Timer
+              key={restKey}
               initialSeconds={currentExercise.rest_seconds || 30}
               mode="countdown"
               running={!paused}
@@ -657,17 +709,22 @@ export default function WorkoutPlayerPage() {
         {/* ── Bottom action buttons (fixed) ── */}
         {subPhase === "exercise" && (
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg-primary border-t border-green-dark space-y-2">
-            {/* Primary: complete exercise */}
+            {/* Primary: complete set or exercise.
+                Shows "COMPLETE SET X/Y" when more sets remain,
+                "COMPLETE EXERCISE" on the final set. */}
             <Button fullWidth onClick={handleCompleteExercise}>
               <span className="flex items-center justify-center gap-2 text-base">
-                <Check size={20} /> COMPLETE EXERCISE
+                <Check size={20} />
+                {currentSet < currentExercise.sets
+                  ? `COMPLETE SET ${currentSet}/${currentExercise.sets}`
+                  : "COMPLETE EXERCISE"}
               </span>
             </Button>
 
             {/* Secondary: skip exercise */}
             <Button variant="secondary" fullWidth onClick={handleSkipExercise}>
               <span className="flex items-center justify-center gap-2">
-                <SkipForward size={16} /> SKIP
+                <SkipForward size={16} /> SKIP EXERCISE
               </span>
             </Button>
           </div>
