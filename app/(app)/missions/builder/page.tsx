@@ -369,14 +369,14 @@ export default function WorkoutBuilderPage() {
         </button>
 
         {/* Locked card */}
-        <Card tag="LOCKED" tagVariant="locked" className="text-center py-8">
+        <Card tag="RESTRICTED" tagVariant="locked" className="text-center py-8">
           <Lock size={48} className="text-text-secondary mx-auto mb-4 opacity-50" />
           <h2 className="text-lg font-heading uppercase tracking-wider text-sand mb-2">
-            Custom Workout Builder
+            Loadout Customization Locked
           </h2>
           <Tag variant="locked">RANK 7 REQUIRED</Tag>
           <p className="text-sm text-text-secondary mt-4 max-w-xs mx-auto">
-            Reach Warrant Officer (Rank 7) to unlock the ability to build your own custom workouts.
+            You don&apos;t have clearance yet. Reach Warrant Officer (Rank 7) to design your own assault loadouts.
           </p>
           <div className="mt-4 bg-bg-panel-alt border border-green-dark p-3 inline-block">
             <p className="text-[0.65rem] font-mono text-text-secondary uppercase">
@@ -408,7 +408,7 @@ export default function WorkoutBuilderPage() {
       {/* ---- PAGE TITLE ---- */}
       <div className="flex items-center gap-3">
         <h2 className="text-lg font-heading uppercase tracking-wider text-sand">
-          Custom Workout Builder
+          Assemble Your Loadout
         </h2>
         <Tag variant="gold">RANK 7 REQUIRED</Tag>
       </div>
@@ -728,10 +728,10 @@ export default function WorkoutBuilderPage() {
       {success && (
         <div className="bg-green-primary/20 border border-green-primary p-3 text-center">
           <p className="text-sm font-heading uppercase tracking-wider text-green-light">
-            Workout Saved Successfully
+            Loadout Locked In
           </p>
           <p className="text-xs font-mono text-text-secondary mt-1">
-            Redirecting to missions...
+            Returning to operations...
           </p>
         </div>
       )}
@@ -775,7 +775,7 @@ export default function WorkoutBuilderPage() {
           >
             <span className="flex items-center gap-2 justify-center">
               <Save size={16} />
-              {saving ? "SAVING..." : "SAVE WORKOUT"}
+              {saving ? "LOCKING IN..." : "DEPLOY LOADOUT"}
             </span>
           </Button>
         </div>

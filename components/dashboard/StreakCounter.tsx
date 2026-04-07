@@ -30,7 +30,7 @@ export default function StreakCounter({
             {currentStreak}
           </p>
           <p className="text-[0.65rem] text-text-secondary font-mono uppercase tracking-wider">
-            Day Streak
+            Days Consecutive
           </p>
         </div>
       </div>
@@ -43,7 +43,7 @@ export default function StreakCounter({
         <div className="flex items-center gap-1 justify-end">
           <Shield size={12} className={freezeAvailable ? "text-green-light" : "text-text-secondary"} />
           <span className="text-[0.6rem] font-mono text-text-secondary">
-            {freezeAvailable ? "FREEZE READY" : "FREEZE USED"}
+            {freezeAvailable ? "LIFELINE READY" : "NO LIFELINE"}
           </span>
         </div>
       </div>

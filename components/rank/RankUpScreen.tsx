@@ -56,7 +56,7 @@ export default function RankUpScreen({ newRank, totalXP, onDismiss }: RankUpScre
         {/* PROMOTED header */}
         <p className={`text-sm font-mono text-xp-gold uppercase tracking-[0.3em] transition-all duration-700
           ${phase >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-          PROMOTED
+          NEXT LEVEL UNLOCKED
         </p>
 
         {/* Rank insignia with scale animation */}
@@ -87,7 +87,7 @@ export default function RankUpScreen({ newRank, totalXP, onDismiss }: RankUpScre
 
         {/* Dismiss */}
         <div className={`transition-all duration-500 ${phase >= 5 ? "opacity-100" : "opacity-0"}`}>
-          <Button onClick={onDismiss} fullWidth className="max-w-xs mx-auto mt-4">DISMISSED</Button>
+          <Button onClick={onDismiss} fullWidth className="max-w-xs mx-auto mt-4">NOW GET TO WORK</Button>
         </div>
       </div>
     </div>
