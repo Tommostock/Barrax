@@ -400,4 +400,5 @@ export interface FoodLookupResult {
   fibre_g: number;
   sugar_g: number;
   salt_g: number;
+  source?: "openfoodfacts" | "usda";
 }
