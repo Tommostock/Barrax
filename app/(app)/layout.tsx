@@ -20,7 +20,7 @@ export default function AppLayout({
   return (
     <AuthGuard>
       <Header />
-      <main className="flex-1 pb-20 animate-page-enter">{children}</main>
+      <main className="flex-1 pb-28 animate-page-enter">{children}</main>
       <BottomNav />
       <InstallPrompt />
       <NotificationPermission />

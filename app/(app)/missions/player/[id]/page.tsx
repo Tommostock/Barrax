@@ -447,15 +447,16 @@ export default function WorkoutPlayerPage() {
       return;
     }
 
-    // All sets done for this exercise — record the result
+    // All sets done for this exercise — record the result.
+    // Warm-up/cooldown exercises from AI may lack sets or reps, so default to safe values.
     const isRepBased = !exercise.duration_seconds && exercise.reps;
     setResults((prev) => [
       ...prev,
       {
         name: exercise.name,
-        setsCompleted: exercise.sets,
-        repsCompleted: isRepBased ? actualReps : exercise.reps,
-        durationSeconds: exercise.duration_seconds,
+        setsCompleted: exercise.sets ?? 1,
+        repsCompleted: isRepBased ? actualReps : (exercise.reps ?? null),
+        durationSeconds: exercise.duration_seconds ?? null,
         skipped: false,
         orderIndex: currentExIndex,
       },
