@@ -77,6 +77,9 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
   // Manual state
   const [manual, setManual] = useState({ food_name: "", calories: "", protein_g: "", carbs_g: "", fat_g: "" });
 
+  // Barcode fallback message (shown when barcode not found)
+  const [barcodeFallback, setBarcodeFallback] = useState<string | null>(null);
+
   // Load saved foods when sheet opens
   useEffect(() => {
     if (!isOpen) return;
@@ -158,9 +161,18 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
     try {
       const res = await fetch(`/api/food-lookup?barcode=${barcode}`);
       const data = await res.json();
-      if (data.product) setScannedProduct(data.product);
-      else alert("Product not found. Try manual entry.");
-    } catch { alert("Lookup failed."); }
+      if (data.product) {
+        setScannedProduct(data.product);
+      } else {
+        // Product not in database — switch to search tab with barcode as hint
+        setTab("search");
+        setSearchQuery(barcode);
+        setBarcodeFallback(`Barcode ${barcode} not found in the database. Try searching by product name instead.`);
+      }
+    } catch {
+      setTab("search");
+      setBarcodeFallback("Lookup failed. Try searching by name instead.");
+    }
     finally { setLookingUp(false); }
   }
 
@@ -171,6 +183,7 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
     setSearchResults([]);
     setScannedProduct(null);
     setManual({ food_name: "", calories: "", protein_g: "", carbs_g: "", fat_g: "" });
+    setBarcodeFallback(null);
   }
 
   if (showScanner) {
@@ -319,6 +332,12 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
           {/* SEARCH TAB */}
           {tab === "search" && (
             <div className="space-y-3">
+              {/* Barcode fallback message */}
+              {barcodeFallback && (
+                <div className="bg-bg-panel-alt border border-xp-gold/50 p-2">
+                  <p className="text-xs text-xp-gold font-mono">{barcodeFallback}</p>
+                </div>
+              )}
               <div className="flex gap-2">
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()} placeholder="Search foods..."
