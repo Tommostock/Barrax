@@ -1,15 +1,17 @@
 /* ============================================
    Header Component
-   Top bar with BARRAX title and notification bell.
+   Top bar with BARRAX title and settings cog.
    Shows current date in muted text below title.
    ============================================ */
 
 "use client";
 
-import { Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Settings } from "lucide-react";
 
 export default function Header() {
-  // Format today's date in a military style: "05 APR 2026"
+  const router = useRouter();
+
   const today = new Date();
   const formattedDate = today
     .toLocaleDateString("en-GB", {
@@ -32,13 +34,14 @@ export default function Header() {
           </p>
         </div>
 
-        {/* Notification bell */}
+        {/* Settings cog — opens Base Operations */}
         <button
+          onClick={() => router.push("/intel/settings")}
           className="min-w-[44px] min-h-[44px] flex items-center justify-center
                      text-text-secondary hover:text-green-light transition-colors"
-          aria-label="Notifications"
+          aria-label="Settings"
         >
-          <Bell size={20} />
+          <Settings size={20} />
         </button>
       </div>
     </header>

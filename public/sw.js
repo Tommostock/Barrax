@@ -1,106 +1,92 @@
 /* ============================================
    BARRAX Service Worker
-   Handles offline caching and push notifications.
+   Handles push notifications only.
+   Does NOT cache HTML pages (they're dynamic and
+   auth-dependent, caching them causes "page couldn't
+   load" errors on tab switches).
+   Only caches static assets like JS, CSS, fonts, icons.
    ============================================ */
 
-const CACHE_NAME = "barrax-v1";
+const CACHE_NAME = "barrax-v2";
 
-// Assets to cache for offline use
-const STATIC_ASSETS = [
-  "/",
-  "/manifest.json",
-  "/icons/icon-192.svg",
-  "/icons/icon-512.svg",
-];
-
-// Install event — cache static assets
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
-  // Activate immediately without waiting for old SW to finish
+// Install — skip waiting so new SW activates immediately
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-// Activate event — clean up old caches
+// Activate — clean up old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      );
-    })
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    )
   );
-  // Take control of all pages immediately
   self.clients.claim();
 });
 
-// Fetch event — network-first with cache fallback
+// Fetch — only cache static assets (JS, CSS, fonts, images)
+// NEVER cache HTML pages or API calls
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET requests and API calls
+  // Skip non-GET requests
   if (event.request.method !== "GET") return;
+
+  // Skip API calls
   if (url.pathname.startsWith("/api/")) return;
 
+  // Skip HTML navigation requests entirely — let them always hit the network
+  // This prevents stale cached pages from causing "page couldn't load" errors
+  if (event.request.mode === "navigate") return;
+
+  // Only cache static assets: JS chunks, CSS, fonts, images, icons
+  const isStaticAsset =
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/icons/") ||
+    url.pathname.endsWith(".woff2") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".js");
+
+  if (!isStaticAsset) return;
+
+  // Cache-first for static assets (they're versioned by Next.js)
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Cache successful responses for offline use
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((response) => {
         if (response.ok) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }
         return response;
-      })
-      .catch(() => {
-        // Network failed — try the cache
-        return caches.match(event.request).then((cached) => {
-          return cached || new Response("Offline", { status: 503 });
-        });
-      })
+      });
+    })
   );
 });
 
-// Push notification event — show the notification
+// Push notification
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || "BARRAX";
-  const options = {
-    body: data.body || "You have a new notification.",
-    icon: "/icons/icon-192.svg",
-    badge: "/icons/icon-192.svg",
-    vibrate: [200, 100, 200],
-    tag: data.tag || "barrax-push",
-    data: {
-      url: data.url || "/",
-    },
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.registration.showNotification(data.title || "BARRAX", {
+      body: data.body || "You have a new notification.",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: data.tag || "barrax-push",
+      data: { url: data.url || "/" },
+    })
+  );
 });
 
 // Notification click — open the app
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
   const url = event.notification.data?.url || "/";
-
   event.waitUntil(
     self.clients.matchAll({ type: "window" }).then((clients) => {
-      // If the app is already open, focus it
       for (const client of clients) {
-        if (client.url.includes(url) && "focus" in client) {
-          return client.focus();
-        }
+        if (client.url.includes(url) && "focus" in client) return client.focus();
       }
-      // Otherwise open a new window
       return self.clients.openWindow(url);
     })
   );

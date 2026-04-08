@@ -592,20 +592,15 @@ export default function WorkoutPlayerPage() {
           />
         </div>
 
-        {/* ── Pause overlay ── */}
+        {/* ── Pause banner — non-blocking, sits at top so you can still see the exercise ── */}
         {paused && (
-          <div className="fixed inset-0 bg-bg-primary/90 z-50 flex flex-col items-center justify-center gap-6">
-            <Tag variant="danger">HOLD POSITION</Tag>
-            <h2 className="text-2xl font-heading uppercase tracking-wider text-sand">
-              Mission on Hold
-            </h2>
-            <p className="font-mono text-sm text-text-secondary">
-              {formatTime(elapsedSeconds)} on the clock
-            </p>
-            <Button onClick={handleTogglePause}>
-              <span className="flex items-center gap-2">
-                <Play size={18} /> RESUME ASSAULT
-              </span>
+          <div className="mx-4 mb-2 border border-xp-gold bg-bg-panel p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Tag variant="danger">PAUSED</Tag>
+              <span className="font-mono text-sm text-text-secondary">{formatTime(elapsedSeconds)}</span>
+            </div>
+            <Button onClick={handleTogglePause} className="px-4 py-2 text-xs">
+              <span className="flex items-center gap-2"><Play size={14} /> RESUME</span>
             </Button>
           </div>
         )}
@@ -619,8 +614,8 @@ export default function WorkoutPlayerPage() {
             </h2>
 
             {/* Show what's coming up next */}
-            <p className="text-xs font-mono text-text-secondary uppercase tracking-wider">
-              INCOMING: {currentExercise.name} — Round {currentSet} of {currentExercise.sets}
+            <p className="text-sm font-mono text-text-primary uppercase tracking-wider">
+              NEXT: {currentExercise.name} — Round {currentSet} of {currentExercise.sets || 1}
             </p>
 
             {/* key={restKey} forces the Timer to remount and reset even if
@@ -643,38 +638,44 @@ export default function WorkoutPlayerPage() {
 
         {/* ── Exercise display ── */}
         {subPhase === "exercise" && (
-          <div className="flex-1 flex flex-col px-4 pb-32">
+          <div className="flex-1 flex flex-col px-4">
             {/* Set indicator */}
-            <div className="text-center mb-2">
+            <div className="text-center mb-3 mt-2">
               <Tag variant="active">
-                {`ROUND ${currentSet} / ${currentExercise.sets}`}
+                {`ROUND ${currentSet} / ${currentExercise.sets || 1}`}
               </Tag>
             </div>
 
-            {/* Exercise name */}
-            <h2 className="text-2xl font-heading uppercase tracking-wider text-sand text-center mt-4 mb-2">
+            {/* Exercise name — LARGE and bright for outdoor visibility */}
+            <h2 className="text-3xl font-heading uppercase tracking-wider text-sand text-center mb-2">
               {currentExercise.name}
             </h2>
 
-            {/* Form cue / description */}
-            {currentExercise.form_cue && (
-              <p className="text-sm text-text-secondary text-center mb-4 max-w-sm mx-auto">
-                {currentExercise.form_cue}
-              </p>
-            )}
-            {currentExercise.description && !currentExercise.form_cue && (
-              <p className="text-sm text-text-secondary text-center mb-4 max-w-sm mx-auto">
-                {currentExercise.description}
+            {/* Form cue / description — brighter text, larger */}
+            {(currentExercise.form_cue || currentExercise.description) && (
+              <p className="text-base text-text-primary text-center mb-4 max-w-sm mx-auto leading-relaxed">
+                {currentExercise.form_cue || currentExercise.description}
               </p>
             )}
 
-            {/* Rep counter OR duration timer */}
-            <div className="flex-1 flex items-center justify-center">
+            {/* Muscle group visual — shows which body areas are targeted */}
+            {currentExercise.muscles && currentExercise.muscles.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-center mb-4">
+                {currentExercise.muscles.map((muscle) => (
+                  <span key={muscle}
+                    className="px-3 py-1.5 bg-green-primary/20 border border-green-primary/40 text-sm font-mono text-green-light uppercase">
+                    {muscle}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Rep counter OR duration timer — LARGER for outdoor visibility */}
+            <div className="flex items-center justify-center mb-4">
               {currentExercise.duration_seconds ? (
-                // Timed exercise — countdown timer
                 <div className="text-center">
-                  <p className="text-xs font-mono uppercase tracking-wider text-text-secondary mb-2">
-                    Duration
+                  <p className="text-sm font-mono uppercase tracking-wider text-text-primary mb-2">
+                    COUNTDOWN
                   </p>
                   <Timer
                     initialSeconds={currentExercise.duration_seconds}
@@ -685,52 +686,35 @@ export default function WorkoutPlayerPage() {
                   />
                 </div>
               ) : (
-                // Rep-based exercise — show target reps
                 <div className="text-center">
-                  <p className="text-xs font-mono uppercase tracking-wider text-text-secondary mb-2">
-                    Target Reps
+                  <p className="text-sm font-mono uppercase tracking-wider text-text-primary mb-2">
+                    TARGET REPS
                   </p>
-                  <span className="font-mono text-6xl font-bold text-text-primary">
-                    {currentExercise.reps ?? "AMRAP"}
+                  <span className="font-mono text-7xl font-bold text-sand">
+                    {currentExercise.reps ?? "MAX"}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Muscle tags */}
-            {currentExercise.muscles && currentExercise.muscles.length > 0 && (
-              <div className="flex flex-wrap gap-2 justify-center mb-4">
-                {currentExercise.muscles.map((muscle) => (
-                  <Tag key={muscle} variant="default">
-                    {muscle}
-                  </Tag>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
-        {/* ── Bottom action buttons (fixed) ── */}
+        {/* ── Bottom action buttons — sticky so they're always visible ── */}
         {subPhase === "exercise" && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg-primary border-t border-green-dark space-y-2">
-            {/* Primary: complete set or exercise.
-                Shows "CRUSH ROUND X/Y" when more sets remain,
-                "FINISH EXERCISE" on the final set. */}
-            <Button fullWidth onClick={handleCompleteExercise}>
-              <span className="flex items-center justify-center gap-2 text-base">
-                <Check size={20} />
-                {currentSet < currentExercise.sets
-                  ? `CRUSH ROUND ${currentSet}/${currentExercise.sets}`
-                  : "FINISH EXERCISE"}
+          <div className="sticky bottom-0 left-0 right-0 p-3 bg-bg-primary/95 backdrop-blur-sm border-t border-green-dark space-y-2 safe-bottom">
+            <Button fullWidth onClick={handleCompleteExercise} className="py-4">
+              <span className="flex items-center justify-center gap-2 text-lg">
+                <Check size={22} />
+                {currentSet < (currentExercise.sets || 1)
+                  ? `DONE — ROUND ${currentSet}/${currentExercise.sets || 1}`
+                  : "EXERCISE COMPLETE"}
               </span>
             </Button>
-
-            {/* Secondary: skip exercise */}
-            <Button variant="secondary" fullWidth onClick={handleSkipExercise}>
-              <span className="flex items-center justify-center gap-2">
-                <SkipForward size={16} /> ABANDON (shame on you)
-              </span>
-            </Button>
+            <button onClick={handleSkipExercise}
+              className="w-full py-2 text-xs font-mono text-text-secondary uppercase tracking-wider hover:text-text-primary transition-colors min-h-[36px]">
+              SKIP THIS ONE
+            </button>
           </div>
         )}
       </div>
