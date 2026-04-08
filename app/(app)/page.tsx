@@ -20,24 +20,18 @@ import DailyChallenge from "@/components/dashboard/DailyChallenge";
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  // Fetch the current user
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch rank data (or use defaults if not yet created)
-  const { data: rank } = await supabase
-    .from("ranks")
-    .select("*")
-    .eq("user_id", user?.id)
-    .single();
+  // Fetch rank AND streak in parallel (not sequentially)
+  const [rankResult, streakResult] = await Promise.all([
+    supabase.from("ranks").select("*").eq("user_id", user?.id).single(),
+    supabase.from("streaks").select("*").eq("user_id", user?.id).single(),
+  ]);
 
-  // Fetch streak data
-  const { data: streak } = await supabase
-    .from("streaks")
-    .select("*")
-    .eq("user_id", user?.id)
-    .single();
+  const rank = rankResult.data;
+  const streak = streakResult.data;
 
   return (
     <div className="px-4 py-4 space-y-4">

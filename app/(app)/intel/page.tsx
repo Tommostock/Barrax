@@ -16,29 +16,18 @@ export default async function IntelPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch real stats from the database
-  const { count: workoutCount } = await supabase
-    .from("workouts")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user?.id)
-    .eq("status", "complete");
+  // Fetch all stats in parallel (not sequentially) for speed
+  const [workoutCountResult, runsResult, rankResult, allWorkoutsResult] = await Promise.all([
+    supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user?.id).eq("status", "complete"),
+    supabase.from("runs").select("distance_metres, duration_seconds").eq("user_id", user?.id),
+    supabase.from("ranks").select("total_xp").eq("user_id", user?.id).single(),
+    supabase.from("workouts").select("duration_seconds").eq("user_id", user?.id).eq("status", "complete"),
+  ]);
 
-  const { data: runs } = await supabase
-    .from("runs")
-    .select("distance_metres, duration_seconds")
-    .eq("user_id", user?.id);
-
-  const { data: rank } = await supabase
-    .from("ranks")
-    .select("total_xp")
-    .eq("user_id", user?.id)
-    .single();
-
-  const { data: allWorkouts } = await supabase
-    .from("workouts")
-    .select("duration_seconds")
-    .eq("user_id", user?.id)
-    .eq("status", "complete");
+  const workoutCount = workoutCountResult.count;
+  const runs = runsResult.data;
+  const rank = rankResult.data;
+  const allWorkouts = allWorkoutsResult.data;
 
   // Calculate totals
   const totalDistanceM = runs?.reduce((sum, r) => sum + (r.distance_metres || 0), 0) ?? 0;

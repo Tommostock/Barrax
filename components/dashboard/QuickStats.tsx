@@ -1,7 +1,7 @@
 /* ============================================
    QuickStats Component
    Row of stat boxes showing key weekly metrics.
-   Pulls real data from the database.
+   All queries run in parallel for speed.
    ============================================ */
 
 "use client";
@@ -22,42 +22,29 @@ export default function QuickStats() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // This week's completed workouts
       const weekStart = new Date();
       const day = weekStart.getDay();
       weekStart.setDate(weekStart.getDate() - (day === 0 ? 6 : day - 1));
       weekStart.setHours(0, 0, 0, 0);
 
-      const { count } = await supabase
-        .from("workouts")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "complete")
-        .gte("completed_at", weekStart.toISOString());
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
 
-      setWeekWorkouts(count ?? 0);
+      // Run all 3 queries in parallel instead of sequentially
+      const [countResult, xpResult, mealsResult] = await Promise.all([
+        supabase.from("workouts").select("*", { count: "exact", head: true })
+          .eq("user_id", user.id).eq("status", "complete").gte("completed_at", weekStart.toISOString()),
+        supabase.from("workouts").select("xp_earned")
+          .eq("user_id", user.id).eq("status", "complete").gte("completed_at", weekStart.toISOString()),
+        supabase.from("food_diary").select("*", { count: "exact", head: true })
+          .eq("user_id", user.id).gte("logged_at", todayStart.toISOString()).lte("logged_at", todayEnd.toISOString()),
+      ]);
 
-      // Calculate weekly XP from workouts completed this week
-      const { data: weeklyWorkouts } = await supabase
-        .from("workouts")
-        .select("xp_earned")
-        .eq("user_id", user.id)
-        .eq("status", "complete")
-        .gte("completed_at", weekStart.toISOString());
-
-      const totalXP = weeklyWorkouts?.reduce((sum, w) => sum + (w.xp_earned || 0), 0) ?? 0;
-      setWeekXP(totalXP);
-
-      // Today's meals eaten
-      const today = new Date().toISOString().split("T")[0];
-      const { count: eatenCount } = await supabase
-        .from("meal_logs")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("day", today)
-        .eq("eaten", true);
-
-      setMealsToday(`${eatenCount ?? 0}/4`);
+      setWeekWorkouts(countResult.count ?? 0);
+      setWeekXP(xpResult.data?.reduce((sum, w) => sum + (w.xp_earned || 0), 0) ?? 0);
+      setMealsToday(`${mealsResult.count ?? 0}/4`);
     }
     load();
   }, [supabase]);

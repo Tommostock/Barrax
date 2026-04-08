@@ -35,21 +35,20 @@ export default async function RecordPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase
-    .from("profiles").select("*").eq("id", user?.id).single();
+  // Fetch all data in parallel for speed
+  const [profileResult, rankResult, streakResult, badgesResult, workoutCountResult] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user?.id).single(),
+    supabase.from("ranks").select("*").eq("user_id", user?.id).single(),
+    supabase.from("streaks").select("*").eq("user_id", user?.id).single(),
+    supabase.from("badges").select("*").eq("user_id", user?.id),
+    supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user?.id).eq("status", "complete"),
+  ]);
 
-  const { data: rank } = await supabase
-    .from("ranks").select("*").eq("user_id", user?.id).single();
-
-  const { data: streak } = await supabase
-    .from("streaks").select("*").eq("user_id", user?.id).single();
-
-  const { data: earnedBadges } = await supabase
-    .from("badges").select("*").eq("user_id", user?.id);
-
-  const { count: workoutCount } = await supabase
-    .from("workouts").select("*", { count: "exact", head: true })
-    .eq("user_id", user?.id).eq("status", "complete");
+  const profile = profileResult.data;
+  const rank = rankResult.data;
+  const streak = streakResult.data;
+  const earnedBadges = badgesResult.data;
+  const workoutCount = workoutCountResult.count;
 
   const currentRank = rank?.current_rank ?? 1;
   const totalXp = rank?.total_xp ?? 0;
