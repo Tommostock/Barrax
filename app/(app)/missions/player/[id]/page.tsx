@@ -550,7 +550,7 @@ export default function WorkoutPlayerPage() {
     return (
       <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col">
         {/* ── Top bar: elapsed time, pause, and finish ── */}
-        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+        <div className="px-4 pb-2 flex items-center justify-between" style={{ paddingTop: "max(env(safe-area-inset-top, 20px), 50px)" }}>
           <div className="flex items-center gap-2">
             <Clock size={16} className="text-text-secondary" />
             <span className="font-mono text-sm text-text-secondary">
