@@ -446,14 +446,14 @@ export default function WorkoutPlayerPage() {
         </div>
 
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto px-4 pb-32">
-          {/* Workout name — big uppercase heading */}
+        <div className="flex-1 overflow-y-auto px-4 pb-8">
+          {/* Workout name */}
           <h1 className="text-3xl font-heading uppercase tracking-wider text-sand mt-4 mb-1">
             {workoutData.name}
           </h1>
 
           {/* Workout type and duration */}
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-4 mb-4">
             <Tag variant="default">{workoutData.type.replace(/_/g, " ")}</Tag>
             <span className="flex items-center gap-1 text-xs font-mono text-text-secondary">
               <Clock size={14} /> {workoutData.duration_minutes} MIN
@@ -462,6 +462,18 @@ export default function WorkoutPlayerPage() {
               <Zap size={14} /> +{workoutData.xp_value} XP
             </span>
           </div>
+
+          {/* BIG START BUTTON — right at the top, impossible to miss */}
+          <Button fullWidth onClick={handleDeploy} className="mb-6 py-4">
+            <span className="flex items-center justify-center gap-3 text-lg">
+              <Play size={24} /> START WORKOUT
+            </span>
+          </Button>
+
+          {/* Exercise list preview (scrollable below the start button) */}
+          <p className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-wider mb-3">
+            {allExercises.length} EXERCISES — PREVIEW
+          </p>
 
           {/* Warmup section (if any) */}
           {workoutData.warmup && workoutData.warmup.length > 0 && (
@@ -516,11 +528,11 @@ export default function WorkoutPlayerPage() {
           </div>
         </div>
 
-        {/* Fixed bottom ENGAGE button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-bg-primary border-t border-green-dark">
+        {/* Sticky bottom START button — backup for users who scroll past the top one */}
+        <div className="sticky bottom-0 left-0 right-0 p-3 bg-bg-primary/95 backdrop-blur-sm border-t border-green-dark">
           <Button fullWidth onClick={handleDeploy}>
-            <span className="flex items-center justify-center gap-2 text-base">
-              <Play size={20} /> ENGAGE ENEMY
+            <span className="flex items-center justify-center gap-2">
+              <Play size={18} /> START WORKOUT
             </span>
           </Button>
         </div>
