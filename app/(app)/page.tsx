@@ -1,14 +1,14 @@
 /* ============================================
    COMMAND (Dashboard) Page
-   The daily command centre. Shows rank, streak,
-   today's mission, rations, quick stats, and
-   daily challenge at a glance.
+   Client component — fetches data on mount instead
+   of server-side. This makes tab switching instant
+   since no server round-trip is needed.
    ============================================ */
 
-import { createClient } from "@/lib/supabase/server";
+"use client";
 
-// Force dynamic rendering — this page needs auth cookies and DB access
-export const dynamic = "force-dynamic";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import RankStrip from "@/components/dashboard/RankStrip";
 import StreakCounter from "@/components/dashboard/StreakCounter";
 import QuickActions from "@/components/dashboard/QuickActions";
@@ -17,50 +17,63 @@ import TodayRations from "@/components/dashboard/TodayRations";
 import QuickStats from "@/components/dashboard/QuickStats";
 import DailyChallenge from "@/components/dashboard/DailyChallenge";
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
+export default function DashboardPage() {
+  const supabase = createClient();
+  const [rank, setRank] = useState<{ current_rank: number; total_xp: number } | null>(null);
+  const [streak, setStreak] = useState<{ current_streak: number; longest_streak: number; freeze_used_this_week: boolean } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-  // Fetch rank AND streak in parallel (not sequentially)
-  const [rankResult, streakResult] = await Promise.all([
-    supabase.from("ranks").select("*").eq("user_id", user?.id).single(),
-    supabase.from("streaks").select("*").eq("user_id", user?.id).single(),
-  ]);
+      const [rankResult, streakResult] = await Promise.all([
+        supabase.from("ranks").select("current_rank, total_xp").eq("user_id", user.id).single(),
+        supabase.from("streaks").select("current_streak, longest_streak, freeze_used_this_week").eq("user_id", user.id).single(),
+      ]);
 
-  const rank = rankResult.data;
-  const streak = streakResult.data;
+      if (rankResult.data) setRank(rankResult.data);
+      if (streakResult.data) setStreak(streakResult.data);
+      setLoading(false);
+    }
+    load();
+  }, [supabase]);
+
+  if (loading) {
+    return (
+      <div className="px-4 py-4 space-y-4">
+        <div className="skeleton h-20 w-full" />
+        <div className="skeleton h-16 w-full" />
+        <div className="skeleton h-12 w-full" />
+        <div className="skeleton h-28 w-full" />
+        <div className="skeleton h-28 w-full" />
+        <div className="grid grid-cols-3 gap-3">
+          <div className="skeleton h-20" />
+          <div className="skeleton h-20" />
+          <div className="skeleton h-20" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 py-4 space-y-4">
-      {/* Rank strip with XP progress bar */}
       <RankStrip
         currentRank={rank?.current_rank ?? 1}
         totalXp={rank?.total_xp ?? 0}
       />
 
-      {/* Streak counter */}
       <StreakCounter
         currentStreak={streak?.current_streak ?? 0}
         longestStreak={streak?.longest_streak ?? 0}
         freezeAvailable={!streak?.freeze_used_this_week}
       />
 
-      {/* Quick actions: start run, log food, log weight — one tap each */}
       <QuickActions />
-
-      {/* Today's mission card — pulls real workout data */}
       <TodayMission />
-
-      {/* Today's rations card (includes mini macro rings) */}
       <TodayRations />
-
-      {/* Quick stats row */}
       <QuickStats />
-
-      {/* Daily challenge card (placeholder until Phase 5) */}
       <DailyChallenge />
     </div>
   );

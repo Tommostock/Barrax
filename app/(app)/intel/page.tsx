@@ -1,40 +1,50 @@
 /* ============================================
    INTEL Page
-   Stats and progress overview. Pulls real data
-   from workouts, runs, and ranks tables.
+   Client component — fetches stats on mount.
+   No server round-trip needed for tab switching.
    ============================================ */
 
-import { createClient } from "@/lib/supabase/server";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import { TrendingUp, Trophy, Activity, PieChart, FileText, Settings } from "lucide-react";
 import { formatDistance } from "@/lib/geolocation";
 import Link from "next/link";
 
-export default async function IntelPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export default function IntelPage() {
+  const supabase = createClient();
+  const [stats, setStats] = useState({ workouts: 0, distance: 0, xp: 0, hours: 0, mins: 0 });
+  const [loading, setLoading] = useState(true);
 
-  // Fetch all stats in parallel (not sequentially) for speed
-  const [workoutCountResult, runsResult, rankResult, allWorkoutsResult] = await Promise.all([
-    supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user?.id).eq("status", "complete"),
-    supabase.from("runs").select("distance_metres, duration_seconds").eq("user_id", user?.id),
-    supabase.from("ranks").select("total_xp").eq("user_id", user?.id).single(),
-    supabase.from("workouts").select("duration_seconds").eq("user_id", user?.id).eq("status", "complete"),
-  ]);
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-  const workoutCount = workoutCountResult.count;
-  const runs = runsResult.data;
-  const rank = rankResult.data;
-  const allWorkouts = allWorkoutsResult.data;
+      const [wcResult, runsResult, rankResult, wResult] = await Promise.all([
+        supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "complete"),
+        supabase.from("runs").select("distance_metres, duration_seconds").eq("user_id", user.id),
+        supabase.from("ranks").select("total_xp").eq("user_id", user.id).single(),
+        supabase.from("workouts").select("duration_seconds").eq("user_id", user.id).eq("status", "complete"),
+      ]);
 
-  // Calculate totals
-  const totalDistanceM = runs?.reduce((sum, r) => sum + (r.distance_metres || 0), 0) ?? 0;
-  const totalTrainingSecs = (allWorkouts?.reduce((sum, w) => sum + (w.duration_seconds || 0), 0) ?? 0)
-    + (runs?.reduce((sum, r) => sum + (r.duration_seconds || 0), 0) ?? 0);
-  const totalHours = Math.floor(totalTrainingSecs / 3600);
-  const totalMins = Math.floor((totalTrainingSecs % 3600) / 60);
+      const totalDist = runsResult.data?.reduce((s, r) => s + (r.distance_metres || 0), 0) ?? 0;
+      const totalSecs = (wResult.data?.reduce((s, w) => s + (w.duration_seconds || 0), 0) ?? 0)
+        + (runsResult.data?.reduce((s, r) => s + (r.duration_seconds || 0), 0) ?? 0);
+
+      setStats({
+        workouts: wcResult.count ?? 0,
+        distance: totalDist,
+        xp: rankResult.data?.total_xp ?? 0,
+        hours: Math.floor(totalSecs / 3600),
+        mins: Math.floor((totalSecs % 3600) / 60),
+      });
+      setLoading(false);
+    }
+    load();
+  }, [supabase]);
 
   const sections = [
     { href: "/intel/body", icon: Activity, title: "Physical Condition", description: "Weight, measurements. Stay sharp." },
@@ -46,31 +56,27 @@ export default async function IntelPage() {
 
   return (
     <div className="px-4 py-4 space-y-4">
-      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">
-        Intelligence Report
-      </h2>
+      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Intelligence Report</h2>
 
-      {/* Live stats */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-bg-panel border border-green-dark p-3">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Total Workouts</p>
-          <p className="text-2xl font-bold font-mono text-text-primary">{workoutCount ?? 0}</p>
+          <p className="text-2xl font-bold font-mono text-text-primary">{loading ? "-" : stats.workouts}</p>
         </div>
         <div className="bg-bg-panel border border-green-dark p-3">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Total Distance</p>
-          <p className="text-2xl font-bold font-mono text-text-primary">{formatDistance(totalDistanceM)} km</p>
+          <p className="text-2xl font-bold font-mono text-text-primary">{loading ? "-" : `${formatDistance(stats.distance)} km`}</p>
         </div>
         <div className="bg-bg-panel border border-green-dark p-3">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Total XP</p>
-          <p className="text-2xl font-bold font-mono text-xp-gold">{(rank?.total_xp ?? 0).toLocaleString()}</p>
+          <p className="text-2xl font-bold font-mono text-xp-gold">{loading ? "-" : stats.xp.toLocaleString()}</p>
         </div>
         <div className="bg-bg-panel border border-green-dark p-3">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Time Trained</p>
-          <p className="text-2xl font-bold font-mono text-text-primary">{totalHours}h {totalMins}m</p>
+          <p className="text-2xl font-bold font-mono text-text-primary">{loading ? "-" : `${stats.hours}h ${stats.mins}m`}</p>
         </div>
       </div>
 
-      {/* Section navigation */}
       {sections.map((section) => {
         const Icon = section.icon;
         return (
@@ -88,7 +94,6 @@ export default async function IntelPage() {
         );
       })}
 
-      {/* Base Operations (Settings) */}
       <Link href="/intel/settings">
         <Card className="flex items-center gap-3 hover:bg-bg-panel-alt transition-colors">
           <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
