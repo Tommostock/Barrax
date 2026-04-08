@@ -9,6 +9,7 @@
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
 import InstallPrompt from "@/components/layout/InstallPrompt";
+import NotificationPermission from "@/components/layout/NotificationPermission";
 
 export default function AppLayout({
   children,
@@ -22,6 +23,7 @@ export default function AppLayout({
       <main className="flex-1 pb-20 animate-page-enter">{children}</main>
       <BottomNav />
       <InstallPrompt />
+      <NotificationPermission />
     </>
   );
 }

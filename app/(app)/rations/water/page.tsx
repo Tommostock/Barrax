@@ -67,13 +67,10 @@ export default function WaterTrackerPage() {
     const newTotal = todayTotal + amount;
     setTodayTotal(newTotal);
 
-    // Award XP if just hit the daily target
+    // Award XP + notify if just hit the daily target
     if (todayTotal < dailyTarget && newTotal >= dailyTarget) {
-      await fetch("/api/award-xp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 10, source: "water_goal_hit" }),
-      });
+      const { hitWaterGoalAndNotify } = await import("@/lib/award-and-notify");
+      await hitWaterGoalAndNotify();
     }
   }
 

@@ -149,6 +149,9 @@ export default function RationsPage() {
       });
       if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Failed"); }
       await loadData();
+      // Notify that meal plan is ready
+      const { notifyMealPlanReady } = await import("@/lib/notifications");
+      notifyMealPlanReady();
     } catch (err) { setError(err instanceof Error ? err.message : "Something went wrong"); }
     finally { setGenerating(false); }
   }

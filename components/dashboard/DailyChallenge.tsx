@@ -89,12 +89,9 @@ export default function DailyChallenge() {
       .update({ completed: true })
       .eq("id", challenge.id);
 
-    // Award XP
-    await fetch("/api/award-xp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: challenge.xp_value, source: "daily_challenge" }),
-    });
+    // Award XP + fire notification
+    const { completeChallengeAndNotify } = await import("@/lib/award-and-notify");
+    await completeChallengeAndNotify(challenge.xp_value);
 
     setChallenge({ ...challenge, completed: true });
   }

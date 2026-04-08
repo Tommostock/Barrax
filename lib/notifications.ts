@@ -1,77 +1,144 @@
 /* ============================================
-   Web Push Notifications
-   Handles push subscription registration,
-   permission requests, and notification sending.
-   All notification text is military-toned, no emojis.
+   Notifications System
+   Local notifications for in-app events.
+   All text is military-toned, no emojis.
+
+   Free, no server needed. Works on:
+   - Android PWA (installed to home screen)
+   - Desktop browsers (Chrome, Edge, Firefox)
+   - iOS PWA (16.4+ only, must be installed)
    ============================================ */
 
-// Check if the browser supports push notifications
-export function isPushSupported(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    "serviceWorker" in navigator &&
-    "PushManager" in window &&
-    "Notification" in window
-  );
+// Check if notifications are supported in this browser
+export function isNotificationSupported(): boolean {
+  return typeof window !== "undefined" && "Notification" in window;
 }
 
-// Get current notification permission status
+// Get current permission status
 export function getPermissionStatus(): NotificationPermission | "unsupported" {
-  if (!isPushSupported()) return "unsupported";
+  if (!isNotificationSupported()) return "unsupported";
   return Notification.permission;
 }
 
-// Request notification permission from the user
+// Request permission — returns the result
 export async function requestPermission(): Promise<NotificationPermission> {
-  if (!isPushSupported()) return "denied";
+  if (!isNotificationSupported()) return "denied";
   return await Notification.requestPermission();
 }
 
-// Show a local notification (doesn't need push subscription)
-// Used for in-app alerts like rank-ups and PR notifications
-export function showLocalNotification(
+// Show a local notification.
+// Uses the service worker if available (works when tab is backgrounded),
+// falls back to the Notification constructor if not.
+export function showNotification(
   title: string,
   body: string,
-  tag?: string
+  tag?: string,
+  url?: string
 ) {
   if (getPermissionStatus() !== "granted") return;
 
-  // Use the service worker registration to show the notification
-  // so it works even when the tab is backgrounded
-  navigator.serviceWorker.ready.then((registration) => {
-    registration.showNotification(title, {
-      body,
-      tag: tag ?? "barrax-notification",
-      icon: "/icons/icon-192.svg",
-      badge: "/icons/icon-192.svg",
-      data: { url: "/" },
-    } as NotificationOptions);
-  });
+  const options = {
+    body,
+    tag: tag ?? `barrax-${Date.now()}`,
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    data: { url: url ?? "/" },
+  };
+
+  // Try service worker first (works in background)
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.ready.then((registration) => {
+      registration.showNotification(title, options as NotificationOptions);
+    });
+  } else {
+    // Fallback to basic Notification API
+    new Notification(title, options);
+  }
 }
 
-// Military-themed notification messages
-export const NOTIFICATION_MESSAGES = {
-  morningMission: (rank: string, name: string) =>
-    `Your mission is waiting, ${rank} ${name}. Deploy when ready.`,
+// ──────────────────────────────────────────────
+// Pre-built notification triggers
+// Call these from anywhere in the app after events.
+// ──────────────────────────────────────────────
 
-  missedWorkout: () =>
-    "Mission incomplete. You still have time to report for duty.",
+export function notifyWorkoutComplete(xp: number, duration: number) {
+  const mins = Math.round(duration / 60);
+  showNotification(
+    "MISSION COMPLETE",
+    `${mins} minutes. +${xp} XP earned. Good work, soldier.`,
+    "workout-complete",
+    "/missions"
+  );
+}
 
-  streakAtRisk: (days: number) =>
-    `Your ${days}-day streak is at risk. Do not break the chain.`,
+export function notifyRankUp(rankTitle: string) {
+  showNotification(
+    "PROMOTION CONFIRMED",
+    `You have been promoted to ${rankTitle}. New capabilities unlocked.`,
+    "rank-up",
+    "/record"
+  );
+}
 
-  waterReminder: () =>
-    "Hydration check. You are behind on water intake.",
+export function notifyBadgeEarned(badgeName: string) {
+  showNotification(
+    "ACHIEVEMENT UNLOCKED",
+    `${badgeName}. This distinction has been added to your service record.`,
+    "badge-earned",
+    "/record"
+  );
+}
 
-  programmeReady: () =>
-    "New weekly programme generated. Report to MISSIONS.",
+export function notifyWaterGoalHit() {
+  showNotification(
+    "HYDRATION QUOTA ACHIEVED",
+    "Daily water target reached. Your body thanks you.",
+    "water-goal",
+    "/rations/water"
+  );
+}
 
-  rankUp: (rank: string) =>
-    `Promotion confirmed. You have been promoted to ${rank}.`,
+export function notifyChallengeComplete(xp: number) {
+  showNotification(
+    "GAUNTLET CLEARED",
+    `Challenge completed. +${xp} XP. You proved yourself today.`,
+    "challenge-complete",
+    "/"
+  );
+}
 
-  personalRecord: (category: string, value: string) =>
-    `New personal record. ${category}: ${value}.`,
+export function notifyStreakMilestone(days: number) {
+  showNotification(
+    `${days}-DAY STREAK`,
+    `${days} consecutive days of duty. No one can stop you now.`,
+    "streak-milestone",
+    "/"
+  );
+}
 
-  weeklyReport: () =>
-    "Weekly intelligence report ready for review.",
-} as const;
+export function notifyPersonalRecord(category: string, value: string) {
+  showNotification(
+    "NEW PERSONAL RECORD",
+    `${category}: ${value}. Your best just got better.`,
+    "personal-record",
+    "/intel/records"
+  );
+}
+
+export function notifyRunComplete(distanceKm: string, xp: number) {
+  showNotification(
+    "RUN LOGGED",
+    `${distanceKm} km covered. +${xp} XP. Territory secured.`,
+    "run-complete",
+    "/intel/runs"
+  );
+}
+
+export function notifyMealPlanReady() {
+  showNotification(
+    "RATIONS PREPARED",
+    "New weekly meal plan generated. Report to FUEL UP.",
+    "meal-plan-ready",
+    "/rations"
+  );
+}
