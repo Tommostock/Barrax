@@ -548,7 +548,7 @@ export default function WorkoutPlayerPage() {
 
   if (phase === "active" && currentExercise) {
     return (
-      <div className="min-h-screen bg-bg-primary flex flex-col">
+      <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col">
         {/* ── Top bar: elapsed time, pause, and finish ── */}
         <div className="px-4 pt-4 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -658,16 +658,16 @@ export default function WorkoutPlayerPage() {
               </p>
             )}
 
-            {/* Exercise illustration image */}
-            <div className="w-[180px] h-[130px] mx-auto mb-2 border border-green-dark/50 bg-bg-panel-alt flex items-center justify-center overflow-hidden">
-              <img
-                src={`https://wger.de/api/v2/exerciseimage/?exercise_base_name=${encodeURIComponent(currentExercise.name)}&format=json`}
-                alt=""
-                className="hidden"
-              />
-              {/* Use a simple SVG stick figure showing the exercise type */}
-              <ExerciseIllustration muscles={currentExercise.muscles || []} name={currentExercise.name} />
-            </div>
+            {/* Muscle tags */}
+            {currentExercise.muscles && currentExercise.muscles.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 justify-center mb-3">
+                {currentExercise.muscles.map((muscle) => (
+                  <span key={muscle} className="px-2 py-0.5 bg-green-primary/20 border border-green-primary/40 text-xs font-mono text-green-light uppercase">
+                    {muscle}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Rep counter OR duration timer */}
             <div className="flex items-center justify-center mb-2">
@@ -721,7 +721,7 @@ export default function WorkoutPlayerPage() {
 
   if (phase === "debrief") {
     return (
-      <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center px-4">
+      <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col items-center justify-center px-4">
         {/* Tag */}
         <Tag variant="complete">HOSTILE ELIMINATED</Tag>
 
@@ -800,54 +800,6 @@ export default function WorkoutPlayerPage() {
 // ──────────────────────────────────────────────
 // Sub-component: Exercise row in the briefing
 // ──────────────────────────────────────────────
-
-// ──────────────────────────────────────────────
-// Sub-component: Exercise illustration
-// Shows a simple body diagram highlighting active
-// muscle groups. Uses SVG for instant rendering.
-// ──────────────────────────────────────────────
-
-function ExerciseIllustration({ muscles, name }: { muscles: string[]; name: string }) {
-  // Map muscle names to body regions for the SVG highlight
-  const muscleStr = muscles.join(" ").toLowerCase();
-
-  const isUpper = /chest|shoulder|tricep|arm|bicep|back|upper/.test(muscleStr);
-  const isCore = /core|oblique|ab|spine/.test(muscleStr);
-  const isLegs = /quad|glute|hamstring|calf|calves|leg|hip|thigh|adductor/.test(muscleStr);
-  const isFullBody = /full body|full/.test(muscleStr) || (isUpper && isLegs);
-
-  // Colour for active regions
-  const active = "#4A6B3A";
-  const inactive = "#1A221A";
-  const outline = "#2D4220";
-
-  return (
-    <svg viewBox="0 0 100 140" width="100" height="130" className="mx-auto">
-      {/* Head */}
-      <circle cx="50" cy="16" r="10" fill={inactive} stroke={outline} strokeWidth="1" />
-      {/* Neck */}
-      <rect x="47" y="26" width="6" height="6" fill={inactive} />
-      {/* Shoulders */}
-      <rect x="25" y="32" width="50" height="6" rx="0" fill={isUpper || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-      {/* Torso/chest */}
-      <rect x="30" y="38" width="40" height="24" fill={isUpper || isCore || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-      {/* Core/abs */}
-      <rect x="35" y="62" width="30" height="16" fill={isCore || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-      {/* Left arm */}
-      <rect x="18" y="34" width="10" height="30" fill={isUpper || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-      {/* Right arm */}
-      <rect x="72" y="34" width="10" height="30" fill={isUpper || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-      {/* Left leg */}
-      <rect x="32" y="80" width="14" height="36" fill={isLegs || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-      {/* Right leg */}
-      <rect x="54" y="80" width="14" height="36" fill={isLegs || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-      {/* Left calf */}
-      <rect x="33" y="116" width="12" height="16" fill={/calf|calves/.test(muscleStr) || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-      {/* Right calf */}
-      <rect x="55" y="116" width="12" height="16" fill={/calf|calves/.test(muscleStr) || isFullBody ? active : inactive} stroke={outline} strokeWidth="0.5" />
-    </svg>
-  );
-}
 
 function ExerciseBriefingRow({ exercise }: { exercise: WorkoutExercise }) {
   return (
