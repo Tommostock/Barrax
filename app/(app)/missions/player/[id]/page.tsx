@@ -27,7 +27,18 @@ import {
   Clock,
   Zap,
   ChevronLeft,
+  Music,
+  Minus,
+  Plus,
 } from "lucide-react";
+import {
+  countdownBeep,
+  completeBeep,
+  exerciseCompleteSound,
+  workoutCompleteSound,
+  restOverBeep,
+} from "@/lib/workout-audio";
+import { requestWakeLock, releaseWakeLock } from "@/lib/wake-lock";
 import type { WorkoutData, WorkoutExercise } from "@/types";
 
 // ──────────────────────────────────────────────
@@ -88,6 +99,27 @@ function formatTime(totalSeconds: number): string {
   return `${pad(mins)}:${pad(secs)}`;
 }
 
+// ──────────────────────────────────────────────
+// Helper: estimate remaining time from remaining exercises
+// ──────────────────────────────────────────────
+
+function estimateRemainingSeconds(
+  exercises: WorkoutExercise[],
+  currentIndex: number,
+  currentSet: number
+): number {
+  let total = 0;
+
+  for (let i = currentIndex; i < exercises.length; i++) {
+    const ex = exercises[i];
+    const setsLeft = i === currentIndex ? ex.sets - currentSet + 1 : ex.sets;
+    const perSet = ex.reps ? 30 : (ex.duration_seconds ?? 30);
+    total += setsLeft * (perSet + (ex.rest_seconds ?? 0));
+  }
+
+  return total;
+}
+
 // ==============================================================
 // MAIN COMPONENT
 // ==============================================================
@@ -133,6 +165,25 @@ export default function WorkoutPlayerPage() {
   // ── Debrief state ──
   const [xpEarned, setXpEarned] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  // ── Feature 1: Audio countdown timer tracking ──
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Feature 2: "Well done" moment before rest ──
+  const [showWellDone, setShowWellDone] = useState(false);
+
+  // ── Feature 3: Green flash on exercise complete ──
+  const [showFlash, setShowFlash] = useState(false);
+
+  // ── Feature 5: Rep counter with +/- ──
+  const [actualReps, setActualReps] = useState<number>(0);
+
+  // ── Feature 6: Set-by-set tracking per exercise ──
+  const [completedSetsForExercise, setCompletedSetsForExercise] = useState<number[]>([]);
+
+  // ── Feature 8: Workout history per exercise ──
+  const [exerciseHistory, setExerciseHistory] = useState<string | null>(null);
 
   // ────────────────────────────────────────────
   // 1. Load workout from Supabase on mount
@@ -200,12 +251,159 @@ export default function WorkoutPlayerPage() {
   }, [phase, paused]);
 
   // ────────────────────────────────────────────
+  // Feature 1: Audio countdown beeps for timer exercises
+  // ────────────────────────────────────────────
+
+  // Initialize secondsLeft when exercise changes or subPhase changes to exercise
+  useEffect(() => {
+    if (phase !== "active" || subPhase !== "exercise") {
+      setSecondsLeft(null);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      return;
+    }
+
+    const exercise = allExercises[currentExIndex];
+    if (!exercise || !exercise.duration_seconds) {
+      setSecondsLeft(null);
+      return;
+    }
+
+    // Set initial seconds left
+    setSecondsLeft(exercise.duration_seconds);
+
+    // Start countdown interval
+    countdownRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev === null || prev <= 0) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [phase, subPhase, currentExIndex, currentSet, allExercises]);
+
+  // Pause/resume the countdown with the main pause
+  useEffect(() => {
+    if (paused && countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    } else if (!paused && phase === "active" && subPhase === "exercise") {
+      const exercise = allExercises[currentExIndex];
+      if (exercise?.duration_seconds && secondsLeft !== null && secondsLeft > 0) {
+        countdownRef.current = setInterval(() => {
+          setSecondsLeft((prev) => {
+            if (prev === null || prev <= 0) {
+              if (countdownRef.current) clearInterval(countdownRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    }
+
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paused]);
+
+  // Play beeps based on secondsLeft
+  useEffect(() => {
+    if (secondsLeft === null) return;
+    if (secondsLeft === 3 || secondsLeft === 2 || secondsLeft === 1) {
+      countdownBeep();
+    }
+    if (secondsLeft === 0) {
+      completeBeep();
+    }
+  }, [secondsLeft]);
+
+  // ────────────────────────────────────────────
+  // Feature 4: Cleanup wake lock on unmount
+  // ────────────────────────────────────────────
+
+  useEffect(() => {
+    return () => {
+      releaseWakeLock();
+    };
+  }, []);
+
+  // ────────────────────────────────────────────
+  // Feature 5: Reset actualReps when exercise/set changes
+  // ────────────────────────────────────────────
+
+  useEffect(() => {
+    const exercise = allExercises[currentExIndex];
+    if (exercise && exercise.reps) {
+      setActualReps(exercise.reps);
+    } else {
+      setActualReps(0);
+    }
+  }, [currentExIndex, currentSet, allExercises]);
+
+  // ────────────────────────────────────────────
+  // Feature 6: Reset completed sets when exercise changes
+  // ────────────────────────────────────────────
+
+  useEffect(() => {
+    setCompletedSetsForExercise([]);
+  }, [currentExIndex]);
+
+  // ────────────────────────────────────────────
+  // Feature 8: Load exercise history when exercise changes
+  // ────────────────────────────────────────────
+
+  useEffect(() => {
+    if (phase !== "active") return;
+    const exercise = allExercises[currentExIndex];
+    if (!exercise) return;
+
+    setExerciseHistory(null);
+
+    async function loadHistory() {
+      try {
+        const { data } = await supabase
+          .from("workout_exercises")
+          .select("sets_completed, reps_completed, duration_seconds")
+          .eq("exercise_name", exercise.name)
+          .eq("skipped", false)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          const prev = data[0];
+          if (prev.reps_completed) {
+            setExerciseHistory(`Last time: ${prev.sets_completed}x${prev.reps_completed}`);
+          } else if (prev.duration_seconds) {
+            setExerciseHistory(`Last time: ${prev.sets_completed}x${prev.duration_seconds}s`);
+          }
+        }
+      } catch {
+        // Silently fail — history is a nice-to-have
+      }
+    }
+
+    loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, currentExIndex, allExercises]);
+
+  // ────────────────────────────────────────────
   // 3. Actions
   // ────────────────────────────────────────────
 
   /** Start the workout (transition from briefing -> active) */
   const handleDeploy = useCallback(async () => {
     startTimeRef.current = new Date();
+
+    // Feature 4: Keep screen awake
+    requestWakeLock();
 
     // Mark workout as "in_progress" in the database
     if (workoutId) {
@@ -226,24 +424,37 @@ export default function WorkoutPlayerPage() {
     // Haptic feedback on supported devices
     navigator.vibrate?.(100);
 
+    // Feature 1: Play exercise complete sound
+    exerciseCompleteSound();
+
+    // Feature 3: Flash green
+    setShowFlash(true);
+    setTimeout(() => setShowFlash(false), 300);
+
+    // Feature 6: Track this set as completed
+    setCompletedSetsForExercise((prev) => [...prev, currentSet]);
+
     // If there are more sets left, show rest screen then advance
     if (currentSet < exercise.sets) {
-      // Always show a rest screen between sets so the user gets
-      // clear feedback that the set was recorded. Uses the exercise's
-      // rest_seconds or defaults to 30s if none specified.
-      setSubPhase("rest");
-      setRestKey((k) => k + 1);
+      // Feature 2: Show "EXERCISE DONE" briefly before rest
+      setShowWellDone(true);
+      setTimeout(() => {
+        setShowWellDone(false);
+        setSubPhase("rest");
+        setRestKey((k) => k + 1);
+      }, 1000);
       setCurrentSet((prev) => prev + 1);
       return;
     }
 
     // All sets done for this exercise — record the result
+    const isRepBased = !exercise.duration_seconds && exercise.reps;
     setResults((prev) => [
       ...prev,
       {
         name: exercise.name,
         setsCompleted: exercise.sets,
-        repsCompleted: exercise.reps,
+        repsCompleted: isRepBased ? actualReps : exercise.reps,
         durationSeconds: exercise.duration_seconds,
         skipped: false,
         orderIndex: currentExIndex,
@@ -251,8 +462,9 @@ export default function WorkoutPlayerPage() {
     ]);
 
     // Move to next exercise (or finish)
-    moveToNextExercise(exercise);
-  }, [allExercises, currentExIndex, currentSet]);
+    moveToNextExercise();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allExercises, currentExIndex, currentSet, actualReps]);
 
   /** Skip the current exercise entirely */
   const handleSkipExercise = useCallback(() => {
@@ -272,11 +484,12 @@ export default function WorkoutPlayerPage() {
       },
     ]);
 
-    moveToNextExercise(exercise);
+    moveToNextExercise();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allExercises, currentExIndex]);
 
   /** Shared logic to advance to the next exercise or finish */
-  function moveToNextExercise(currentExercise: WorkoutExercise) {
+  function moveToNextExercise() {
     const nextIndex = currentExIndex + 1;
 
     if (nextIndex >= allExercises.length) {
@@ -285,14 +498,24 @@ export default function WorkoutPlayerPage() {
       return;
     }
 
-    // Always show a rest screen between exercises so the user
-    // has a clear transition point before the next exercise starts.
-    setSubPhase("rest");
-    setRestKey((k) => k + 1);
+    // Feature 2: Show "EXERCISE DONE" briefly before rest
+    setShowWellDone(true);
+    setTimeout(() => {
+      setShowWellDone(false);
+      setSubPhase("rest");
+      setRestKey((k) => k + 1);
+    }, 1000);
 
     setCurrentExIndex(nextIndex);
     setCurrentSet(1);
   }
+
+  /** When rest timer ends naturally */
+  const handleRestComplete = useCallback(() => {
+    // Feature 1: Play rest over beep
+    restOverBeep();
+    setSubPhase("exercise");
+  }, []);
 
   /** Skip the rest timer and go straight to the next exercise */
   const handleSkipRest = useCallback(() => {
@@ -317,7 +540,23 @@ export default function WorkoutPlayerPage() {
     // Second tap: actually finish
     setConfirmFinish(false);
     finishWorkout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmFinish]);
+
+  // ────────────────────────────────────────────
+  // Feature 10: Music app launcher
+  // ────────────────────────────────────────────
+
+  const handleOpenMusic = useCallback(() => {
+    // Try Spotify deep link first, fallback to web after 1 second
+    const spotifyWindow = window.open("spotify://", "_blank");
+    setTimeout(() => {
+      // If the window is null or didn't navigate, open web player
+      if (!spotifyWindow || spotifyWindow.closed) {
+        window.open("https://open.spotify.com", "_blank");
+      }
+    }, 1000);
+  }, []);
 
   // ────────────────────────────────────────────
   // 4. Finish & save results
@@ -326,6 +565,12 @@ export default function WorkoutPlayerPage() {
   async function finishWorkout() {
     setPhase("debrief");
     setSaving(true);
+
+    // Feature 1: Play workout complete sound
+    workoutCompleteSound();
+
+    // Feature 4: Release wake lock
+    releaseWakeLock();
 
     const totalDuration = elapsedSeconds;
     const xp = calculateXP(totalDuration);
@@ -396,6 +641,12 @@ export default function WorkoutPlayerPage() {
   const completedCount = results.filter((r) => !r.skipped).length;
   const skippedCount = results.filter((r) => r.skipped).length;
   const totalExerciseCount = allExercises.length;
+
+  // Feature 9: Estimated time remaining
+  const estimatedRemaining = phase === "active"
+    ? estimateRemainingSeconds(allExercises, currentExIndex, currentSet)
+    : 0;
+  const estimatedMinutes = Math.max(1, Math.round(estimatedRemaining / 60));
 
   // ────────────────────────────────────────────
   // 6. Render
@@ -547,17 +798,58 @@ export default function WorkoutPlayerPage() {
   const currentExercise = allExercises[currentExIndex] ?? null;
 
   if (phase === "active" && currentExercise) {
+    const isTimerExercise = !!currentExercise.duration_seconds;
+    const isRepExercise = !isTimerExercise && !!currentExercise.reps;
+    const totalSets = currentExercise.sets || 1;
+
     return (
       <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col">
-        {/* ── Top bar: elapsed time, pause, and finish ── */}
+        {/* Feature 3: Green flash overlay */}
+        {showFlash && (
+          <div
+            className="fixed inset-0 z-[200] bg-green-primary/30 pointer-events-none"
+            style={{
+              animation: "fadeOut 300ms ease-out forwards",
+            }}
+          />
+        )}
+
+        {/* Feature 2: "EXERCISE DONE" well done moment */}
+        {showWellDone && (
+          <div className="fixed inset-0 z-[150] bg-bg-primary flex items-center justify-center">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-primary/20 border-2 border-green-primary mb-4">
+                <Check size={32} className="text-green-light" />
+              </div>
+              <h2 className="text-2xl font-heading uppercase tracking-wider text-green-light">
+                EXERCISE DONE
+              </h2>
+            </div>
+          </div>
+        )}
+
+        {/* ── Top bar: elapsed time, estimated remaining, music, and finish ── */}
         <div className="px-4 pb-2 flex items-center justify-between" style={{ paddingTop: "max(env(safe-area-inset-top, 20px), 50px)" }}>
           <div className="flex items-center gap-2">
             <Clock size={16} className="text-text-secondary" />
             <span className="font-mono text-sm text-text-secondary">
               {formatTime(elapsedSeconds)}
             </span>
+            {/* Feature 9: Estimated time remaining */}
+            <span className="font-mono text-xs text-text-secondary opacity-60">
+              ~{estimatedMinutes}m left
+            </span>
           </div>
           <div className="flex items-center gap-1">
+            {/* Feature 10: Music launcher */}
+            <button
+              onClick={handleOpenMusic}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-text-secondary hover:text-green-light transition-colors"
+              aria-label="Open music"
+            >
+              <Music size={18} />
+            </button>
+
             {/* Finish workout early — two-tap safety */}
             <button
               onClick={handleFinishEarly}
@@ -613,10 +905,18 @@ export default function WorkoutPlayerPage() {
               Recovery Timer
             </h2>
 
-            {/* Show what's coming up next */}
-            <p className="text-sm font-mono text-text-primary uppercase tracking-wider">
-              NEXT: {currentExercise.name} — Round {currentSet} of {currentExercise.sets || 1}
-            </p>
+            {/* Feature 2: Show what's coming next more prominently */}
+            <div className="text-center border border-green-dark bg-bg-panel px-6 py-3">
+              <p className="text-xs font-mono uppercase tracking-wider text-text-secondary mb-1">
+                UP NEXT
+              </p>
+              <p className="text-lg font-heading uppercase tracking-wider text-sand">
+                {currentExercise.name}
+              </p>
+              <p className="text-sm font-mono text-green-light mt-1">
+                Round {currentSet} of {totalSets}
+              </p>
+            </div>
 
             {/* key={restKey} forces the Timer to remount and reset even if
                 the duration is the same as the previous rest period */}
@@ -625,7 +925,7 @@ export default function WorkoutPlayerPage() {
               initialSeconds={currentExercise.rest_seconds || 30}
               mode="countdown"
               running={!paused}
-              onComplete={handleSkipRest}
+              onComplete={handleRestComplete}
               size="lg"
             />
             <Button variant="secondary" fullWidth onClick={handleSkipRest}>
@@ -639,10 +939,34 @@ export default function WorkoutPlayerPage() {
         {/* ── Exercise display ── */}
         {subPhase === "exercise" && (
           <div className="flex-1 flex flex-col px-4 pb-2">
-            {/* Set indicator */}
-            <div className="text-center mb-2 mt-1">
+            {/* Feature 6: Set-by-set tracking indicators */}
+            <div className="flex items-center justify-center gap-2 mb-3 mt-1">
+              {Array.from({ length: totalSets }, (_, i) => {
+                const setNum = i + 1;
+                const isCompleted = completedSetsForExercise.includes(setNum);
+                const isCurrent = setNum === currentSet;
+
+                return (
+                  <div
+                    key={setNum}
+                    className={`flex items-center justify-center w-8 h-8 text-xs font-mono font-bold
+                      ${isCompleted
+                        ? "bg-green-primary/30 border border-green-primary text-green-light"
+                        : isCurrent
+                          ? "bg-bg-panel border-2 border-sand text-sand"
+                          : "bg-bg-panel border border-green-dark text-text-secondary opacity-50"
+                      }`}
+                  >
+                    {isCompleted ? <Check size={14} /> : setNum}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Set indicator tag */}
+            <div className="text-center mb-2">
               <Tag variant="active">
-                {`ROUND ${currentSet} / ${currentExercise.sets || 1}`}
+                {`ROUND ${currentSet} / ${totalSets}`}
               </Tag>
             </div>
 
@@ -650,6 +974,13 @@ export default function WorkoutPlayerPage() {
             <h2 className="text-2xl font-heading uppercase tracking-wider text-sand text-center mb-1">
               {currentExercise.name}
             </h2>
+
+            {/* Feature 8: Workout history */}
+            {exerciseHistory && (
+              <p className="text-xs font-mono text-text-secondary text-center mb-1">
+                {exerciseHistory}
+              </p>
+            )}
 
             {/* Form cue — compact */}
             {(currentExercise.form_cue || currentExercise.description) && (
@@ -671,11 +1002,11 @@ export default function WorkoutPlayerPage() {
 
             {/* Rep counter OR duration timer */}
             <div className="flex items-center justify-center mb-2">
-              {currentExercise.duration_seconds ? (
+              {isTimerExercise ? (
                 <div className="text-center">
                   <p className="text-xs font-mono uppercase tracking-wider text-text-primary mb-1">COUNTDOWN</p>
                   <Timer
-                    initialSeconds={currentExercise.duration_seconds}
+                    initialSeconds={currentExercise.duration_seconds!}
                     mode="countdown"
                     running={!paused}
                     onComplete={handleCompleteExercise}
@@ -688,6 +1019,34 @@ export default function WorkoutPlayerPage() {
                   <span className="font-mono text-6xl font-bold text-sand">
                     {currentExercise.reps ?? "MAX"}
                   </span>
+
+                  {/* Feature 5: +/- rep counter buttons */}
+                  {isRepExercise && (
+                    <div className="flex items-center justify-center gap-4 mt-3">
+                      <button
+                        onClick={() => setActualReps((prev) => Math.max(0, prev - 1))}
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-green-dark bg-bg-panel text-text-primary hover:bg-bg-panel-alt transition-colors"
+                        aria-label="Decrease reps"
+                      >
+                        <Minus size={20} />
+                      </button>
+                      <div className="text-center">
+                        <span className="font-mono text-3xl font-bold text-green-light">
+                          {actualReps}
+                        </span>
+                        <p className="text-[0.6rem] font-mono uppercase tracking-wider text-text-secondary">
+                          ACTUAL
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setActualReps((prev) => prev + 1)}
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-green-dark bg-bg-panel text-text-primary hover:bg-bg-panel-alt transition-colors"
+                        aria-label="Increase reps"
+                      >
+                        <Plus size={20} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -700,9 +1059,11 @@ export default function WorkoutPlayerPage() {
             <Button fullWidth onClick={handleCompleteExercise} className="py-3">
               <span className="flex items-center justify-center gap-2 text-base">
                 <Check size={20} />
-                {currentSet < (currentExercise.sets || 1)
-                  ? `DONE — ROUND ${currentSet}/${currentExercise.sets || 1}`
-                  : "EXERCISE COMPLETE"}
+                {currentSet < totalSets
+                  ? `DONE — ROUND ${currentSet}/${totalSets}`
+                  : isRepExercise
+                    ? `DONE — ${actualReps} REPS`
+                    : "EXERCISE COMPLETE"}
               </span>
             </Button>
             <Button variant="secondary" fullWidth onClick={handleSkipExercise} className="py-3">
@@ -712,6 +1073,14 @@ export default function WorkoutPlayerPage() {
             </Button>
           </div>
         )}
+
+        {/* Feature 3: CSS keyframe for flash fadeout */}
+        <style jsx>{`
+          @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -721,75 +1090,129 @@ export default function WorkoutPlayerPage() {
   // =============================================
 
   if (phase === "debrief") {
+    // Build full results list for the summary (feature 7)
+    const allResultsForSummary: ExerciseResult[] = [...results];
+    allExercises.forEach((ex, idx) => {
+      const alreadyLogged = allResultsForSummary.some((r) => r.orderIndex === idx);
+      if (!alreadyLogged) {
+        allResultsForSummary.push({
+          name: ex.name,
+          setsCompleted: 0,
+          repsCompleted: null,
+          durationSeconds: null,
+          skipped: true,
+          orderIndex: idx,
+        });
+      }
+    });
+    allResultsForSummary.sort((a, b) => a.orderIndex - b.orderIndex);
+
     return (
-      <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col items-center justify-center px-4">
-        {/* Tag */}
-        <Tag variant="complete">HOSTILE ELIMINATED</Tag>
+      <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col overflow-y-auto">
+        <div className="flex-1 flex flex-col items-center px-4 py-8">
+          {/* Tag */}
+          <Tag variant="complete">HOSTILE ELIMINATED</Tag>
 
-        {/* Heading */}
-        <h1 className="text-3xl font-heading uppercase tracking-wider text-sand mt-6 mb-8 text-center">
-          {workoutData.name}
-        </h1>
+          {/* Heading */}
+          <h1 className="text-3xl font-heading uppercase tracking-wider text-sand mt-6 mb-8 text-center">
+            {workoutData.name}
+          </h1>
 
-        {/* Summary stats grid */}
-        <div className="w-full max-w-sm space-y-4 mb-8">
-          {/* Total duration */}
-          <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
-            <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
-              <Clock size={16} /> Duration
-            </span>
-            <span className="font-mono text-lg font-bold text-text-primary">
-              {formatTime(elapsedSeconds)}
-            </span>
+          {/* Summary stats grid */}
+          <div className="w-full max-w-sm space-y-4 mb-8">
+            {/* Total duration */}
+            <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
+              <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
+                <Clock size={16} /> Duration
+              </span>
+              <span className="font-mono text-lg font-bold text-text-primary">
+                {formatTime(elapsedSeconds)}
+              </span>
+            </div>
+
+            {/* Exercises completed */}
+            <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
+              <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
+                <Check size={16} /> Completed
+              </span>
+              <span className="font-mono text-lg font-bold text-text-primary">
+                {completedCount} / {totalExerciseCount}
+              </span>
+            </div>
+
+            {/* Exercises skipped */}
+            <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
+              <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
+                <SkipForward size={16} /> Skipped
+              </span>
+              <span className="font-mono text-lg font-bold text-text-primary">
+                {skippedCount}
+              </span>
+            </div>
+
+            {/* XP earned — highlighted */}
+            <div className="flex items-center justify-between border border-xp-gold bg-bg-panel p-4">
+              <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-xp-gold">
+                <Zap size={18} /> XP Earned
+              </span>
+              <span className="font-mono text-2xl font-bold text-xp-gold">
+                +{xpEarned}
+              </span>
+            </div>
           </div>
 
-          {/* Exercises completed */}
-          <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
-            <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
-              <Check size={16} /> Completed
-            </span>
-            <span className="font-mono text-lg font-bold text-text-primary">
-              {completedCount} / {totalExerciseCount}
-            </span>
+          {/* Feature 7: Post-workout exercise summary */}
+          <div className="w-full max-w-sm mb-8">
+            <h3 className="text-xs font-heading uppercase tracking-wider text-text-secondary mb-3">
+              Exercise Summary
+            </h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {allResultsForSummary.map((r, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between border border-green-dark bg-bg-panel p-3"
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {r.skipped ? (
+                      <SkipForward size={14} className="text-text-secondary shrink-0" />
+                    ) : (
+                      <Check size={14} className="text-green-light shrink-0" />
+                    )}
+                    <span className="text-sm font-heading uppercase tracking-wider text-sand truncate">
+                      {r.name}
+                    </span>
+                  </div>
+                  <span className="text-xs font-mono text-text-secondary ml-2 shrink-0">
+                    {r.skipped
+                      ? "SKIPPED"
+                      : r.durationSeconds
+                        ? `${r.setsCompleted}x${r.durationSeconds}s`
+                        : r.repsCompleted
+                          ? `${r.setsCompleted}x${r.repsCompleted}`
+                          : `${r.setsCompleted} sets`}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Exercises skipped */}
-          <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
-            <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
-              <SkipForward size={16} /> Skipped
-            </span>
-            <span className="font-mono text-lg font-bold text-text-primary">
-              {skippedCount}
-            </span>
-          </div>
+          {/* Saving indicator */}
+          {saving && (
+            <p className="font-mono text-xs text-text-secondary mb-4 animate-pulse">
+              Logging your victory...
+            </p>
+          )}
 
-          {/* XP earned — highlighted */}
-          <div className="flex items-center justify-between border border-xp-gold bg-bg-panel p-4">
-            <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-xp-gold">
-              <Zap size={18} /> XP Earned
-            </span>
-            <span className="font-mono text-2xl font-bold text-xp-gold">
-              +{xpEarned}
-            </span>
-          </div>
+          {/* Dismiss button */}
+          <Button
+            fullWidth
+            className="max-w-sm"
+            onClick={() => router.push("/missions")}
+            disabled={saving}
+          >
+            RETURN TO BASE
+          </Button>
         </div>
-
-        {/* Saving indicator */}
-        {saving && (
-          <p className="font-mono text-xs text-text-secondary mb-4 animate-pulse">
-            Logging your victory...
-          </p>
-        )}
-
-        {/* Dismiss button */}
-        <Button
-          fullWidth
-          className="max-w-sm"
-          onClick={() => router.push("/missions")}
-          disabled={saving}
-        >
-          RETURN TO BASE
-        </Button>
       </div>
     );
   }
