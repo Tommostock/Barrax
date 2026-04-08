@@ -1,15 +1,15 @@
 /* ============================================
    App Layout (Authenticated)
    Wraps all authenticated pages with the header,
-   bottom navigation, and main content area.
-   Uses a route group so this layout applies to
-   all pages EXCEPT /auth/* and /onboarding.
+   bottom navigation, and auth guard.
+   No middleware needed — auth is checked client-side.
    ============================================ */
 
 import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
 import InstallPrompt from "@/components/layout/InstallPrompt";
 import NotificationPermission from "@/components/layout/NotificationPermission";
+import AuthGuard from "@/components/layout/AuthGuard";
 
 export default function AppLayout({
   children,
@@ -17,13 +17,12 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <AuthGuard>
       <Header />
-      {/* Main content area — padded at bottom for the fixed nav bar */}
       <main className="flex-1 pb-20 animate-page-enter">{children}</main>
       <BottomNav />
       <InstallPrompt />
       <NotificationPermission />
-    </>
+    </AuthGuard>
   );
 }
