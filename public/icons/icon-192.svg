@@ -1,18 +1,14 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'>
-  <rect width='192' height='192' fill='#0C0C0C'/>
-  <!-- Dumbbell icon centred in the PWA icon -->
-  <g transform='translate(96,96)' fill='none' stroke='#4A6B3A' stroke-width='6' stroke-linecap='square'>
-    <!-- Centre bar -->
-    <line x1='-40' y1='0' x2='40' y2='0'/>
-    <!-- Left weight plates (two stacked rectangles) -->
-    <rect x='-62' y='-28' width='16' height='56'  fill='#4A6B3A'/>
-    <rect x='-52' y='-20' width='12' height='40' fill='#4A6B3A'/>
-    <!-- Right weight plates (two stacked rectangles) -->
-    <rect x='46' y='-28' width='16' height='56' fill='#4A6B3A'/>
-    <rect x='40' y='-20' width='12' height='40' fill='#4A6B3A'/>
-    <!-- Left collar -->
-    <line x1='-40' y1='-12' x2='-40' y2='12'/>
-    <!-- Right collar -->
-    <line x1='40' y1='-12' x2='40' y2='12'/>
+  <!-- Dark military green background -->
+  <rect width='192' height='192' fill='#1A2E14'/>
+
+  <!-- Bold double chevron — military rank insignia -->
+  <!-- Gold (#B8A04A) on dark green, sharp corners, no curves -->
+  <g transform='translate(96, 96)'>
+    <!-- Top chevron (upper stripe) -->
+    <polygon points='-56,-8 0,-41 56,-8 56,11 0,-22 -56,11' fill='#B8A04A'/>
+
+    <!-- Bottom chevron (lower stripe) -->
+    <polygon points='-56,26 0,-7 56,26 56,45 0,12 -56,45' fill='#B8A04A'/>
   </g>
 </svg>
