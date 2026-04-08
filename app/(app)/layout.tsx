@@ -9,6 +9,7 @@ import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
 import InstallPrompt from "@/components/layout/InstallPrompt";
 import NotificationPermission from "@/components/layout/NotificationPermission";
+import WeighInReminder from "@/components/layout/WeighInReminder";
 import AuthGuard from "@/components/layout/AuthGuard";
 
 export default function AppLayout({
@@ -19,10 +20,11 @@ export default function AppLayout({
   return (
     <AuthGuard>
       <Header />
-      <main className="flex-1 pb-20 animate-page-enter">{children}</main>
+      <main className="flex-1 pb-28 animate-page-enter">{children}</main>
       <BottomNav />
       <InstallPrompt />
       <NotificationPermission />
+      <WeighInReminder />
     </AuthGuard>
   );
 }

@@ -142,3 +142,13 @@ export function notifyMealPlanReady() {
     "/rations"
   );
 }
+
+// Sunday weigh-in reminder — fired every Sunday at 0700
+export function notifyWeighIn() {
+  showNotification(
+    "WEIGH-IN REQUIRED",
+    "Weekly body assessment is due. Report your weight, soldier.",
+    "weigh-in-reminder",
+    "/intel/body"
+  );
+}
