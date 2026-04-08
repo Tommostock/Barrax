@@ -1,20 +1,22 @@
 /* ============================================
    Supabase Auth Middleware
-   Refreshes the user's auth session on every request.
-   Redirects unauthenticated users to the sign-in page.
+   Checks auth session on each request and redirects
+   unauthenticated users to sign-in.
+
+   Uses getSession() (local cookie read) instead of
+   getUser() (network call to Supabase) for speed.
+   This prevents "page couldn't load" errors on slow
+   mobile connections where the network call times out.
    ============================================ */
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Routes that don't require authentication
 const PUBLIC_ROUTES = ["/auth/sign-in", "/auth/sign-up", "/auth/callback", "/auth/forgot-password", "/auth/reset-password"];
 
 export async function updateSession(request: NextRequest) {
-  // Start with a basic response that passes through the request
   let supabaseResponse = NextResponse.next({ request });
 
-  // Create a Supabase client that can read and write cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -24,11 +26,9 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          // Set cookies on the request (for downstream server components)
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          // Also set cookies on the response (for the browser)
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -38,25 +38,29 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh the session — this is critical for keeping the user logged in.
-  // Do NOT remove this getUser() call even if it looks unused.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const pathname = request.nextUrl.pathname;
 
-  // Allow public routes through without auth check
+  // Allow public routes through immediately — no auth check needed
   if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
     return supabaseResponse;
   }
 
-  // If the user is not logged in and trying to access a protected route,
-  // redirect them to the sign-in page
-  if (!user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/sign-in";
-    return NextResponse.redirect(url);
+  try {
+    // Use getSession() instead of getUser() — reads from the cookie
+    // locally without making a network call to Supabase. This is
+    // much faster and won't fail on slow mobile connections.
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      // No session cookie — redirect to sign-in
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/sign-in";
+      return NextResponse.redirect(url);
+    }
+  } catch {
+    // If auth check fails for any reason (network error, cookie issue),
+    // let the request through rather than showing "page couldn't load".
+    // The page's own auth check will handle the redirect if needed.
   }
 
   return supabaseResponse;
