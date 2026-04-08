@@ -694,9 +694,9 @@ export default function WorkoutPlayerPage() {
           </div>
         )}
 
-        {/* ── Bottom action buttons — above the nav bar ── */}
+        {/* ── Bottom action buttons ── */}
         {subPhase === "exercise" && (
-          <div className="px-3 pb-3 bg-bg-primary border-t border-green-dark space-y-1">
+          <div className="px-4 pb-8 bg-bg-primary border-t border-green-dark pt-4 space-y-3">
             <Button fullWidth onClick={handleCompleteExercise} className="py-3">
               <span className="flex items-center justify-center gap-2 text-base">
                 <Check size={20} />
@@ -705,10 +705,11 @@ export default function WorkoutPlayerPage() {
                   : "EXERCISE COMPLETE"}
               </span>
             </Button>
-            <button onClick={handleSkipExercise}
-              className="w-full py-1 text-[0.65rem] font-mono text-text-secondary uppercase tracking-wider hover:text-text-primary transition-colors">
-              SKIP
-            </button>
+            <Button variant="secondary" fullWidth onClick={handleSkipExercise} className="py-3">
+              <span className="flex items-center justify-center gap-2 text-sm">
+                <SkipForward size={16} /> SKIP EXERCISE
+              </span>
+            </Button>
           </div>
         )}
       </div>
