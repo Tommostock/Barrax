@@ -181,7 +181,7 @@ export default function SettingsPage() {
     <div className="px-4 py-4 space-y-4 pb-24">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href="/record" className="text-text-secondary hover:text-text-primary min-w-[44px] min-h-[44px] flex items-center justify-center">
+        <Link href="/intel" className="text-text-secondary hover:text-text-primary min-w-[44px] min-h-[44px] flex items-center justify-center">
           <ArrowLeft size={20} />
         </Link>
         <h2 className="text-lg font-heading uppercase tracking-wider text-sand">

@@ -13,8 +13,7 @@ import Tag from "@/components/ui/Tag";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { RANK_THRESHOLDS } from "@/types";
 import { BADGE_DEFINITIONS } from "@/lib/badges";
-import { Settings, Shield, Award, Flame, Calendar } from "lucide-react";
-import Link from "next/link";
+import { Shield, Award, Flame, Calendar } from "lucide-react";
 
 // Same rank colour mapping as the dashboard RankStrip
 const RANK_STYLES: Record<number, { bg: string; border: string }> = {
@@ -197,16 +196,6 @@ export default async function RecordPage() {
         </div>
       </div>
 
-      {/* Settings link */}
-      <Link href="/record/settings">
-        <Card className="flex items-center gap-3 hover:bg-bg-panel-alt transition-colors">
-          <Settings size={18} className="text-green-primary" />
-          <div>
-            <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Base Operations</h3>
-            <p className="text-xs text-text-secondary">Settings and preferences</p>
-          </div>
-        </Card>
-      </Link>
     </div>
   );
 }

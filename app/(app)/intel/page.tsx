@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 import Card from "@/components/ui/Card";
-import { TrendingUp, Trophy, Activity, PieChart, FileText } from "lucide-react";
+import { TrendingUp, Trophy, Activity, PieChart, FileText, Settings } from "lucide-react";
 import { formatDistance } from "@/lib/geolocation";
 import Link from "next/link";
 
@@ -98,6 +98,19 @@ export default async function IntelPage() {
           </Link>
         );
       })}
+
+      {/* Base Operations (Settings) */}
+      <Link href="/intel/settings">
+        <Card className="flex items-center gap-3 hover:bg-bg-panel-alt transition-colors">
+          <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
+            <Settings size={18} className="text-green-primary" />
+          </div>
+          <div>
+            <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Base Operations</h3>
+            <p className="text-xs text-text-secondary">Settings, preferences, account</p>
+          </div>
+        </Card>
+      </Link>
     </div>
   );
 }
