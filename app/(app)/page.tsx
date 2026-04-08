@@ -39,13 +39,6 @@ export default async function DashboardPage() {
     .eq("user_id", user?.id)
     .single();
 
-  // Fetch profile for the user's name
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name, unit_preference")
-    .eq("id", user?.id)
-    .single();
-
   return (
     <div className="px-4 py-4 space-y-4">
       {/* Rank strip with XP progress bar */}

@@ -65,7 +65,7 @@ export function getRankFromXP(totalXP: number): number {
 export async function awardXP(
   userId: string,
   amount: number,
-  source: string
+  _source: string
 ): Promise<{
   newTotalXP: number;
   previousRank: number;

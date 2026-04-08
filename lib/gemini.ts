@@ -139,8 +139,6 @@ async function callGroqProvider<T>(
 export async function callGemini<T>(
   { systemPrompt, userPrompt, maxRetries = 2 }: AIRequest
 ): Promise<T> {
-  let lastError: Error | null = null;
-
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     // 1. Try Gemini (Google)
     const geminiKey = process.env.GEMINI_API_KEY;

@@ -100,7 +100,6 @@ export default function WorkoutPlayerPage() {
   // ── Data state ──
   const [workoutData, setWorkoutData] = useState<WorkoutData | null>(null);
   const [workoutId, setWorkoutId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -152,8 +151,6 @@ export default function WorkoutPlayerPage() {
           setLoading(false);
           return;
         }
-        setUserId(user.id);
-
         // Fetch the workout row
         const { data: workout, error: fetchErr } = await supabase
           .from("workouts")
@@ -402,7 +399,6 @@ export default function WorkoutPlayerPage() {
   // 5. Derived values
   // ────────────────────────────────────────────
 
-  const currentExercise = allExercises[currentExIndex] ?? null;
   const completedCount = results.filter((r) => !r.skipped).length;
   const skippedCount = results.filter((r) => r.skipped).length;
   const totalExerciseCount = allExercises.length;
@@ -541,6 +537,8 @@ export default function WorkoutPlayerPage() {
   // =============================================
   // PHASE 2: ACTIVE WORKOUT
   // =============================================
+
+  const currentExercise = allExercises[currentExIndex] ?? null;
 
   if (phase === "active" && currentExercise) {
     return (

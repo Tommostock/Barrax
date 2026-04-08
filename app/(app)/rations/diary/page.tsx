@@ -14,12 +14,10 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MacroRings from "@/components/nutrition/MacroRings";
 import AddFoodSheet from "@/components/nutrition/AddFoodSheet";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
 import {
@@ -94,7 +92,6 @@ function getSourceTag(source: string): { label: string; variant: "active" | "def
 // Main Page Component
 // ====================================================
 export default function FoodDiaryPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   // ── State ──────────────────────────────────

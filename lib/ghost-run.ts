@@ -10,7 +10,6 @@ import { haversineDistance } from "@/lib/geolocation";
 
 // How close two routes need to be to count as "same route"
 const ROUTE_MATCH_THRESHOLD_M = 200; // Start points within 200m
-const POINT_MATCH_THRESHOLD_M = 100;  // Points within 100m
 
 // Check if two runs started from roughly the same location
 export function routesMatch(

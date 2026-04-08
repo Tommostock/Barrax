@@ -18,12 +18,11 @@ import RecentFoods from "@/components/nutrition/RecentFoods";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
-import ProgressBar from "@/components/ui/ProgressBar";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import {
   Utensils, Plus, ChevronDown, ChevronUp, Heart, RefreshCw,
   Check, Clock, Flame, Droplets, ShoppingCart, Loader2,
-  CircleCheck, Trash2, Scan, PenLine, Search,
+  CircleCheck, Trash2,
 } from "lucide-react";
 import type { FoodDiaryEntry, MealType } from "@/types";
 

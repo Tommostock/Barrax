@@ -16,7 +16,7 @@ import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { formatPace, formatDistance, formatDuration } from "@/lib/geolocation";
-import { ArrowLeft, MapPin, Clock, TrendingUp, Zap, Calendar } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, TrendingUp, Zap } from "lucide-react";
 import type { Run, GpsPoint } from "@/types";
 
 // Dynamic import for the map (Leaflet needs browser APIs)

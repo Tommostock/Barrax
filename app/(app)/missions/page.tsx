@@ -15,7 +15,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon, Route, Trophy } from "lucide-react";
 import { estimateCaloriesBurned } from "@/lib/calories";

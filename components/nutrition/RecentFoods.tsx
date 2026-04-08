@@ -34,7 +34,7 @@ interface RecentFoodsProps {
   }) => void;
 }
 
-export default function RecentFoods({ mealType, onQuickAdd }: RecentFoodsProps) {
+export default function RecentFoods({ mealType: _mealType, onQuickAdd }: RecentFoodsProps) {
   const supabase = createClient();
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [loading, setLoading] = useState(true);

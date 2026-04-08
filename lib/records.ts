@@ -62,8 +62,7 @@ export async function checkPersonalRecord(
 // Check multiple records at once after a workout
 export async function checkWorkoutRecords(
   userId: string,
-  durationSeconds: number,
-  exerciseCount: number
+  durationSeconds: number
 ): Promise<string[]> {
   const newPRs: string[] = [];
 

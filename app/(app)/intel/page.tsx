@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 import Card from "@/components/ui/Card";
-import { TrendingUp, Trophy, Activity, PieChart, FileText, Calendar } from "lucide-react";
-import { formatDistance, formatDuration } from "@/lib/geolocation";
+import { TrendingUp, Trophy, Activity, PieChart, FileText } from "lucide-react";
+import { formatDistance } from "@/lib/geolocation";
 import Link from "next/link";
 
 export default async function IntelPage() {

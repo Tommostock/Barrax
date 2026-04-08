@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import Button from "@/components/ui/Button";
-import { Trophy, Zap, Check } from "lucide-react";
+import { Trophy, Check } from "lucide-react";
 
 interface ChallengeData {
   title: string;
