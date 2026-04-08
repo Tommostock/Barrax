@@ -414,9 +414,19 @@ export default function MissionsPage() {
                         </span>
                       </button>
                     ) : (
-                      <div className="mt-4 flex items-center justify-center gap-2 py-2 text-green-primary">
-                        <Play size={14} /> <span className="text-xs font-heading uppercase tracking-wider">TAP TO ENGAGE</span>
-                      </div>
+                      <button
+                        className="mt-4 w-full py-3 bg-green-primary text-text-primary font-heading
+                                   text-sm uppercase tracking-widest font-bold hover:bg-green-light
+                                   active:scale-[0.98] transition-all min-h-[48px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/missions/player/${selectedWorkout.id}`);
+                        }}
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <Play size={18} /> START WORKOUT
+                        </span>
+                      </button>
                     )}
                   </div>
                 );

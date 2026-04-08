@@ -379,15 +379,9 @@ export default function WorkoutPlayerPage() {
         await supabase.from("workout_exercises").insert(rows);
       }
 
-      // 4c. Award XP via the API route
-      await fetch("/api/award-xp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: xp,
-          source: "workout_complete",
-        }),
-      });
+      // 4c. Award XP + fire notification for workout complete and rank-up
+      const { completeWorkoutAndNotify } = await import("@/lib/award-and-notify");
+      await completeWorkoutAndNotify(xp, totalDuration);
     } catch (err) {
       console.error("Error saving workout results:", err);
     } finally {
