@@ -124,16 +124,24 @@ export default function RationsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const qty = food.quantity ?? 1;
-    const { data } = await supabase.from("food_diary").insert({
+    const { data, error } = await supabase.from("food_diary").insert({
       user_id: user.id, ...food, quantity: qty, meal_type: addFoodMealType,
     }).select().single();
+    if (error) {
+      alert(`Failed to log food: ${error.message}`);
+      return;
+    }
     if (data) setDiaryEntries(prev => [...prev, data as FoodDiaryEntry]);
     navigator.vibrate?.(50);
   }
 
   // Delete diary entry
   async function deleteDiaryEntry(id: string) {
-    await supabase.from("food_diary").delete().eq("id", id);
+    const { error } = await supabase.from("food_diary").delete().eq("id", id);
+    if (error) {
+      alert(`Failed to delete: ${error.message}`);
+      return;
+    }
     setDiaryEntries(prev => prev.filter(e => e.id !== id));
   }
 
