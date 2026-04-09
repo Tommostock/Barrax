@@ -60,6 +60,24 @@ export default function IntelPage() {
     { href: "/intel/report", icon: FileText, title: "Mission Debrief", description: "Weekly performance evaluation" },
   ];
 
+  if (loading) {
+    return (
+      <div className="px-4 py-4 space-y-4">
+        <div className="skeleton h-6 w-48" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="skeleton h-20" />
+          <div className="skeleton h-20" />
+          <div className="skeleton h-20" />
+          <div className="skeleton h-20" />
+        </div>
+        <div className="skeleton h-64" />
+        <div className="skeleton h-16" />
+        <div className="skeleton h-16" />
+        <div className="skeleton h-16" />
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-4 space-y-4">
       <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Intelligence Report</h2>
@@ -67,19 +85,19 @@ export default function IntelPage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-bg-panel border border-green-dark p-3">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Total Workouts</p>
-          <p className="text-2xl font-bold font-mono text-text-primary">{loading ? "-" : stats.workouts}</p>
+          <p className="text-2xl font-bold font-mono text-text-primary">{stats.workouts}</p>
         </div>
         <div className="bg-bg-panel border border-green-dark p-3">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Total Distance</p>
-          <p className="text-2xl font-bold font-mono text-text-primary">{loading ? "-" : `${formatDistance(stats.distance)} km`}</p>
+          <p className="text-2xl font-bold font-mono text-text-primary">{`${formatDistance(stats.distance)} km`}</p>
         </div>
         <div className="bg-bg-panel border border-green-dark p-3">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Total XP</p>
-          <p className="text-2xl font-bold font-mono text-xp-gold">{loading ? "-" : stats.xp.toLocaleString()}</p>
+          <p className="text-2xl font-bold font-mono text-xp-gold">{stats.xp.toLocaleString()}</p>
         </div>
         <div className="bg-bg-panel border border-green-dark p-3">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Time Trained</p>
-          <p className="text-2xl font-bold font-mono text-text-primary">{loading ? "-" : `${stats.hours}h ${stats.mins}m`}</p>
+          <p className="text-2xl font-bold font-mono text-text-primary">{`${stats.hours}h ${stats.mins}m`}</p>
         </div>
       </div>
 
