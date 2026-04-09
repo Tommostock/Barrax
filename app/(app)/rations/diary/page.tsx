@@ -238,7 +238,6 @@ export default function FoodDiaryPage() {
       serving_size: food.serving_size ?? null,
       meal_type: addingMealType,
       source: food.source,
-      quantity: food.quantity ?? 1,
       logged_at: logDate.toISOString(),
     });
 
