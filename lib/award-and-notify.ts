@@ -73,3 +73,4 @@ export async function hitWaterGoalAndNotify() {
   notifyWaterGoalHit();
   return awardXPAndNotify(10, "water_goal_hit");
 }
+

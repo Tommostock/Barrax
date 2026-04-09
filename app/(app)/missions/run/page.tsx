@@ -343,21 +343,24 @@ export default function RunTrackerPage() {
         }),
       });
 
-      // Check for personal records (longest run, fastest pace)
-      try {
-        const { checkRunRecords } = await import("@/lib/records");
-        const newPRs = await checkRunRecords(
-          user.id,
-          computed.distanceMetres,
-          computed.durationSeconds,
-          computed.avgPace
-        );
-        if (newPRs.length > 0) {
-          const { notifyPersonalRecord } = await import("@/lib/notifications");
-          newPRs.forEach((pr) => notifyPersonalRecord(pr, `${(computed.distanceMetres / 1000).toFixed(1)} km`));
-        }
-      } catch (prErr) {
-        console.error("PR check failed:", prErr);
+      // Check and award badges
+      const { checkRunBadges, checkTimeBadges } = await import("@/lib/badges");
+      const { notifyBadgeEarned } = await import("@/lib/notifications");
+      const dist = computed.distanceMetres;
+      const runBadges = await checkRunBadges(user.id, dist);
+      const timeBadges = await checkTimeBadges(user.id, new Date());
+      for (const badge of [...runBadges, ...timeBadges]) {
+        notifyBadgeEarned(badge);
+      }
+
+      // Check personal records
+      const { checkRunRecords } = await import("@/lib/records");
+      const { notifyPersonalRecord } = await import("@/lib/notifications");
+      const elapsedSeconds = computed.durationSeconds;
+      const avgP = computed.avgPace;
+      const runPRs = await checkRunRecords(user.id, dist, elapsedSeconds, avgP);
+      for (const pr of runPRs) {
+        notifyPersonalRecord(pr, "");
       }
 
       setSaved(true);

@@ -6,7 +6,6 @@
      - Total workout time
      - XP earned
      - Meals followed
-     - Current streak
      - Badges earned
      - Runs completed
      - Performance rating (S/A/B/C/D)
@@ -179,7 +178,7 @@ export default function WeeklyReportPage() {
       .gte("earned_at", monday)
       .lte("earned_at", sunday);
 
-    // 10. Build the stats object
+    // 9. Build the stats object
     setStats({
       workoutsCompleted: completedCount ?? 0,
       workoutsScheduled: scheduledCount ?? 0,

@@ -69,19 +69,6 @@ export interface WeightLog {
   logged_at: string;
 }
 
-export interface BodyMeasurement {
-  id: string;
-  user_id: string;
-  chest_cm: number | null;
-  waist_cm: number | null;
-  hips_cm: number | null;
-  left_arm_cm: number | null;
-  right_arm_cm: number | null;
-  left_thigh_cm: number | null;
-  right_thigh_cm: number | null;
-  logged_at: string;
-}
-
 // --- Workouts ---
 export type WorkoutStatus = "pending" | "in_progress" | "complete" | "skipped";
 export type ExerciseCategory = "strength" | "cardio" | "hiit" | "recovery" | "core";

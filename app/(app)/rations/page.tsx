@@ -216,6 +216,19 @@ export default function RationsPage() {
       setEatenMeals(prev => new Set(prev).add(mealKey));
       if (data) setDiaryEntries(prev => [...prev, data as FoodDiaryEntry]);
       navigator.vibrate?.(50);
+
+      // Check if all 4 meals eaten today — award XP
+      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+      const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+      const { count: mealCount } = await supabase.from("food_diary")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id).eq("source", "meal_plan")
+        .gte("logged_at", todayStart.toISOString())
+        .lte("logged_at", todayEnd.toISOString());
+      if (mealCount && mealCount >= 4) {
+        const { awardXPAndNotify } = await import("@/lib/award-and-notify");
+        await awardXPAndNotify(20, "meal_plan_followed");
+      }
     }
   }
 

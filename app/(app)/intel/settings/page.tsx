@@ -107,7 +107,7 @@ export default function SettingsPage() {
     setFoods((prev) => prev.filter((f) => f.id !== id));
   }
 
-  // Reset all user progress — deletes XP, rank, streaks, badges,
+  // Reset all user progress — deletes XP, rank, badges,
   // workouts, runs, programmes, food diary, and weight logs.
   // Profile and food preferences are kept so they don't have to
   // re-enter their settings.

@@ -64,7 +64,7 @@ export default function NotificationPermission() {
             Enable Notifications
           </p>
           <p className="text-[0.65rem] text-text-secondary mt-0.5">
-            Get alerts for completed missions, rank promotions, and weigh-in reminders.
+            Get alerts for completed missions, rank promotions, and daily challenges.
           </p>
           <div className="flex gap-2 mt-2">
             <button onClick={handleAllow}
