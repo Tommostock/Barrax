@@ -107,15 +107,6 @@ export function notifyChallengeComplete(xp: number) {
   );
 }
 
-export function notifyStreakMilestone(days: number) {
-  showNotification(
-    `${days}-DAY STREAK`,
-    `${days} consecutive days of duty. No one can stop you now.`,
-    "streak-milestone",
-    "/"
-  );
-}
-
 export function notifyPersonalRecord(category: string, value: string) {
   showNotification(
     "NEW PERSONAL RECORD",

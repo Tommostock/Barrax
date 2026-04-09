@@ -140,13 +140,6 @@ export default function SettingsPage() {
           total_xp: 0,
           rank_history: [],
         }).eq("user_id", user.id),
-        // Reset streak to zero rather than deleting
-        supabase.from("streaks").update({
-          current_streak: 0,
-          longest_streak: 0,
-          last_activity_date: null,
-          freeze_used_this_week: false,
-        }).eq("user_id", user.id),
       ]);
 
       setShowResetSheet(false);
@@ -344,7 +337,7 @@ export default function SettingsPage() {
       <BottomSheet isOpen={showResetSheet} onClose={() => setShowResetSheet(false)} title="Acknowledge the Wipe">
         <div className="space-y-4">
           <p className="text-sm text-text-primary">
-            This will PERMANENTLY DELETE all your progress: XP, rank, streaks, badges, workouts, runs, food logs, weight history. EVERYTHING. There&apos;s NO coming back from this.
+            This will PERMANENTLY DELETE all your progress: XP, rank, badges, workouts, runs, food logs, weight history. EVERYTHING. There&apos;s NO coming back from this.
           </p>
           <p className="text-sm text-text-secondary">
             Your profile and food preferences stay. You&apos;ll start from ZERO.

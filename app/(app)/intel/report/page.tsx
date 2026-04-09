@@ -27,7 +27,6 @@ import {
   Swords,
   Clock,
   Zap,
-  Flame,
   Trophy,
   MapPin,
   Utensils,
@@ -173,14 +172,7 @@ export default function WeeklyReportPage() {
       .gte("logged_at", monday)
       .lte("logged_at", sunday);
 
-    // 8. Fetch current streak from the streaks table
-    const { data: streak } = await supabase
-      .from("streaks")
-      .select("current_streak")
-      .eq("user_id", user.id)
-      .single();
-
-    // 9. Fetch badges earned this week
+    // 8. Fetch badges earned this week
     const { count: badgesCount } = await supabase
       .from("badges")
       .select("*", { count: "exact", head: true })
@@ -195,7 +187,6 @@ export default function WeeklyReportPage() {
       totalWorkoutSeconds,
       xpEarned: workoutXp + runXp,
       mealsFollowed: mealsCount ?? 0,
-      currentStreak: streak?.current_streak ?? 0,
       badgesEarned: badgesCount ?? 0,
       runsCompleted: runs?.length ?? 0,
       totalRunDistance,
@@ -360,20 +351,6 @@ export default function WeeklyReportPage() {
             </div>
             <p className="text-2xl font-bold font-mono text-xp-gold">
               +{stats.xpEarned.toLocaleString()}
-            </p>
-          </Card>
-
-          {/* Current streak */}
-          <Card>
-            <div className="flex items-center gap-2 mb-2">
-              <Flame size={16} className="text-danger" />
-              <span className="text-[0.55rem] font-mono text-text-secondary uppercase">
-                Streak
-              </span>
-            </div>
-            <p className="text-2xl font-bold font-mono text-text-primary">
-              {stats.currentStreak}
-              <span className="text-sm text-text-secondary"> days</span>
             </p>
           </Card>
 

@@ -13,7 +13,7 @@ import Tag from "@/components/ui/Tag";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { RANK_THRESHOLDS } from "@/types";
 import { BADGE_DEFINITIONS } from "@/lib/badges";
-import { Award, Flame, Calendar } from "lucide-react";
+import { Award, Calendar } from "lucide-react";
 import RankInsignia from "@/components/rank/RankInsignia";
 
 const RANK_STYLES: Record<number, { bg: string; border: string }> = {
@@ -35,7 +35,6 @@ export default function RecordPage() {
   const supabase = createClient();
   const [profile, setProfile] = useState<{ name?: string; created_at?: string } | null>(null);
   const [rank, setRank] = useState<{ current_rank: number; total_xp: number; rank_history: { rank: number; title: string; achieved_at: string }[] } | null>(null);
-  const [streak, setStreak] = useState<{ current_streak: number; longest_streak: number } | null>(null);
   const [earnedBadges, setEarnedBadges] = useState<{ badge_key: string; earned_at: string }[]>([]);
   const [workoutCount, setWorkoutCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -45,17 +44,15 @@ export default function RecordPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const [pResult, rResult, sResult, bResult, wResult] = await Promise.all([
+      const [pResult, rResult, bResult, wResult] = await Promise.all([
         supabase.from("profiles").select("name, created_at").eq("id", user.id).single(),
         supabase.from("ranks").select("current_rank, total_xp, rank_history").eq("user_id", user.id).single(),
-        supabase.from("streaks").select("current_streak, longest_streak").eq("user_id", user.id).single(),
         supabase.from("badges").select("badge_key, earned_at").eq("user_id", user.id),
         supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "complete"),
       ]);
 
       if (pResult.data) setProfile(pResult.data);
       if (rResult.data) setRank(rResult.data as typeof rank);
-      if (sResult.data) setStreak(sResult.data);
       if (bResult.data) setEarnedBadges(bResult.data);
       setWorkoutCount(wResult.count ?? 0);
       setLoading(false);
@@ -135,23 +132,6 @@ export default function RecordPage() {
           </div>
         </div>
       </div>
-
-      {/* Streak */}
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Flame size={24} className={(streak?.current_streak ?? 0) > 0 ? "text-xp-gold" : "text-text-secondary"} />
-            <div>
-              <p className="text-2xl font-bold font-mono text-text-primary">{streak?.current_streak ?? 0}</p>
-              <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Current Streak</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-bold font-mono text-text-primary">{streak?.longest_streak ?? 0}</p>
-            <p className="text-[0.55rem] font-mono text-text-secondary uppercase">Best Streak</p>
-          </div>
-        </div>
-      </Card>
 
       {/* Rank history */}
       {rank?.rank_history && rank.rank_history.length > 0 && (

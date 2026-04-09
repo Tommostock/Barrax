@@ -8,15 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 
 // All badge definitions — key, name, description, and check function context
 export const BADGE_DEFINITIONS = [
-  // Streak badges
-  { key: "streak_7", name: "Week Warrior", description: "7-day streak", category: "streak", threshold: 7 },
-  { key: "streak_14", name: "Fortnight Fighter", description: "14-day streak", category: "streak", threshold: 14 },
-  { key: "streak_30", name: "Monthly Mission", description: "30-day streak", category: "streak", threshold: 30 },
-  { key: "streak_60", name: "Two Month Tour", description: "60-day streak", category: "streak", threshold: 60 },
-  { key: "streak_90", name: "Quarter Guard", description: "90-day streak", category: "streak", threshold: 90 },
-  { key: "streak_180", name: "Half Year Hero", description: "180-day streak", category: "streak", threshold: 180 },
-  { key: "streak_365", name: "Year of Service", description: "365-day streak", category: "streak", threshold: 365 },
-
   // Workout count badges
   { key: "workout_1", name: "First Blood", description: "Complete first workout", category: "workout", threshold: 1 },
   { key: "workout_10", name: "Getting Started", description: "Complete 10 workouts", category: "workout", threshold: 10 },
@@ -81,21 +72,6 @@ export async function checkAndAwardBadge(
   if (error) return null;
 
   return { badge_name: badge.name, badge_description: badge.description };
-}
-
-// Check all streak-based badges for the current streak value
-export async function checkStreakBadges(userId: string, currentStreak: number) {
-  const streakBadges = BADGE_DEFINITIONS.filter((b) => b.category === "streak");
-  const awarded: string[] = [];
-
-  for (const badge of streakBadges) {
-    if (currentStreak >= badge.threshold) {
-      const result = await checkAndAwardBadge(userId, badge.key);
-      if (result) awarded.push(result.badge_name);
-    }
-  }
-
-  return awarded;
 }
 
 // Check workout count badges

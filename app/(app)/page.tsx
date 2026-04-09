@@ -10,7 +10,6 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import RankStrip from "@/components/dashboard/RankStrip";
-import StreakCounter from "@/components/dashboard/StreakCounter";
 import QuickActions from "@/components/dashboard/QuickActions";
 import TodayMission from "@/components/dashboard/TodayMission";
 import TodayRations from "@/components/dashboard/TodayRations";
@@ -20,7 +19,6 @@ import DailyChallenge from "@/components/dashboard/DailyChallenge";
 export default function DashboardPage() {
   const supabase = createClient();
   const [rank, setRank] = useState<{ current_rank: number; total_xp: number } | null>(null);
-  const [streak, setStreak] = useState<{ current_streak: number; longest_streak: number; freeze_used_this_week: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,13 +26,10 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const [rankResult, streakResult] = await Promise.all([
-        supabase.from("ranks").select("current_rank, total_xp").eq("user_id", user.id).single(),
-        supabase.from("streaks").select("current_streak, longest_streak, freeze_used_this_week").eq("user_id", user.id).single(),
-      ]);
+      const { data: rankData } = await supabase
+        .from("ranks").select("current_rank, total_xp").eq("user_id", user.id).single();
 
-      if (rankResult.data) setRank(rankResult.data);
-      if (streakResult.data) setStreak(streakResult.data);
+      if (rankData) setRank(rankData);
       setLoading(false);
     }
     load();
@@ -62,12 +57,6 @@ export default function DashboardPage() {
       <RankStrip
         currentRank={rank?.current_rank ?? 1}
         totalXp={rank?.total_xp ?? 0}
-      />
-
-      <StreakCounter
-        currentStreak={streak?.current_streak ?? 0}
-        longestStreak={streak?.longest_streak ?? 0}
-        freezeAvailable={!streak?.freeze_used_this_week}
       />
 
       <QuickActions />
