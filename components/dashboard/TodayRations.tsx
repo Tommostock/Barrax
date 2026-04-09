@@ -323,7 +323,7 @@ export default function TodayRations() {
                              border border-green-dark hover:bg-green-primary/20
                              active:scale-95 transition-all"
                 >
-                  CONSUMED
+                  CONSUME
                 </button>
               )}
             </div>
