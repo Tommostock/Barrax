@@ -7,7 +7,7 @@
    Only caches static assets like JS, CSS, fonts, icons.
    ============================================ */
 
-const CACHE_NAME = "barrax-v2";
+const CACHE_NAME = "barrax-v3";
 
 // Install — skip waiting so new SW activates immediately
 self.addEventListener("install", () => {
