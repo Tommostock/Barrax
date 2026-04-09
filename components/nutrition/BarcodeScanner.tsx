@@ -11,7 +11,7 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Keyboard, Camera } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
@@ -20,6 +20,17 @@ interface BarcodeScannerProps {
 
 // Unique ID for the scanner container div — html5-qrcode needs a DOM element ID
 const SCANNER_ELEMENT_ID = "barrax-barcode-reader";
+
+// Only scan for product barcode formats (skip QR, Aztec, etc.) — much faster detection
+const BARCODE_FORMATS = [
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+  Html5QrcodeSupportedFormats.CODE_128,
+  Html5QrcodeSupportedFormats.CODE_39,
+  Html5QrcodeSupportedFormats.ITF,
+];
 
 export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
   const [error, setError] = useState<string | null>(null);
@@ -46,14 +57,28 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
 
   async function startScanner() {
     try {
-      const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
+      // Only scan product barcode formats for faster detection.
+      // Enable native BarcodeDetector API when available (Chrome/Android)
+      // for significantly better recognition.
+      const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID, {
+        formatsToSupport: BARCODE_FORMATS,
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        verbose: false,
+      });
       scannerRef.current = scanner;
 
       await scanner.start(
         { facingMode: "environment" },
         {
-          fps: 10,
-          qrbox: { width: 280, height: 150 },
+          fps: 15,
+          qrbox: { width: 300, height: 180 },
+          aspectRatio: 1.0,
+          // Request high-res camera for better barcode readability
+          videoConstraints: {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
         },
         (decodedText) => {
           // Barcode detected — haptic feedback and return result
