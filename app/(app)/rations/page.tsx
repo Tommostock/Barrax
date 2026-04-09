@@ -156,14 +156,22 @@ export default function RationsPage() {
     finally { setGenerating(false); }
   }
 
-  // Save favourite meal to the favourite_meals table
+  // Save a meal to the saved_foods table (My Food)
   async function saveFavourite(meal: Meal) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { error } = await supabase.from("favourite_meals").insert({ user_id: user.id, meal_data: meal });
+    const { error } = await supabase.from("saved_foods").insert({
+      user_id: user.id,
+      food_name: meal.name,
+      calories: meal.calories,
+      protein_g: meal.protein_g,
+      carbs_g: meal.carbs_g,
+      fat_g: meal.fat_g,
+      serving_size: `${meal.prep_time_minutes} min prep`,
+    });
     if (error) {
-      console.error("Failed to save favourite:", error);
-      alert(`Failed to save favourite: ${error.message}`);
+      console.error("Failed to save food:", error);
+      alert(`Failed to save food: ${error.message}`);
       return;
     }
     setSavedMeals(prev => new Set(prev).add(meal.name));
@@ -421,7 +429,7 @@ export default function RationsPage() {
           <button onClick={() => router.push("/rations/favourites")}
             className="w-full flex items-center gap-2 p-3 bg-bg-panel border border-green-dark hover:bg-bg-panel-alt transition-colors min-h-[44px]">
             <Heart size={16} className="text-green-primary" />
-            <span className="text-sm text-text-primary">Favourite Meals</span>
+            <span className="text-sm text-text-primary">My Food</span>
           </button>
           <button onClick={() => router.push("/rations/water")}
             className="w-full flex items-center gap-2 p-3 bg-bg-panel border border-green-dark hover:bg-bg-panel-alt transition-colors min-h-[44px]">
