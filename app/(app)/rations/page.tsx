@@ -223,24 +223,51 @@ export default function RationsPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Fetch food preferences for the AI
       const { data: prefs } = await supabase.from("food_preferences").select("food_name, category").eq("user_id", user.id);
       const noGo = prefs?.filter(p => p.category === "no_go").map(p => p.food_name) ?? [];
       const approved = prefs?.filter(p => p.category === "approved").map(p => p.food_name) ?? [];
-      const { data: profile } = await supabase.from("profiles").select("calorie_target").eq("id", user.id).single();
-      const { callGemini } = await import("@/lib/gemini");
-      const newMeal = await callGemini<Meal>({
-        systemPrompt: `You are a nutritionist. Generate a single ${meal.meal_type} meal replacement. Respond ONLY in valid JSON matching: { "meal_type": string, "name": string, "ingredients": [{"name": string, "quantity": string}], "method": [string], "prep_time_minutes": number, "calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, "is_maybe_food": false }. UK ingredients, budget-friendly, max 30 min prep. NEVER use these foods: ${noGo.join(", ")}. Prefer these: ${approved.join(", ")}.`,
-        userPrompt: `Replace this ${meal.meal_type}: "${meal.name}". Generate a different meal for ~${Math.round((profile?.calorie_target ?? 2000) / 4)} calories. Do NOT suggest the same meal.`,
+
+      // Call the server-side swap API (Gemini needs server-side API key)
+      const res = await fetch("/api/swap-meal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mealType: meal.meal_type,
+          currentMealName: meal.name,
+          targetCalories: Math.round(calorieTarget / 4),
+          noGoFoods: noGo,
+          approvedFoods: approved,
+        }),
       });
-      if (plan && newMeal) {
+
+      const data = await res.json();
+      if (!res.ok || !data.meal) {
+        alert(`Swap failed: ${data.error || "Could not generate replacement"}`);
+        return;
+      }
+
+      const newMeal = data.meal;
+
+      // Update the meal plan in the database and local state
+      if (plan) {
         const updatedDays = plan.plan_data.map(d => {
           if (d.day !== dayName) return d;
           return { ...d, meals: d.meals.map(m => m.meal_type === meal.meal_type ? { ...newMeal, meal_type: meal.meal_type, is_maybe_food: false } : m) };
         });
-        await supabase.from("meal_plans").update({ plan_data: updatedDays }).eq("id", plan.id);
+        const { error } = await supabase.from("meal_plans").update({ plan_data: updatedDays }).eq("id", plan.id);
+        if (error) {
+          alert(`Failed to save swap: ${error.message}`);
+          return;
+        }
         setPlan({ ...plan, plan_data: updatedDays });
+        navigator.vibrate?.(50);
       }
-    } catch (err) { console.error("Swap failed:", err); }
+    } catch (err) {
+      console.error("Swap failed:", err);
+      alert("Swap failed. Please try again.");
+    }
     finally { setSwapping(null); }
   }
 
