@@ -233,10 +233,11 @@ export default function MissionsPage() {
                 onClick={() => setSelectedDay(dayName)}
                 className={`p-2 text-center border transition-all min-h-[56px]
                   ${isSelected ? "border-green-primary bg-green-primary/15 scale-[1.02]"
-                    : isComplete ? "border-green-light/50 bg-bg-panel"
+                    : isComplete ? "border-xp-gold/60 bg-xp-gold/10"
+                    : isToday ? "border-white/60 bg-bg-panel"
                     : "border-green-dark bg-bg-panel hover:bg-bg-panel-alt"}`}
               >
-                <p className={`text-[0.55rem] font-mono ${isSelected ? "text-green-light font-bold" : isToday ? "text-green-light" : "text-text-secondary"}`}>
+                <p className={`text-[0.55rem] font-mono ${isSelected ? "text-green-light font-bold" : isComplete ? "text-xp-gold font-bold" : isToday ? "text-white font-bold" : "text-text-secondary"}`}>
                   {DAY_LABELS[i]}
                 </p>
                 <div className="w-6 h-6 mx-auto mt-1 flex items-center justify-center">
@@ -245,14 +246,14 @@ export default function MissionsPage() {
                     const scheduleRule = trainingSchedule[dayName as keyof TrainingSchedule];
                     const activeColor = isSelected || isToday ? "text-green-primary" : "text-text-secondary";
 
-                    if (isComplete) return <Check size={14} className="text-green-light" />;
+                    if (isComplete) return <Check size={14} className="text-xp-gold" />;
                     if (scheduleRule?.type === "run") return <Route size={12} className={activeColor} />;
                     if (scheduleRule?.type === "activity") return <Trophy size={12} className={isSelected || isToday ? "text-khaki" : "text-text-secondary"} />;
                     if (isRest) return <Moon size={11} className="text-text-secondary" />;
                     return <Swords size={12} className={activeColor} />;
                   })()}
                 </div>
-                {isToday && <div className="w-1 h-1 mx-auto mt-0.5 bg-green-light" />}
+                {isToday && <div className="w-1.5 h-1.5 mx-auto mt-0.5 bg-white" />}
               </button>
             );
           })}
