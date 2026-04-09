@@ -329,7 +329,11 @@ export default function TodayRations() {
             </div>
           );
         }) : (
-          <p className="text-xs text-text-secondary">No meals for today.</p>
+          <div className="text-center py-4">
+            <Utensils size={20} className="text-text-secondary mx-auto mb-2" />
+            <p className="text-xs text-text-secondary">No meal plan active.</p>
+            <p className="text-[0.6rem] text-text-secondary mt-1">Go to FUEL UP and deploy your rations.</p>
+          </div>
         )}
       </div>
     </Card>

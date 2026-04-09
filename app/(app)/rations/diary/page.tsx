@@ -501,6 +501,7 @@ export default function FoodDiaryPage() {
                   {!loading && mealEntries.length === 0 && (
                     <div className="py-4 text-center">
                       <p className="text-xs text-text-secondary font-mono">No food logged</p>
+                      <p className="text-[0.55rem] text-text-secondary mt-1">Tap ADD FOOD to scan, search, or enter manually.</p>
                     </div>
                   )}
 

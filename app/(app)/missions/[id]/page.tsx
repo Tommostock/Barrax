@@ -45,8 +45,10 @@ export default function WorkoutDetailPage() {
 
   if (!workout) {
     return (
-      <div className="px-4 py-4 text-center">
-        <p className="text-text-secondary">Workout not found.</p>
+      <div className="px-4 py-8 text-center">
+        <Swords size={32} className="text-text-secondary mx-auto mb-3" />
+        <p className="text-sm text-text-secondary">Workout not found.</p>
+        <p className="text-[0.6rem] text-text-secondary mt-1">This mission may have been removed or reassigned.</p>
         <Button onClick={() => router.push("/missions")} className="mt-4">BACK TO MISSIONS</Button>
       </div>
     );
