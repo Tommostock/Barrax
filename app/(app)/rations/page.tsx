@@ -508,7 +508,7 @@ export default function RationsPage() {
           <button onClick={() => router.push("/rations/favourites")}
             className="w-full flex items-center gap-2 p-3 bg-bg-panel border border-green-dark hover:bg-bg-panel-alt transition-colors min-h-[44px]">
             <Heart size={16} className="text-green-primary" />
-            <span className="text-sm text-text-primary">My Food</span>
+            <span className="text-sm text-text-primary">Saved Foods</span>
           </button>
           <button onClick={() => router.push("/rations/water")}
             className="w-full flex items-center gap-2 p-3 bg-bg-panel border border-green-dark hover:bg-bg-panel-alt transition-colors min-h-[44px]">

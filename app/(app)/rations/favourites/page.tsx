@@ -153,7 +153,7 @@ export default function MyFoodPage() {
         <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Rations</span>
       </button>
 
-      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">My Food</h2>
+      <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Saved Foods</h2>
 
       {/* Tab selector */}
       <div className="flex border border-green-dark">
