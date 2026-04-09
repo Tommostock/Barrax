@@ -10,6 +10,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import InstallPrompt from "@/components/layout/InstallPrompt";
 import NotificationPermission from "@/components/layout/NotificationPermission";
 import WeighInReminder from "@/components/layout/WeighInReminder";
+import WeeklySummary from "@/components/layout/WeeklySummary";
 import AuthGuard from "@/components/layout/AuthGuard";
 
 export default function AppLayout({
@@ -25,6 +26,7 @@ export default function AppLayout({
       <InstallPrompt />
       <NotificationPermission />
       <WeighInReminder />
+      <WeeklySummary />
     </AuthGuard>
   );
 }
