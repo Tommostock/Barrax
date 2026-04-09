@@ -630,6 +630,17 @@ export default function WorkoutPlayerPage() {
       // 4c. Award XP + fire notification for workout complete and rank-up
       const { completeWorkoutAndNotify } = await import("@/lib/award-and-notify");
       await completeWorkoutAndNotify(xp, totalDuration);
+
+      // 4d. Check for personal records
+      const { checkWorkoutRecords } = await import("@/lib/records");
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const newPRs = await checkWorkoutRecords(currentUser.id, totalDuration);
+        if (newPRs.length > 0) {
+          const { notifyPersonalRecord } = await import("@/lib/notifications");
+          newPRs.forEach((pr) => notifyPersonalRecord(pr, `${Math.round(totalDuration / 60)} min`));
+        }
+      }
     } catch (err) {
       console.error("Error saving workout results:", err);
     } finally {

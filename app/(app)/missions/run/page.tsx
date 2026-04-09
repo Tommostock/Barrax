@@ -343,6 +343,23 @@ export default function RunTrackerPage() {
         }),
       });
 
+      // Check for personal records (longest run, fastest pace)
+      try {
+        const { checkRunRecords } = await import("@/lib/records");
+        const newPRs = await checkRunRecords(
+          user.id,
+          computed.distanceMetres,
+          computed.durationSeconds,
+          computed.avgPace
+        );
+        if (newPRs.length > 0) {
+          const { notifyPersonalRecord } = await import("@/lib/notifications");
+          newPRs.forEach((pr) => notifyPersonalRecord(pr, `${(computed.distanceMetres / 1000).toFixed(1)} km`));
+        }
+      } catch (prErr) {
+        console.error("PR check failed:", prErr);
+      }
+
       setSaved(true);
     } catch (err) {
       console.error("Error saving run:", err);

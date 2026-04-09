@@ -16,6 +16,7 @@ import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { ArrowLeft, Heart, Search, Trash2 } from "lucide-react";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import type { SavedFood } from "@/types";
 
 export default function MyFoodPage() {
@@ -25,6 +26,7 @@ export default function MyFoodPage() {
   const [foods, setFoods] = useState<SavedFood[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const loadFoods = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -114,7 +116,7 @@ export default function MyFoodPage() {
 
               {/* Delete */}
               <button
-                onClick={() => removeFood(food.id)}
+                onClick={() => setDeleteTarget({ id: food.id, name: food.food_name })}
                 className="flex items-center justify-center min-h-[44px] min-w-[44px] text-text-secondary hover:text-danger transition-colors"
                 aria-label={`Remove ${food.food_name}`}
               >
@@ -129,6 +131,18 @@ export default function MyFoodPage() {
           </p>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="REMOVE FOOD"
+        message={`Remove ${deleteTarget?.name ?? "this item"} from My Food?`}
+        confirmLabel="REMOVE"
+        onConfirm={() => {
+          if (deleteTarget) removeFood(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
