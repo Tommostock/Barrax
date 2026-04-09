@@ -250,12 +250,7 @@ export interface MealLog {
   logged_at: string;
 }
 
-export interface FavouriteMeal {
-  id: string;
-  user_id: string;
-  meal_data: Meal;
-  created_at: string;
-}
+
 
 // --- Water ---
 export interface WaterLog {
@@ -296,21 +291,6 @@ export const RANK_THRESHOLDS = [
   { rank: 11, title: "Colonel", xp: 24000, unlocks: "Prestige badge" },
   { rank: 12, title: "General", xp: 33000, unlocks: "Full prestige, all badges" },
 ] as const;
-
-export interface Streak {
-  id: string;
-  user_id: string;
-  current_streak: number;
-  longest_streak: number;
-  last_active_date: string;
-  freeze_used_this_week: boolean;
-  streak_history: StreakEvent[];
-}
-
-export interface StreakEvent {
-  date: string;
-  type: "active" | "freeze" | "break";
-}
 
 export interface Badge {
   id: string;
