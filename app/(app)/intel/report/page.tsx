@@ -44,7 +44,6 @@ interface WeeklyStats {
   totalWorkoutSeconds: number;
   xpEarned: number;
   mealsFollowed: number;
-  currentStreak: number;
   badgesEarned: number;
   runsCompleted: number;
   totalRunDistance: number;

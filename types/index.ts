@@ -41,7 +41,6 @@ export interface Profile {
 export interface NotificationSettings {
   morning_mission: boolean;
   missed_workout: boolean;
-  streak_warning: boolean;
   water_reminder: boolean;
   weekly_programme: boolean;
   rank_up: boolean;
