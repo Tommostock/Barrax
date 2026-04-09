@@ -9,6 +9,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
+import WorkoutCalendar from "@/components/intel/WorkoutCalendar";
 import { TrendingUp, Trophy, Activity, PieChart, FileText, Settings } from "lucide-react";
 import { formatDistance } from "@/lib/geolocation";
 import Link from "next/link";
@@ -16,6 +17,7 @@ import Link from "next/link";
 export default function IntelPage() {
   const supabase = createClient();
   const [stats, setStats] = useState({ workouts: 0, distance: 0, xp: 0, hours: 0, mins: 0 });
+  const [calendarWorkouts, setCalendarWorkouts] = useState<{ scheduled_date: string; status: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,12 +25,16 @@ export default function IntelPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const [wcResult, runsResult, rankResult, wResult] = await Promise.all([
+      const [wcResult, runsResult, rankResult, wResult, calResult] = await Promise.all([
         supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "complete"),
         supabase.from("runs").select("distance_metres, duration_seconds").eq("user_id", user.id),
         supabase.from("ranks").select("total_xp").eq("user_id", user.id).single(),
         supabase.from("workouts").select("duration_seconds").eq("user_id", user.id).eq("status", "complete"),
+        // Fetch all workouts for the calendar (scheduled_date + status)
+        supabase.from("workouts").select("scheduled_date, status").eq("user_id", user.id),
       ]);
+
+      if (calResult.data) setCalendarWorkouts(calResult.data);
 
       const totalDist = runsResult.data?.reduce((s, r) => s + (r.distance_metres || 0), 0) ?? 0;
       const totalSecs = (wResult.data?.reduce((s, w) => s + (w.duration_seconds || 0), 0) ?? 0)
@@ -76,6 +82,9 @@ export default function IntelPage() {
           <p className="text-2xl font-bold font-mono text-text-primary">{loading ? "-" : `${stats.hours}h ${stats.mins}m`}</p>
         </div>
       </div>
+
+      {/* Workout history calendar */}
+      <WorkoutCalendar month={new Date()} workouts={calendarWorkouts} />
 
       {sections.map((section) => {
         const Icon = section.icon;
