@@ -29,6 +29,24 @@ interface ProgrammeDay {
   workout: { type: string; focus: string; name: string } | null;
 }
 
+// Derive a short label and colour from a workout's focus/type field
+function getWorkoutLabel(focus: string): { label: string; color: string } {
+  const f = focus.toLowerCase();
+  if (f.includes("upper") || f.includes("push") || f.includes("chest") || f.includes("arm") || f.includes("shoulder"))
+    return { label: "UPPER", color: "text-green-light" };
+  if (f.includes("lower") || f.includes("leg") || f.includes("squat") || f.includes("glute"))
+    return { label: "LEGS", color: "text-xp-gold" };
+  if (f.includes("full") || f.includes("total"))
+    return { label: "FULL", color: "text-khaki" };
+  if (f.includes("core") || f.includes("abs"))
+    return { label: "CORE", color: "text-sand" };
+  if (f.includes("cardio") || f.includes("hiit") || f.includes("conditioning"))
+    return { label: "CARDIO", color: "text-danger" };
+  if (f.includes("pull") || f.includes("back"))
+    return { label: "PULL", color: "text-green-light" };
+  return { label: focus.slice(0, 5).toUpperCase(), color: "text-text-secondary" };
+}
+
 export default function MissionsPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -253,6 +271,12 @@ export default function MissionsPage() {
                     return <Swords size={12} className={activeColor} />;
                   })()}
                 </div>
+                {/* Muscle group / workout type label */}
+                {dayData?.workout?.focus && !isRest && (
+                  <p className={`text-[0.35rem] font-mono mt-0.5 truncate ${getWorkoutLabel(dayData.workout.focus).color}`}>
+                    {getWorkoutLabel(dayData.workout.focus).label}
+                  </p>
+                )}
                 {isToday && <div className="w-1.5 h-1.5 mx-auto mt-0.5 bg-white" />}
               </button>
             );

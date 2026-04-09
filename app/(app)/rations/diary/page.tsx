@@ -18,6 +18,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MacroRings from "@/components/nutrition/MacroRings";
 import AddFoodSheet from "@/components/nutrition/AddFoodSheet";
+import BottomSheet from "@/components/ui/BottomSheet";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
 import PullToRefresh from "@/components/ui/PullToRefresh";
@@ -114,6 +115,13 @@ export default function FoodDiaryPage() {
 
   // AddFoodSheet state — which meal type is being added to
   const [addingMealType, setAddingMealType] = useState<MealType | null>(null);
+
+  // Edit food state
+  const [editEntry, setEditEntry] = useState<FoodDiaryEntry | null>(null);
+  const [editCalories, setEditCalories] = useState("");
+  const [editProtein, setEditProtein] = useState("");
+  const [editCarbs, setEditCarbs] = useState("");
+  const [editFat, setEditFat] = useState("");
 
   // Confirm delete state
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
@@ -320,6 +328,36 @@ export default function FoodDiaryPage() {
   }
 
   // ──────────────────────────────────────────
+  // Open the edit sheet for a food entry
+  // ──────────────────────────────────────────
+  function openEditSheet(entry: FoodDiaryEntry) {
+    setEditEntry(entry);
+    setEditCalories(String(entry.calories));
+    setEditProtein(String(entry.protein_g));
+    setEditCarbs(String(entry.carbs_g));
+    setEditFat(String(entry.fat_g));
+  }
+
+  // Save edited food entry
+  async function saveEdit() {
+    if (!editEntry) return;
+    const { error } = await supabase.from("food_diary").update({
+      calories: Number(editCalories) || 0,
+      protein_g: Number(editProtein) || 0,
+      carbs_g: Number(editCarbs) || 0,
+      fat_g: Number(editFat) || 0,
+    }).eq("id", editEntry.id);
+
+    if (error) {
+      alert(`Failed to update: ${error.message}`);
+      return;
+    }
+
+    setEditEntry(null);
+    await loadEntries();
+  }
+
+  // ──────────────────────────────────────────
   // Filter entries by meal type
   // ──────────────────────────────────────────
   function getEntriesForMeal(mealType: MealType): FoodDiaryEntry[] {
@@ -354,10 +392,18 @@ export default function FoodDiaryPage() {
           <ChevronLeft size={24} />
         </button>
 
-        {/* Current date display */}
-        <span className="text-sm font-heading uppercase tracking-wider text-sand">
+        {/* Current date display — tap to pick a date */}
+        <label className="text-sm font-heading uppercase tracking-wider text-sand cursor-pointer hover:text-green-light transition-colors relative">
           {formatDateDisplay(selectedDate)}
-        </span>
+          <input
+            type="date"
+            value={selectedDate.toISOString().split("T")[0]}
+            onChange={(e) => {
+              if (e.target.value) setSelectedDate(new Date(e.target.value + "T12:00:00"));
+            }}
+            className="absolute inset-0 opacity-0 cursor-pointer"
+          />
+        </label>
 
         {/* Right arrow — go to next day */}
         <button
@@ -449,8 +495,8 @@ export default function FoodDiaryPage() {
                             key={entry.id}
                             className="flex items-center gap-2 p-3 min-h-[44px]"
                           >
-                            {/* Food name + macro detail + source tag */}
-                            <div className="flex-1 min-w-0">
+                            {/* Food name + macro detail — tap to edit */}
+                            <button onClick={() => openEditSheet(entry)} className="flex-1 min-w-0 text-left">
                               <p className="text-sm text-text-primary truncate">
                                 {entry.food_name}
                               </p>
@@ -462,7 +508,7 @@ export default function FoodDiaryPage() {
                                 {/* Source tag */}
                                 <Tag variant={sourceTag.variant}>{sourceTag.label}</Tag>
                               </div>
-                            </div>
+                            </button>
 
                             {/* Calories (right-aligned) */}
                             <div className="text-right flex-shrink-0 mr-1">
@@ -545,6 +591,38 @@ export default function FoodDiaryPage() {
         }}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {/* Edit food entry sheet */}
+      <BottomSheet isOpen={editEntry !== null} onClose={() => setEditEntry(null)} title="EDIT FOOD">
+        {editEntry && (
+          <div className="space-y-3">
+            <p className="text-sm font-heading uppercase text-sand">{editEntry.food_name}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Calories</label>
+                <input type="number" value={editCalories} onChange={(e) => setEditCalories(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" />
+              </div>
+              <div>
+                <label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Protein (g)</label>
+                <input type="number" value={editProtein} onChange={(e) => setEditProtein(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" />
+              </div>
+              <div>
+                <label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Carbs (g)</label>
+                <input type="number" value={editCarbs} onChange={(e) => setEditCarbs(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" />
+              </div>
+              <div>
+                <label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Fat (g)</label>
+                <input type="number" value={editFat} onChange={(e) => setEditFat(e.target.value)}
+                  className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" />
+              </div>
+            </div>
+            <Button onClick={saveEdit} fullWidth>SAVE CHANGES</Button>
+          </div>
+        )}
+      </BottomSheet>
 
     </div>
   );

@@ -63,7 +63,10 @@ export default function RationsPage() {
   const [diaryEntries, setDiaryEntries] = useState<FoodDiaryEntry[]>([]);
   const [calorieTarget, setCalorieTarget] = useState(2000);
   const [addFoodOpen, setAddFoodOpen] = useState(false);
-  const [addFoodMealType, setAddFoodMealType] = useState<MealType>("snack");
+  // Smart default: pick meal type based on time of day
+  const hour = new Date().getHours();
+  const defaultMealType: MealType = hour < 10 ? "breakfast" : hour < 14 ? "lunch" : hour < 17 ? "snack" : "dinner";
+  const [addFoodMealType, setAddFoodMealType] = useState<MealType>(defaultMealType);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [portionScale, setPortionScale] = useState(1);
 

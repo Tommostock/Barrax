@@ -3,7 +3,16 @@
    Circular progress indicators for daily macros.
    Shows calories (large centre), protein, carbs, fat.
    Uses SVG circles for the ring effect.
+   Numbers animate when values change.
    ============================================ */
+
+import useCountUp from "@/hooks/useCountUp";
+
+// Animated number display using the count-up hook
+function AnimatedValue({ value }: { value: number }) {
+  const display = useCountUp(value);
+  return <span className="text-lg font-bold font-mono text-text-primary">{display}</span>;
+}
 
 interface MacroRingsProps {
   calories: number;
@@ -67,7 +76,7 @@ function Ring({
       </svg>
       {/* Centre text overlay */}
       <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
-        <span className="text-lg font-bold font-mono text-text-primary">{Math.round(value)}</span>
+        <AnimatedValue value={value} />
         <span className="text-[0.5rem] font-mono text-text-secondary uppercase">{unit}</span>
       </div>
       <p className="text-[0.55rem] font-mono text-text-secondary uppercase mt-1">{label}</p>
