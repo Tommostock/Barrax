@@ -28,7 +28,7 @@ import type { FoodDiaryEntry, MealType } from "@/types";
 
 interface MealIngredient { name: string; quantity: string; checked: boolean; }
 interface Meal {
-  meal_type: string; name: string; ingredients: MealIngredient[];
+  meal_type: string; name: string; description?: string; ingredients: MealIngredient[];
   method: string[]; prep_time_minutes: number; calories: number;
   protein_g: number; carbs_g: number; fat_g: number; is_maybe_food: boolean;
 }
@@ -353,6 +353,10 @@ export default function RationsPage() {
 
                       {isMealExpanded && (
                         <div className="px-3 pb-3 space-y-3 border-t border-green-dark/30 pt-3">
+                          {/* Meal description */}
+                          {meal.description && (
+                            <p className="text-xs text-text-secondary italic">{meal.description}</p>
+                          )}
                           <div className="flex gap-2">
                             <Tag variant="default">{`P: ${meal.protein_g}g`}</Tag>
                             <Tag variant="default">{`C: ${meal.carbs_g}g`}</Tag>

@@ -22,6 +22,7 @@ The JSON must match this exact structure:
         {
           "meal_type": "breakfast" | "lunch" | "dinner" | "snack",
           "name": string,
+          "description": string,
           "ingredients": [
             { "name": string, "quantity": string }
           ],
@@ -48,7 +49,7 @@ The JSON must match this exact structure:
 Rules:
 - Generate exactly 7 days (Monday to Sunday)
 - Each day has exactly 4 meals: breakfast, lunch, dinner, snack
-- Keep meals SIMPLE. Familiar comfort foods made healthier. Not fancy restaurant dishes.
+- Keep meals SIMPLE — familiar comfort foods made healthier, not fancy restaurant dishes
 - Meals should be family-friendly and can feed multiple people
 - Use the APPROVED foods list as preferred ingredients
 - NEVER include ANY ingredient from the NO GO list — these are hard exclusions
@@ -56,7 +57,13 @@ Rules:
 - All other meals should have is_maybe_food: false
 - Consolidate the shopping list — combine quantities for the same ingredient across meals
 - Organise the shopping list by supermarket section
-- Calorie estimates should be reasonable and per serving`;
+- Calorie estimates should be reasonable and per serving
+
+RECIPE QUALITY — this is critical:
+- "description" should be 1-2 sentences describing the dish and what makes it good (e.g. "A hearty one-pot chicken and rice dish with peppers and a smoky paprika kick. Great for batch cooking.")
+- "ingredients" must include EVERYTHING needed: oil, butter, salt, pepper, herbs, spices, sauces, stock cubes — not just the main ingredients. Be specific with quantities (e.g. "1 tbsp olive oil", "1 tsp smoked paprika", "pinch of salt and pepper")
+- "method" must be proper step-by-step cooking instructions, typically 4-8 steps. Each step should be a clear, actionable sentence. Include cooking temperatures, times, and useful tips (e.g. "Heat 1 tbsp olive oil in a large frying pan over medium-high heat", "Cook for 3-4 minutes until golden brown", "Season to taste with salt and pepper")
+- Do NOT write vague steps like "cook the chicken" — say HOW to cook it, for how long, and at what heat`;
 
 interface GenerateMealsRequest {
   noGoFoods: string[];
@@ -103,6 +110,7 @@ Remember: keep it simple. British comfort food. Nothing fancy.`;
         meals: {
           meal_type: string;
           name: string;
+          description: string;
           ingredients: { name: string; quantity: string }[];
           method: string[];
           prep_time_minutes: number;
