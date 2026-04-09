@@ -112,7 +112,9 @@ function estimateRemainingSeconds(
 
   for (let i = currentIndex; i < exercises.length; i++) {
     const ex = exercises[i];
-    const setsLeft = i === currentIndex ? ex.sets - currentSet + 1 : ex.sets;
+    // Warm-up/cooldown exercises may lack sets — default to 1
+    const exSets = ex.sets ?? 1;
+    const setsLeft = i === currentIndex ? exSets - currentSet + 1 : exSets;
     const perSet = ex.reps ? 30 : (ex.duration_seconds ?? 30);
     total += setsLeft * (perSet + (ex.rest_seconds ?? 0));
   }
