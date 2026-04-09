@@ -18,6 +18,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import MacroRings from "@/components/nutrition/MacroRings";
 import AddFoodSheet from "@/components/nutrition/AddFoodSheet";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
 import {
@@ -112,6 +115,9 @@ export default function FoodDiaryPage() {
   // AddFoodSheet state — which meal type is being added to
   const [addingMealType, setAddingMealType] = useState<MealType | null>(null);
 
+  // Confirm delete state
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+
   // ── Derived macro targets ──────────────────
   // protein  = 30% of calories / 4 cal per gram
   // carbs    = 40% of calories / 4 cal per gram
@@ -175,6 +181,8 @@ export default function FoodDiaryPage() {
   useEffect(() => {
     loadEntries();
   }, [loadEntries]);
+
+  const { pullDistance, refreshing } = usePullToRefresh({ onRefresh: loadEntries });
 
   // ──────────────────────────────────────────
   // Navigate date forward / backward by 1 day
@@ -323,6 +331,7 @@ export default function FoodDiaryPage() {
   // ====================================================
   return (
     <div className="bg-bg-primary min-h-screen pb-24">
+      <PullToRefresh pullDistance={pullDistance} refreshing={refreshing} />
       {/* ── Back link to /rations ── */}
       <div className="px-4 pt-4">
         <Link
@@ -476,7 +485,7 @@ export default function FoodDiaryPage() {
 
                             {/* Delete button (trash icon) */}
                             <button
-                              onClick={() => handleDeleteEntry(entry.id)}
+                              onClick={() => setDeleteTarget({ id: entry.id, name: entry.food_name })}
                               className="flex items-center justify-center min-h-[44px] min-w-[44px] text-text-secondary hover:text-danger transition-colors"
                               aria-label={`Delete ${entry.food_name}`}
                             >
@@ -521,6 +530,19 @@ export default function FoodDiaryPage() {
         onClose={() => setAddingMealType(null)}
         mealType={addingMealType ?? "breakfast"}
         onAddFood={handleAddFood}
+      />
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="DELETE FOOD"
+        message={`Remove ${deleteTarget?.name ?? "this item"} from your diary?`}
+        confirmLabel="DELETE"
+        onConfirm={() => {
+          if (deleteTarget) handleDeleteEntry(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
       />
 
     </div>

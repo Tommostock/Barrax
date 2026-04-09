@@ -14,6 +14,8 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { SkeletonCard } from "@/components/ui/Skeleton";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 import { ArrowLeft, Plus, Scale } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import type { WeightLog } from "@/types";
@@ -43,6 +45,8 @@ export default function BodyTrackingPage() {
   }, [supabase]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const { pullDistance, refreshing } = usePullToRefresh({ onRefresh: loadData });
 
   async function logWeight() {
     const weight = parseFloat(newWeight);
@@ -83,6 +87,7 @@ export default function BodyTrackingPage() {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
+      <PullToRefresh pullDistance={pullDistance} refreshing={refreshing} />
       <button onClick={() => router.push("/intel")}
         className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">
         <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Intel</span>

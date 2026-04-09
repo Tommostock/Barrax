@@ -7,8 +7,10 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
+import PullToRefresh from "@/components/ui/PullToRefresh";
 import RankStrip from "@/components/dashboard/RankStrip";
 import QuickActions from "@/components/dashboard/QuickActions";
 import TodayMission from "@/components/dashboard/TodayMission";
@@ -20,19 +22,20 @@ export default function DashboardPage() {
   const [rank, setRank] = useState<{ current_rank: number; total_xp: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+  const loadData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
 
-      const { data: rankData } = await supabase
-        .from("ranks").select("current_rank, total_xp").eq("user_id", user.id).single();
+    const { data: rankData } = await supabase
+      .from("ranks").select("current_rank, total_xp").eq("user_id", user.id).single();
 
-      if (rankData) setRank(rankData);
-      setLoading(false);
-    }
-    load();
+    if (rankData) setRank(rankData);
+    setLoading(false);
   }, [supabase]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const { pullDistance, refreshing } = usePullToRefresh({ onRefresh: loadData });
 
   if (loading) {
     return (
@@ -53,6 +56,7 @@ export default function DashboardPage() {
 
   return (
     <div className="px-4 py-4 space-y-4">
+      <PullToRefresh pullDistance={pullDistance} refreshing={refreshing} />
       <RankStrip
         currentRank={rank?.current_rank ?? 1}
         totalXp={rank?.total_xp ?? 0}

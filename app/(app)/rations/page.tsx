@@ -19,6 +19,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   Utensils, Plus, ChevronDown, ChevronUp, Heart, RefreshCw,
   Check, Clock, Flame, Droplets, ShoppingCart, Loader2,
@@ -63,6 +64,7 @@ export default function RationsPage() {
   const [calorieTarget, setCalorieTarget] = useState(2000);
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   const [addFoodMealType, setAddFoodMealType] = useState<MealType>("snack");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const todayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const todayName = todayNames[new Date().getDay()];
@@ -278,7 +280,7 @@ export default function RationsPage() {
                 </div>
                 <div className="flex items-center gap-2 ml-2">
                   <span className="text-xs font-mono text-text-secondary">{Math.round(entry.calories)} kcal</span>
-                  <button onClick={() => deleteDiaryEntry(entry.id)}
+                  <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.food_name })}
                     className="text-text-secondary hover:text-danger min-w-[28px] min-h-[28px] flex items-center justify-center">
                     <Trash2 size={12} />
                   </button>
@@ -457,6 +459,19 @@ export default function RationsPage() {
         onClose={() => setAddFoodOpen(false)}
         mealType={addFoodMealType}
         onAddFood={(food) => addToDiary(food)}
+      />
+
+      {/* Confirm delete dialog */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="DELETE FOOD"
+        message={`Remove ${deleteTarget?.name ?? "this item"} from your diary?`}
+        confirmLabel="DELETE"
+        onConfirm={() => {
+          if (deleteTarget) deleteDiaryEntry(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );
