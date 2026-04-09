@@ -9,7 +9,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import nextDynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -47,7 +47,10 @@ export default function MyFoodPage() {
   const [saving, setSaving] = useState<string | null>(null);
 
   // Track saved food names so we can show which results are already saved
-  const savedNames = new Set(foods.map((f) => f.food_name.toLowerCase()));
+  const savedNames = useMemo(() => new Set(foods.map((f) => f.food_name.toLowerCase())), [foods]);
+
+  // Abort controller to cancel stale search requests
+  const abortRef = useRef<AbortController | null>(null);
 
   const loadFoods = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -100,16 +103,31 @@ export default function MyFoodPage() {
     setSaving(null);
   }
 
-  // Search Open Food Facts + USDA
+  // Search Open Food Facts + USDA — cancels any in-flight request first
   async function handleSearch() {
     if (!searchQuery.trim()) return;
+
+    // Abort any previous search still running
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setSearching(true);
+    setSearchResults([]);
     try {
-      const res = await fetch(`/api/food-lookup?query=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(
+        `/api/food-lookup?query=${encodeURIComponent(searchQuery)}`,
+        { signal: controller.signal }
+      );
       const data = await res.json();
       setSearchResults(data.products || []);
-    } catch { setSearchResults([]); }
-    finally { setSearching(false); }
+    } catch (err) {
+      // Ignore aborted requests — a newer search replaced this one
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
   }
 
   // Barcode lookup
