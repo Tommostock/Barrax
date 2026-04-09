@@ -42,7 +42,6 @@ export default function PersonalRecordsPage() {
 
   // All possible record categories
   const categories = [
-    { key: "longest_streak", label: "Longest Streak", icon: "days" },
     { key: "most_xp_week", label: "Most XP in a Week", icon: "XP" },
     { key: "fastest_1km", label: "Fastest 1km", icon: "min/km" },
     { key: "fastest_5km", label: "Fastest 5km", icon: "min" },

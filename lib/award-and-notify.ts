@@ -14,7 +14,6 @@ import {
   notifyRunComplete,
   notifyChallengeComplete,
   notifyWaterGoalHit,
-  notifyStreakMilestone,
 } from "@/lib/notifications";
 
 interface AwardResult {
@@ -73,12 +72,4 @@ export async function completeChallengeAndNotify(xp: number) {
 export async function hitWaterGoalAndNotify() {
   notifyWaterGoalHit();
   return awardXPAndNotify(10, "water_goal_hit");
-}
-
-export async function hitStreakMilestoneAndNotify(days: number, bonusXP: number) {
-  notifyStreakMilestone(days);
-  if (bonusXP > 0) {
-    return awardXPAndNotify(bonusXP, "streak_milestone");
-  }
-  return null;
 }

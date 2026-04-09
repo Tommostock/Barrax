@@ -21,7 +21,6 @@ const TOTAL_STEPS = 9;
 const DEFAULT_NOTIFICATIONS = {
   morning_mission: true,
   missed_workout: true,
-  streak_warning: true,
   water_reminder: true,
   weekly_programme: true,
   rank_up: true,
@@ -480,7 +479,6 @@ export default function OnboardingPage() {
             {[
               { key: "morning_mission", label: "Morning mission reminder" },
               { key: "missed_workout", label: "Missed workout nudge" },
-              { key: "streak_warning", label: "Streak at risk warning" },
               { key: "water_reminder", label: "Water intake reminder" },
             ].map(({ key, label }) => (
               <label

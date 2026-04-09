@@ -17,8 +17,6 @@ export const XP_VALUES = {
   RUN_MAX: 100,          // Max run XP
   MEAL_PLAN_FOLLOWED: 20,
   WEIGHT_LOGGED: 10,
-  STREAK_BONUS_PER_DAY: 5,
-  STREAK_BONUS_MAX: 50,
   DAILY_CHALLENGE_MIN: 50,
   DAILY_CHALLENGE_MAX: 150,
   WEEKLY_PROGRAMME_COMPLETE: 200,
@@ -40,11 +38,6 @@ export function getRunXP(distanceMetres: number): number {
   const km = distanceMetres / 1000;
   const xp = XP_VALUES.RUN_BASE + Math.floor(km * XP_VALUES.RUN_PER_KM);
   return Math.min(xp, XP_VALUES.RUN_MAX);
-}
-
-// Calculate streak bonus XP
-export function getStreakBonus(currentStreak: number): number {
-  return Math.min(currentStreak * XP_VALUES.STREAK_BONUS_PER_DAY, XP_VALUES.STREAK_BONUS_MAX);
 }
 
 // Determine rank from total XP
