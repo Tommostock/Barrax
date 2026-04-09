@@ -318,7 +318,7 @@ export default function FoodDiaryPage() {
   // Render
   // ====================================================
   return (
-    <div className="bg-bg-primary min-h-screen pb-36">
+    <div className="bg-bg-primary min-h-screen pb-24">
       {/* ── Back link to /rations ── */}
       <div className="px-4 pt-4">
         <Link
@@ -519,31 +519,6 @@ export default function FoodDiaryPage() {
         onAddFood={handleAddFood}
       />
 
-      {/* ── Sticky Bottom Bar: daily totals ── */}
-      <div className="fixed bottom-[4.5rem] left-0 right-0 z-40 bg-bg-panel border-t border-green-dark">
-        <div className="grid grid-cols-4 py-2 px-4">
-          {/* Calories */}
-          <div className="text-center">
-            <p className="text-sm font-mono font-bold text-text-primary">{totalCalories}</p>
-            <p className="text-[0.5rem] font-mono text-text-secondary uppercase">Cal</p>
-          </div>
-          {/* Protein */}
-          <div className="text-center">
-            <p className="text-sm font-mono font-bold text-green-light">{Math.round(totalProtein)}g</p>
-            <p className="text-[0.5rem] font-mono text-text-secondary uppercase">Protein</p>
-          </div>
-          {/* Carbs */}
-          <div className="text-center">
-            <p className="text-sm font-mono font-bold text-xp-gold">{Math.round(totalCarbs)}g</p>
-            <p className="text-[0.5rem] font-mono text-text-secondary uppercase">Carbs</p>
-          </div>
-          {/* Fat */}
-          <div className="text-center">
-            <p className="text-sm font-mono font-bold text-khaki">{Math.round(totalFat)}g</p>
-            <p className="text-[0.5rem] font-mono text-text-secondary uppercase">Fat</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
