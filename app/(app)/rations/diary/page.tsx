@@ -29,6 +29,7 @@ import {
   Utensils,
   ChevronDown,
   ChevronUp,
+  Heart,
 } from "lucide-react";
 import type { FoodDiaryEntry, MealType } from "@/types";
 
@@ -100,6 +101,9 @@ export default function FoodDiaryPage() {
   const [calorieTarget, setCalorieTarget] = useState<number>(2000);     // from profile
   const [loading, setLoading] = useState(true);
 
+  // Track which foods have been saved to My Foods (by food_name)
+  const [savedFoodNames, setSavedFoodNames] = useState<Set<string>>(new Set());
+
   // Which meal sections are expanded (all open by default)
   const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(
     new Set(["breakfast", "lunch", "dinner", "snack"])
@@ -154,6 +158,16 @@ export default function FoodDiaryPage() {
       .order("logged_at", { ascending: true });
 
     setEntries((data as FoodDiaryEntry[]) ?? []);
+
+    // Load names of all saved foods so we can show which are already saved
+    const { data: saved } = await supabase
+      .from("saved_foods")
+      .select("food_name")
+      .eq("user_id", user.id);
+    if (saved) {
+      setSavedFoodNames(new Set(saved.map((s: { food_name: string }) => s.food_name)));
+    }
+
     setLoading(false);
   }, [supabase, selectedDate]);
 
@@ -262,6 +276,35 @@ export default function FoodDiaryPage() {
 
     // Remove from local state immediately for snappy UI
     setEntries((prev) => prev.filter((e) => e.id !== entryId));
+  }
+
+  // ──────────────────────────────────────────
+  // Save a diary entry to My Foods (favourites)
+  // ──────────────────────────────────────────
+  async function saveToMyFoods(entry: FoodDiaryEntry) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase.from("saved_foods").insert({
+      user_id: user.id,
+      food_name: entry.food_name,
+      brand: entry.brand ?? null,
+      barcode: entry.barcode ?? null,
+      calories: entry.calories,
+      protein_g: entry.protein_g,
+      carbs_g: entry.carbs_g,
+      fat_g: entry.fat_g,
+      serving_size: entry.serving_size ?? null,
+    });
+
+    if (error) {
+      alert(`Failed to save: ${error.message}`);
+      return;
+    }
+
+    // Update local state so the heart fills in immediately
+    setSavedFoodNames((prev) => new Set(prev).add(entry.food_name));
+    navigator.vibrate?.(50);
   }
 
   // ──────────────────────────────────────────
@@ -415,6 +458,17 @@ export default function FoodDiaryPage() {
                               </p>
                               <p className="text-[0.5rem] font-mono text-text-secondary">kcal</p>
                             </div>
+
+                            {/* Save to My Foods (heart icon) */}
+                            <button
+                              onClick={() => saveToMyFoods(entry)}
+                              disabled={savedFoodNames.has(entry.food_name)}
+                              className={`flex items-center justify-center min-h-[44px] min-w-[44px] transition-colors
+                                ${savedFoodNames.has(entry.food_name) ? "text-green-light" : "text-text-secondary hover:text-green-light"}`}
+                              aria-label={`Save ${entry.food_name} to My Foods`}
+                            >
+                              <Heart size={16} fill={savedFoodNames.has(entry.food_name) ? "currentColor" : "none"} />
+                            </button>
 
                             {/* Delete button (trash icon) */}
                             <button
