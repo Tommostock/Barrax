@@ -122,7 +122,7 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
       resetState();
     } catch (err) {
       console.error("Failed to add food:", err);
-      alert("Failed to log food. Please try again.");
+      alert(`Failed to log food: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
@@ -148,14 +148,14 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
       }).select().single();
       if (error) {
         console.error("Failed to save food:", error);
-        alert("Failed to save to My Foods. Please try again.");
+        alert(`Failed to save to My Foods: ${error.message}`);
         return;
       }
       if (data) setSavedFoods(prev => [...prev, data as SavedFood]);
       navigator.vibrate?.(50);
     } catch (err) {
       console.error("Failed to save food:", err);
-      alert("Failed to save to My Foods. Please try again.");
+      alert(`Failed to save to My Foods: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setSaving(false);
     }
