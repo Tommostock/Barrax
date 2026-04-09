@@ -156,12 +156,18 @@ export default function RationsPage() {
     finally { setGenerating(false); }
   }
 
-  // Save favourite
+  // Save favourite meal to the favourite_meals table
   async function saveFavourite(meal: Meal) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("favourite_meals").insert({ user_id: user.id, meal_data: meal });
+    const { error } = await supabase.from("favourite_meals").insert({ user_id: user.id, meal_data: meal });
+    if (error) {
+      console.error("Failed to save favourite:", error);
+      alert(`Failed to save favourite: ${error.message}`);
+      return;
+    }
     setSavedMeals(prev => new Set(prev).add(meal.name));
+    navigator.vibrate?.(50);
   }
 
   // Mark meal as eaten (auto-log to food_diary)

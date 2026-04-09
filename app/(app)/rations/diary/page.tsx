@@ -520,7 +520,7 @@ export default function FoodDiaryPage() {
       />
 
       {/* ── Sticky Bottom Bar: daily totals ── */}
-      <div className="fixed bottom-16 left-0 right-0 z-40 bg-bg-panel border-t border-green-dark">
+      <div className="fixed bottom-[4.5rem] left-0 right-0 z-40 bg-bg-panel border-t border-green-dark">
         <div className="grid grid-cols-4 py-2 px-4">
           {/* Calories */}
           <div className="text-center">
