@@ -199,6 +199,7 @@ export default function FoodDiaryPage() {
   // ──────────────────────────────────────────
   // Add a food entry to Supabase
   // Called by AddFoodSheet when the user picks or enters food.
+  // Returns a promise so the sheet can await it before closing.
   // ──────────────────────────────────────────
   async function handleAddFood(food: {
     food_name: string;
@@ -209,6 +210,7 @@ export default function FoodDiaryPage() {
     carbs_g: number;
     fat_g: number;
     serving_size?: string;
+    quantity?: number;
     source: "manual" | "barcode" | "search";
   }) {
     if (!addingMealType) return;
@@ -224,7 +226,7 @@ export default function FoodDiaryPage() {
     const logDate = new Date(selectedDate);
     logDate.setHours(12, 0, 0, 0);
 
-    await supabase.from("food_diary").insert({
+    const { error } = await supabase.from("food_diary").insert({
       user_id: user.id,
       food_name: food.food_name,
       brand: food.brand ?? null,
@@ -236,8 +238,15 @@ export default function FoodDiaryPage() {
       serving_size: food.serving_size ?? null,
       meal_type: addingMealType,
       source: food.source,
+      quantity: food.quantity ?? 1,
       logged_at: logDate.toISOString(),
     });
+
+    // If the insert failed, throw so the caller (AddFoodSheet) knows
+    if (error) {
+      console.error("Failed to log food:", error);
+      throw new Error(error.message);
+    }
 
     // Refresh entries from the database
     await loadEntries();
