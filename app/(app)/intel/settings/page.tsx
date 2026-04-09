@@ -30,6 +30,18 @@ export default function SettingsPage() {
   const [showResetSheet, setShowResetSheet] = useState(false);
   const [foodInput, setFoodInput] = useState("");
   const [activeFoodList, setActiveFoodList] = useState<"no_go" | "maybe" | "approved">("no_go");
+  const [oledMode, setOledMode] = useState(false);
+
+  // Read OLED mode from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("barrax_oled_mode");
+      if (stored === "true") {
+        setOledMode(true);
+        document.documentElement.style.setProperty("--bg-primary", "#000000");
+      }
+    } catch {}
+  }, []);
 
   // Load profile and food preferences on mount
   useEffect(() => {
@@ -260,6 +272,19 @@ export default function SettingsPage() {
                   {unit}
                 </button>
               ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-text-secondary mb-1 font-mono">Display</label>
+            <div className="flex border border-green-dark">
+              <button onClick={() => { setOledMode(false); localStorage.setItem("barrax_oled_mode", "false"); document.documentElement.style.setProperty("--bg-primary", "#0C0C0C"); }}
+                className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider transition-colors ${!oledMode ? "bg-green-primary text-text-primary" : "bg-bg-panel text-text-secondary"}`}>
+                STANDARD
+              </button>
+              <button onClick={() => { setOledMode(true); localStorage.setItem("barrax_oled_mode", "true"); document.documentElement.style.setProperty("--bg-primary", "#000000"); }}
+                className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider transition-colors ${oledMode ? "bg-green-primary text-text-primary" : "bg-bg-panel text-text-secondary"}`}>
+                OLED BLACK
+              </button>
             </div>
           </div>
         </div>

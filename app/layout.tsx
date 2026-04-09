@@ -62,6 +62,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-dvh flex flex-col bg-bg-primary text-text-primary" suppressHydrationWarning>
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            if (localStorage.getItem("barrax_oled_mode") === "true") {
+              document.documentElement.style.setProperty("--bg-primary", "#000000");
+            }
+          } catch {}
+        `}} />
         <ServiceWorkerRegister />
         {children}
       </body>
