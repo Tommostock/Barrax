@@ -13,7 +13,8 @@ import Tag from "@/components/ui/Tag";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { RANK_THRESHOLDS } from "@/types";
 import { BADGE_DEFINITIONS } from "@/lib/badges";
-import { Shield, Award, Flame, Calendar } from "lucide-react";
+import { Award, Flame, Calendar } from "lucide-react";
+import RankInsignia from "@/components/rank/RankInsignia";
 
 const RANK_STYLES: Record<number, { bg: string; border: string }> = {
   1:  { bg: "from-[#1A1A1A] to-[#252525]", border: "border-[#3A3A3A]" },
@@ -110,7 +111,7 @@ export default function RecordPage() {
               <Tag variant={currentRank >= 10 ? "gold" : "active"}>{currentRankInfo?.title ?? "Recruit"}</Tag>
             </div>
             <div className="flex flex-col items-center">
-              <Shield size={32} className="text-text-secondary opacity-50" />
+              <RankInsignia rank={currentRank} size={36} />
               <span className="text-[0.5rem] font-mono text-text-secondary mt-0.5">RANK {currentRank}/12</span>
             </div>
           </div>
