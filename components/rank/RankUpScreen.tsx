@@ -1,9 +1,10 @@
 /* ============================================
    Rank-Up Screen
    Full-screen takeover when the user earns a new
-   rank. Dark camo background, rank insignia,
-   "PROMOTED" header with animations. No confetti,
-   no emojis — militarily restrained but impactful.
+   rank. Dark background, animated rank insignia,
+   "PROMOTION CONFIRMED" header with staggered
+   reveal. Military ceremony feel — no confetti,
+   no emojis, just impact.
    ============================================ */
 
 "use client";
@@ -11,7 +12,7 @@
 import { useEffect, useState } from "react";
 import { RANK_THRESHOLDS } from "@/types";
 import Button from "@/components/ui/Button";
-import { Shield } from "lucide-react";
+import RankInsignia from "@/components/rank/RankInsignia";
 
 interface RankUpScreenProps {
   newRank: number;
@@ -19,20 +20,29 @@ interface RankUpScreenProps {
   onDismiss: () => void;
 }
 
+// Colours for the glow effect behind the insignia — matches rank accent
+const RANK_GLOW: Record<number, string> = {
+  1: "#6B6B6B", 2: "#3A5428", 3: "#4A6B3A", 4: "#3A8B4A",
+  5: "#3A7A8B", 6: "#3A6A9B", 7: "#5A3A9B", 8: "#9B3A3A",
+  9: "#9B6A3A", 10: "#B08A3A", 11: "#A8A8B4", 12: "#D4B850",
+};
+
 export default function RankUpScreen({ newRank, totalXP, onDismiss }: RankUpScreenProps) {
   const rankInfo = RANK_THRESHOLDS[newRank - 1];
+  const prevRankInfo = RANK_THRESHOLDS[newRank - 2];
   const [phase, setPhase] = useState(0);
+  const glowColour = RANK_GLOW[newRank] ?? "#B8A04A";
 
   // Stagger animation phases for dramatic reveal
   useEffect(() => {
     const timers = [
-      setTimeout(() => setPhase(1), 300),   // Show "PROMOTED"
-      setTimeout(() => setPhase(2), 800),   // Show insignia
-      setTimeout(() => setPhase(3), 1300),  // Show title
-      setTimeout(() => setPhase(4), 1800),  // Show details
-      setTimeout(() => setPhase(5), 2300),  // Show dismiss
+      setTimeout(() => setPhase(1), 400),   // Show "PROMOTION CONFIRMED"
+      setTimeout(() => setPhase(2), 1000),  // Show insignia
+      setTimeout(() => setPhase(3), 1600),  // Show rank title
+      setTimeout(() => setPhase(4), 2200),  // Show details
+      setTimeout(() => setPhase(5), 2800),  // Show dismiss
     ];
-    // Haptic feedback on mount
+    // Strong haptic — promotion is a big moment
     navigator.vibrate?.([100, 50, 100, 50, 200]);
     return () => timers.forEach(clearTimeout);
   }, []);
@@ -41,53 +51,61 @@ export default function RankUpScreen({ newRank, totalXP, onDismiss }: RankUpScre
 
   return (
     <div className="fixed inset-0 z-[200] bg-bg-primary flex flex-col items-center justify-center px-6 overflow-hidden">
-      {/* Camo background with slow pulse */}
-      <div className="absolute inset-0 camo-bg opacity-20" style={{ animation: "pulse-subtle 4s ease-in-out infinite" }} />
+      {/* Diagonal stripe background */}
+      <div className="absolute inset-0 opacity-[0.06]"
+        style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 11px)" }} />
 
-      {/* Radial glow behind insignia */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 opacity-20"
-        style={{ background: "radial-gradient(circle, var(--xp-gold) 0%, transparent 70%)", animation: "pulse-subtle 3s ease-in-out infinite" }} />
-
-      {/* Scan-line overlay */}
-      <div className="absolute inset-0 scan-lines" />
+      {/* Radial glow behind insignia — colour matches rank */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 opacity-25"
+        style={{ background: `radial-gradient(circle, ${glowColour} 0%, transparent 70%)`, animation: "pulse-subtle 3s ease-in-out infinite" }} />
 
       {/* Content — each element fades in on its phase */}
-      <div className="relative z-10 text-center space-y-6">
-        {/* PROMOTED header */}
-        <p className={`text-sm font-mono text-xp-gold uppercase tracking-[0.3em] transition-all duration-700
-          ${phase >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-          NEXT LEVEL UNLOCKED
-        </p>
-
-        {/* Rank insignia with scale animation */}
-        <div className={`w-28 h-28 mx-auto border-2 border-xp-gold flex items-center justify-center bg-bg-panel
-          transition-all duration-700 ${phase >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
-          style={phase >= 2 ? { boxShadow: "0 0 30px rgba(184, 160, 74, 0.3)" } : {}}>
-          <Shield size={56} className="text-xp-gold" />
+      <div className="relative z-10 text-center space-y-6 max-w-sm">
+        {/* Header line */}
+        <div className={`transition-all duration-700 ${phase >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+          <div className="w-16 h-[2px] mx-auto mb-3" style={{ backgroundColor: glowColour }} />
+          <p className="text-xs font-mono uppercase tracking-[0.4em]" style={{ color: glowColour }}>
+            Promotion Confirmed
+          </p>
+          <div className="w-16 h-[2px] mx-auto mt-3" style={{ backgroundColor: glowColour }} />
         </div>
 
-        {/* Rank title with scale */}
-        <h1 className={`text-4xl font-heading font-bold uppercase tracking-[0.15em] text-sand transition-all duration-700
-          ${phase >= 3 ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
-          {rankInfo.title}
-        </h1>
-
-        {/* Rank number + XP */}
-        <div className={`space-y-1 transition-all duration-500 ${phase >= 4 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-          <p className="text-sm font-mono text-text-secondary">RANK {newRank} OF 12</p>
-          <p className="text-xl font-mono text-xp-gold font-bold">{totalXP.toLocaleString()} XP</p>
+        {/* Rank insignia — large, centred, with glow border */}
+        <div className={`transition-all duration-700 ${phase >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}>
+          <div className="w-32 h-32 mx-auto border-2 flex items-center justify-center bg-bg-panel"
+            style={{ borderColor: glowColour, boxShadow: phase >= 2 ? `0 0 40px ${glowColour}40` : "none" }}>
+            <RankInsignia rank={newRank} size={72} />
+          </div>
         </div>
 
-        {/* Unlocks */}
-        <div className={`bg-bg-panel border border-green-dark p-4 max-w-xs mx-auto transition-all duration-500
-          ${phase >= 4 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-          <p className="text-[0.65rem] font-mono text-text-secondary uppercase tracking-wider mb-2">UNLOCKED</p>
-          <p className="text-sm text-text-primary">{rankInfo.unlocks}</p>
+        {/* Previous rank -> New rank */}
+        <div className={`transition-all duration-700 ${phase >= 3 ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
+          {prevRankInfo && (
+            <p className="text-xs font-mono text-text-secondary mb-2">
+              {prevRankInfo.title.toUpperCase()} &rarr;
+            </p>
+          )}
+          <h1 className="text-4xl font-heading font-bold uppercase tracking-[0.15em] text-sand">
+            {rankInfo.title}
+          </h1>
+          <p className="text-sm font-mono text-text-secondary mt-2">RANK {newRank} OF 12</p>
+        </div>
+
+        {/* XP + Unlocks */}
+        <div className={`space-y-3 transition-all duration-500 ${phase >= 4 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+          <p className="text-2xl font-mono font-bold" style={{ color: glowColour }}>
+            {totalXP.toLocaleString()} XP
+          </p>
+
+          <div className="bg-bg-panel border border-green-dark p-4">
+            <p className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-wider mb-2">New Capabilities</p>
+            <p className="text-sm text-text-primary">{rankInfo.unlocks}</p>
+          </div>
         </div>
 
         {/* Dismiss */}
         <div className={`transition-all duration-500 ${phase >= 5 ? "opacity-100" : "opacity-0"}`}>
-          <Button onClick={onDismiss} fullWidth className="max-w-xs mx-auto mt-4">NOW GET TO WORK</Button>
+          <Button onClick={onDismiss} fullWidth className="mt-4">DISMISSED, SOLDIER</Button>
         </div>
       </div>
     </div>

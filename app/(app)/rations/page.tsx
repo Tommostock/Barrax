@@ -65,6 +65,7 @@ export default function RationsPage() {
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   const [addFoodMealType, setAddFoodMealType] = useState<MealType>("snack");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [portionScale, setPortionScale] = useState(1);
 
   const todayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const todayName = todayNames[new Date().getDay()];
@@ -385,16 +386,37 @@ export default function RationsPage() {
                           {meal.description && (
                             <p className="text-xs text-text-secondary italic">{meal.description}</p>
                           )}
+                          {/* Portion scaler */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[0.55rem] font-mono text-text-secondary uppercase">Portions:</span>
+                            {[0.5, 1, 1.5, 2, 3].map((s) => (
+                              <button key={s} onClick={(e) => { e.stopPropagation(); setPortionScale(s); }}
+                                className={`px-2 py-1 text-[0.6rem] font-mono border transition-colors
+                                  ${portionScale === s ? "bg-green-primary border-green-primary text-text-primary" : "border-green-dark text-text-secondary"}`}>
+                                {s === 1 ? "1x" : `${s}x`}
+                              </button>
+                            ))}
+                          </div>
                           <div className="flex gap-2">
-                            <Tag variant="default">{`P: ${meal.protein_g}g`}</Tag>
-                            <Tag variant="default">{`C: ${meal.carbs_g}g`}</Tag>
-                            <Tag variant="default">{`F: ${meal.fat_g}g`}</Tag>
+                            <Tag variant="default">{`P: ${Math.round(meal.protein_g * portionScale)}g`}</Tag>
+                            <Tag variant="default">{`C: ${Math.round(meal.carbs_g * portionScale)}g`}</Tag>
+                            <Tag variant="default">{`F: ${Math.round(meal.fat_g * portionScale)}g`}</Tag>
+                            <Tag variant="default">{`${Math.round(meal.calories * portionScale)} kcal`}</Tag>
                           </div>
                           <div>
-                            <p className="text-[0.6rem] font-mono text-text-secondary uppercase mb-1">Ingredients</p>
-                            {meal.ingredients?.map((ing, i) => (
-                              <p key={i} className="text-xs text-text-primary py-0.5">{ing.quantity} {ing.name}</p>
-                            ))}
+                            <p className="text-[0.6rem] font-mono text-text-secondary uppercase mb-1">Ingredients {portionScale !== 1 ? `(x${portionScale})` : ""}</p>
+                            {meal.ingredients?.map((ing, i) => {
+                              // Try to scale numeric quantities (e.g. "200g" -> "400g" at 2x)
+                              let displayQty = ing.quantity;
+                              if (portionScale !== 1) {
+                                const match = ing.quantity.match(/^([\d.]+)\s*(.*)/);
+                                if (match) {
+                                  const scaled = (parseFloat(match[1]) * portionScale);
+                                  displayQty = `${scaled % 1 === 0 ? scaled : scaled.toFixed(1)} ${match[2]}`;
+                                }
+                              }
+                              return <p key={i} className="text-xs text-text-primary py-0.5">{displayQty} {ing.name}</p>;
+                            })}
                           </div>
                           <div>
                             <p className="text-[0.6rem] font-mono text-text-secondary uppercase mb-1">Method</p>

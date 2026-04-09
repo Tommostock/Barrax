@@ -23,6 +23,7 @@ import {
   Pause,
   Square,
   SkipForward,
+  RefreshCw,
   Check,
   Clock,
   Zap,
@@ -167,6 +168,8 @@ export default function WorkoutPlayerPage() {
   // ── Debrief state ──
   const [xpEarned, setXpEarned] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [difficultyRating, setDifficultyRating] = useState<number | null>(null);
+  const [swappingExercise, setSwappingExercise] = useState(false);
 
   // ── Feature 1: Audio countdown timer tracking ──
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -490,6 +493,60 @@ export default function WorkoutPlayerPage() {
     moveToNextExercise();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allExercises, currentExIndex]);
+
+  /** Swap current exercise with an alternative targeting the same muscles */
+  async function handleSwapExercise() {
+    const current = allExercises[currentExIndex];
+    if (!current || swappingExercise) return;
+
+    setSwappingExercise(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Find exercises targeting the same muscles
+      const { data: alternatives } = await supabase
+        .from("exercises")
+        .select("name, description, form_cue, difficulty, muscles")
+        .eq("user_id", user.id)
+        .overlaps("muscles", current.muscles ?? []);
+
+      // Filter out the current exercise and pick a random alternative
+      const candidates = (alternatives || []).filter(
+        (ex: { name: string }) => ex.name.toLowerCase() !== current.name.toLowerCase()
+      );
+
+      if (candidates.length === 0) {
+        alert("No alternative exercises found for the same muscle group.");
+        return;
+      }
+
+      // Pick a random one at a similar difficulty
+      const sorted = candidates.sort(
+        (a: { difficulty: number }, b: { difficulty: number }) =>
+          Math.abs(a.difficulty - (current.difficulty ?? 3)) - Math.abs(b.difficulty - (current.difficulty ?? 3))
+      );
+      const replacement = sorted[0];
+
+      // Replace in the exercise list
+      setAllExercises((prev) => {
+        const updated = [...prev];
+        updated[currentExIndex] = {
+          ...current,
+          name: replacement.name,
+          description: replacement.description,
+          form_cue: replacement.form_cue,
+          difficulty: replacement.difficulty,
+          muscles: replacement.muscles,
+        };
+        return updated;
+      });
+
+      navigator.vibrate?.(50);
+    } finally {
+      setSwappingExercise(false);
+    }
+  }
 
   /** Shared logic to advance to the next exercise or finish */
   function moveToNextExercise() {
@@ -1080,11 +1137,18 @@ export default function WorkoutPlayerPage() {
                     : "EXERCISE COMPLETE"}
               </span>
             </Button>
-            <Button variant="secondary" fullWidth onClick={handleSkipExercise} className="py-3">
-              <span className="flex items-center justify-center gap-2 text-sm">
-                <SkipForward size={16} /> SKIP EXERCISE
-              </span>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" fullWidth onClick={handleSwapExercise} disabled={swappingExercise} className="py-3">
+                <span className="flex items-center justify-center gap-2 text-sm">
+                  <RefreshCw size={16} className={swappingExercise ? "animate-spin" : ""} /> {swappingExercise ? "FINDING..." : "SWAP"}
+                </span>
+              </Button>
+              <Button variant="secondary" fullWidth onClick={handleSkipExercise} className="py-3">
+                <span className="flex items-center justify-center gap-2 text-sm">
+                  <SkipForward size={16} /> SKIP
+                </span>
+              </Button>
+            </div>
           </div>
         )}
 
@@ -1206,6 +1270,45 @@ export default function WorkoutPlayerPage() {
                           : `${r.setsCompleted} sets`}
                   </span>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Difficulty rating */}
+          <div className="w-full max-w-sm mb-6">
+            <h3 className="text-xs font-heading uppercase tracking-wider text-text-secondary mb-3 text-center">
+              How Was That?
+            </h3>
+            <div className="flex justify-center gap-2">
+              {[
+                { value: 1, label: "EASY" },
+                { value: 2, label: "LIGHT" },
+                { value: 3, label: "SOLID" },
+                { value: 4, label: "TOUGH" },
+                { value: 5, label: "BRUTAL" },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={async () => {
+                    setDifficultyRating(value);
+                    navigator.vibrate?.(30);
+                    // Save to the workout row
+                    if (workoutId) {
+                      await supabase.from("workouts").update({ difficulty_rating: value }).eq("id", workoutId);
+                    }
+                  }}
+                  className={`flex flex-col items-center gap-1 px-2 py-2 border min-w-[52px] transition-all
+                    ${difficultyRating === value
+                      ? "border-xp-gold bg-xp-gold/15 scale-105"
+                      : "border-green-dark hover:border-green-primary"}`}
+                >
+                  <span className={`text-lg font-bold font-mono ${difficultyRating === value ? "text-xp-gold" : "text-text-primary"}`}>
+                    {value}
+                  </span>
+                  <span className={`text-[0.4rem] font-mono uppercase ${difficultyRating === value ? "text-xp-gold" : "text-text-secondary"}`}>
+                    {label}
+                  </span>
+                </button>
               ))}
             </div>
           </div>

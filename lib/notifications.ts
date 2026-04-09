@@ -134,6 +134,16 @@ export function notifyMealPlanReady() {
   );
 }
 
+// Sunday weekly summary — fired every Sunday at 1800
+export function notifyWeeklySummary(workouts: number, xp: number, distance: string) {
+  showNotification(
+    "WEEKLY DEBRIEF",
+    `${workouts} missions completed. +${xp} XP earned. ${distance} km covered. Full report ready.`,
+    "weekly-summary",
+    "/intel/report"
+  );
+}
+
 // Sunday weigh-in reminder — fired every Sunday at 0700
 export function notifyWeighIn() {
   showNotification(

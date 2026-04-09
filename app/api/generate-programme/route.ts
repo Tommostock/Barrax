@@ -227,11 +227,33 @@ export async function POST(request: Request) {
       return !rule || rule.type === "workout";
     }).length;
 
+    // Fetch recent difficulty ratings to adjust intensity
+    const { data: recentWorkouts } = await supabase
+      .from("workouts")
+      .select("difficulty_rating")
+      .eq("user_id", user.id)
+      .eq("status", "complete")
+      .not("difficulty_rating", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(5);
+
+    const ratings = (recentWorkouts || []).map((w: { difficulty_rating: number }) => w.difficulty_rating);
+    const avgDifficulty = ratings.length > 0 ? (ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length).toFixed(1) : null;
+
+    // Build difficulty feedback for the AI
+    let difficultyNote = "";
+    if (avgDifficulty) {
+      const avg = parseFloat(avgDifficulty);
+      if (avg <= 2) difficultyNote = "\nDIFFICULTY FEEDBACK: Recent workouts were rated too easy (avg " + avgDifficulty + "/5). INCREASE intensity — add more reps, harder variations, or longer sets.";
+      else if (avg >= 4) difficultyNote = "\nDIFFICULTY FEEDBACK: Recent workouts were rated too hard (avg " + avgDifficulty + "/5). DECREASE intensity — fewer reps, easier variations, or more rest.";
+      else difficultyNote = "\nDIFFICULTY FEEDBACK: Recent workouts were rated about right (avg " + avgDifficulty + "/5). Maintain current intensity with slight progression.";
+    }
+
     const userPrompt = `Generate a full 7-day weekly workout programme:
 - Available time per workout: ${body.availableMinutes} minutes
 - User's current rank: ${body.currentRank} out of 12
 - Fitness level: ${body.fitnessLevel}
-- Goals: ${body.goals.join(", ") || "general fitness"}
+- Goals: ${body.goals.join(", ") || "general fitness"}${difficultyNote}
 
 WEEKLY SCHEDULE RULES (FOLLOW EXACTLY):
 ${scheduleRules}
