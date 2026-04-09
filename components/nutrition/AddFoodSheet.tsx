@@ -34,7 +34,7 @@ interface AddFoodSheetProps {
     serving_size?: string;
     quantity: number;
     source: "manual" | "barcode" | "search";
-  }) => void;
+  }) => Promise<void>;
 }
 
 // The food being confirmed before adding (with quantity)
@@ -101,39 +101,64 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
     setQuantity(1);
   }
 
-  // Confirm and add with quantity
-  function confirmAdd() {
-    if (!pendingFood) return;
-    onAddFood({
-      ...pendingFood,
-      calories: pendingFood.calories * quantity,
-      protein_g: pendingFood.protein_g * quantity,
-      carbs_g: pendingFood.carbs_g * quantity,
-      fat_g: pendingFood.fat_g * quantity,
-      quantity,
-    });
-    onClose();
-    resetState();
+  // Whether the add or save operation is in progress
+  const [saving, setSaving] = useState(false);
+
+  // Confirm and add with quantity — awaits the insert before closing
+  async function confirmAdd() {
+    if (!pendingFood || saving) return;
+    setSaving(true);
+    try {
+      await onAddFood({
+        ...pendingFood,
+        calories: pendingFood.calories * quantity,
+        protein_g: pendingFood.protein_g * quantity,
+        carbs_g: pendingFood.carbs_g * quantity,
+        fat_g: pendingFood.fat_g * quantity,
+        quantity,
+      });
+      // Only close and reset if the save succeeded
+      onClose();
+      resetState();
+    } catch (err) {
+      console.error("Failed to add food:", err);
+      alert("Failed to log food. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Save the pending food to "My Foods" library
   async function saveToMyFoods() {
-    if (!pendingFood) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase.from("saved_foods").insert({
-      user_id: user.id,
-      food_name: pendingFood.food_name,
-      brand: pendingFood.brand ?? null,
-      barcode: pendingFood.barcode ?? null,
-      calories: pendingFood.calories,
-      protein_g: pendingFood.protein_g,
-      carbs_g: pendingFood.carbs_g,
-      fat_g: pendingFood.fat_g,
-      serving_size: pendingFood.serving_size ?? null,
-    }).select().single();
-    if (data) setSavedFoods(prev => [...prev, data as SavedFood]);
-    navigator.vibrate?.(50);
+    if (!pendingFood || saving) return;
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase.from("saved_foods").insert({
+        user_id: user.id,
+        food_name: pendingFood.food_name,
+        brand: pendingFood.brand ?? null,
+        barcode: pendingFood.barcode ?? null,
+        calories: pendingFood.calories,
+        protein_g: pendingFood.protein_g,
+        carbs_g: pendingFood.carbs_g,
+        fat_g: pendingFood.fat_g,
+        serving_size: pendingFood.serving_size ?? null,
+      }).select().single();
+      if (error) {
+        console.error("Failed to save food:", error);
+        alert("Failed to save to My Foods. Please try again.");
+        return;
+      }
+      if (data) setSavedFoods(prev => [...prev, data as SavedFood]);
+      navigator.vibrate?.(50);
+    } catch (err) {
+      console.error("Failed to save food:", err);
+      alert("Failed to save to My Foods. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   // Delete a saved food
@@ -179,6 +204,7 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
   function resetState() {
     setPendingFood(null);
     setQuantity(1);
+    setSaving(false);
     setSearchQuery("");
     setSearchResults([]);
     setScannedProduct(null);
@@ -254,16 +280,17 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
 
           {/* Actions */}
           <div className="flex gap-2">
-            <Button onClick={confirmAdd} fullWidth>
+            <Button onClick={confirmAdd} fullWidth disabled={saving}>
               <span className="flex items-center justify-center gap-2">
-                <Plus size={14} /> ADD {quantity !== 1 ? `x${quantity}` : ""}
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                {saving ? "SAVING..." : `ADD ${quantity !== 1 ? `x${quantity}` : ""}`}
               </span>
             </Button>
           </div>
           <div className="flex gap-2">
-            <button onClick={saveToMyFoods}
-              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border border-green-dark text-xs font-mono uppercase text-text-secondary hover:text-green-light min-h-[44px]">
-              <Heart size={14} /> SAVE TO MY FOODS
+            <button onClick={saveToMyFoods} disabled={saving}
+              className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border border-green-dark text-xs font-mono uppercase text-text-secondary hover:text-green-light min-h-[44px] disabled:opacity-50">
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Heart size={14} />} SAVE TO MY FOODS
             </button>
             <button onClick={() => setPendingFood(null)}
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border border-green-dark text-xs font-mono uppercase text-text-secondary hover:text-text-primary min-h-[44px]">
