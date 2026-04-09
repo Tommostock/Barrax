@@ -304,15 +304,15 @@ export default function RationsPage() {
 
       {/* Today's logged foods — compact inline list */}
       {diaryEntries.length > 0 && (
-        <div className="bg-bg-panel border border-green-dark p-3">
+        <div className="bg-bg-panel border border-green-dark p-3 cursor-pointer hover:bg-bg-panel-alt transition-colors"
+          onClick={() => router.push("/rations/diary")}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-wider">
               Today&apos;s Consumption ({diaryEntries.length} items)
             </p>
-            <button onClick={() => router.push("/rations/diary")}
-              className="text-[0.6rem] font-mono text-green-light hover:text-green-primary">
-              FULL DIARY →
-            </button>
+            <span className="text-[0.6rem] font-mono text-green-light">
+              VIEW ALL →
+            </span>
           </div>
           <div className="space-y-1 max-h-32 overflow-y-auto no-scrollbar">
             {diaryEntries.map((entry) => (
@@ -324,7 +324,7 @@ export default function RationsPage() {
                 </div>
                 <div className="flex items-center gap-2 ml-2">
                   <span className="text-xs font-mono text-text-secondary">{Math.round(entry.calories)} kcal</span>
-                  <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.food_name })}
+                  <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: entry.id, name: entry.food_name }); }}
                     className="text-text-secondary hover:text-danger min-w-[28px] min-h-[28px] flex items-center justify-center">
                     <Trash2 size={12} />
                   </button>
