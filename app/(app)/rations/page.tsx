@@ -93,6 +93,10 @@ export default function RationsPage() {
     const { data: profile } = await supabase.from("profiles").select("calorie_target").eq("id", user.id).single();
     if (profile?.calorie_target) setCalorieTarget(profile.calorie_target);
 
+    // Load saved food names so we can show which meals are already saved
+    const { data: saved } = await supabase.from("saved_foods").select("food_name").eq("user_id", user.id);
+    if (saved) setSavedMeals(new Set(saved.map((s: { food_name: string }) => s.food_name)));
+
     setLoading(false);
   }, [supabase]);
 
