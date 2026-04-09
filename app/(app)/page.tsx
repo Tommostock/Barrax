@@ -13,7 +13,6 @@ import RankStrip from "@/components/dashboard/RankStrip";
 import QuickActions from "@/components/dashboard/QuickActions";
 import TodayMission from "@/components/dashboard/TodayMission";
 import TodayRations from "@/components/dashboard/TodayRations";
-import QuickStats from "@/components/dashboard/QuickStats";
 import DailyChallenge from "@/components/dashboard/DailyChallenge";
 
 export default function DashboardPage() {
@@ -63,7 +62,6 @@ export default function DashboardPage() {
       <QuickActions />
       <TodayMission />
       <TodayRations />
-      <QuickStats />
       <DailyChallenge />
     </div>
   );
