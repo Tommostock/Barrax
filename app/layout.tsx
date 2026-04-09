@@ -31,13 +31,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BARRAX",
+  title: "Barrax",
   description: "Military-themed personal fitness and nutrition PWA",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "BARRAX",
+    title: "Barrax",
   },
 };
 
