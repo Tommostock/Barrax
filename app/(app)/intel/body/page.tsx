@@ -51,10 +51,15 @@ export default function BodyTrackingPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from("weight_logs").insert({
+    const { error } = await supabase.from("weight_logs").insert({
       user_id: user.id,
       weight_kg: weight,
     });
+
+    if (error) {
+      alert(`Failed to log weight: ${error.message}`);
+      return;
+    }
 
     // Award XP for logging weight
     await fetch("/api/award-xp", {

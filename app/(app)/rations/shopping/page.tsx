@@ -70,10 +70,11 @@ export default function ShoppingListPage() {
 
     // Save to Supabase
     if (planId) {
-      await supabase
+      const { error } = await supabase
         .from("meal_plans")
         .update({ shopping_list: updated })
         .eq("id", planId);
+      if (error) console.error("Failed to update shopping list:", error);
     }
   }
 

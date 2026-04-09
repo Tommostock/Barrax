@@ -272,7 +272,11 @@ export default function FoodDiaryPage() {
     // Haptic feedback on delete
     navigator.vibrate?.(30);
 
-    await supabase.from("food_diary").delete().eq("id", entryId);
+    const { error } = await supabase.from("food_diary").delete().eq("id", entryId);
+    if (error) {
+      alert(`Failed to delete: ${error.message}`);
+      return;
+    }
 
     // Remove from local state immediately for snappy UI
     setEntries((prev) => prev.filter((e) => e.id !== entryId));

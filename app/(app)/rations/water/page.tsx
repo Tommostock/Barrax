@@ -59,10 +59,15 @@ export default function WaterTrackerPage() {
     // Haptic feedback
     navigator.vibrate?.(50);
 
-    await supabase.from("water_logs").insert({
+    const { error } = await supabase.from("water_logs").insert({
       user_id: user.id,
       amount_ml: amount,
     });
+
+    if (error) {
+      alert(`Failed to log water: ${error.message}`);
+      return;
+    }
 
     const newTotal = todayTotal + amount;
     setTodayTotal(newTotal);
