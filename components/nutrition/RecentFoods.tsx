@@ -9,7 +9,6 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Plus, Clock, Star } from "lucide-react";
-import type { MealType } from "@/types";
 
 interface RecentFood {
   food_name: string;
@@ -22,7 +21,6 @@ interface RecentFood {
 }
 
 interface RecentFoodsProps {
-  mealType: MealType;
   onQuickAdd: (food: {
     food_name: string;
     calories: number;
@@ -34,7 +32,7 @@ interface RecentFoodsProps {
   }) => void;
 }
 
-export default function RecentFoods({ mealType: _mealType, onQuickAdd }: RecentFoodsProps) {
+export default function RecentFoods({ onQuickAdd }: RecentFoodsProps) {
   const supabase = createClient();
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [loading, setLoading] = useState(true);

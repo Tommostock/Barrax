@@ -8,7 +8,6 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { RANK_THRESHOLDS } from "@/types";

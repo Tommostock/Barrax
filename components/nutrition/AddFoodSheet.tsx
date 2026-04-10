@@ -46,6 +46,9 @@ interface PendingFood {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  fibre_g?: number;
+  sugar_g?: number;
+  salt_g?: number;
   serving_size?: string;
   source: "manual" | "barcode" | "search";
 }
@@ -227,6 +230,14 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
             <p className="text-sm font-heading uppercase text-sand">{pendingFood.food_name}</p>
             {pendingFood.brand && <p className="text-[0.6rem] text-text-secondary">{pendingFood.brand}</p>}
             <p className="text-[0.55rem] font-mono text-text-secondary mt-1">Per serving: {pendingFood.calories} kcal | P: {pendingFood.protein_g}g | C: {pendingFood.carbs_g}g | F: {pendingFood.fat_g}g</p>
+            {/* Micronutrients — from Open Food Facts */}
+            {(pendingFood.fibre_g || pendingFood.sugar_g || pendingFood.salt_g) ? (
+              <p className="text-[0.5rem] font-mono text-text-secondary mt-0.5">
+                {pendingFood.fibre_g ? `Fibre: ${pendingFood.fibre_g}g` : ""}
+                {pendingFood.sugar_g ? ` | Sugar: ${pendingFood.sugar_g}g` : ""}
+                {pendingFood.salt_g ? ` | Salt: ${pendingFood.salt_g}g` : ""}
+              </p>
+            ) : null}
           </div>
 
           {/* Quantity selector */}
@@ -378,6 +389,7 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
                   <button key={i} onClick={() => selectFood({
                     food_name: food.food_name, brand: food.brand, barcode: food.barcode,
                     calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g,
+                    fibre_g: food.fibre_g, sugar_g: food.sugar_g, salt_g: food.salt_g,
                     serving_size: food.serving_size, source: "search",
                   })}
                     className="w-full flex items-center justify-between p-3 bg-bg-panel border border-green-dark/50 text-left hover:bg-bg-panel-alt transition-colors min-h-[44px]">
@@ -414,6 +426,7 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
                     <Button onClick={() => { selectFood({
                       food_name: scannedProduct.food_name, brand: scannedProduct.brand, barcode: scannedProduct.barcode,
                       calories: scannedProduct.calories, protein_g: scannedProduct.protein_g, carbs_g: scannedProduct.carbs_g, fat_g: scannedProduct.fat_g,
+                      fibre_g: scannedProduct.fibre_g, sugar_g: scannedProduct.sugar_g, salt_g: scannedProduct.salt_g,
                       serving_size: scannedProduct.serving_size, source: "barcode",
                     }); setScannedProduct(null); }} fullWidth>
                       <span className="flex items-center justify-center gap-2"><Plus size={14} /> SELECT</span>

@@ -93,8 +93,8 @@ export default function MacroRings({
 }: MacroRingsProps) {
   return (
     <div className="bg-bg-panel border border-green-dark p-4">
-      {/* Main calorie ring (large, centred) */}
-      <div className="flex justify-center mb-4 relative">
+      {/* Main calorie ring (large, centred) + remaining calories */}
+      <div className="flex justify-center mb-2 relative">
         <Ring
           value={calories}
           max={calorieTarget}
@@ -104,6 +104,18 @@ export default function MacroRings({
           label="Calories"
           unit="kcal"
         />
+      </div>
+      {/* Remaining calories — big prominent number */}
+      <div className="text-center mb-3">
+        {calories < calorieTarget ? (
+          <p className="text-lg font-bold font-mono text-green-light">
+            {Math.round(calorieTarget - calories)} kcal remaining
+          </p>
+        ) : (
+          <p className="text-lg font-bold font-mono text-danger">
+            {Math.round(calories - calorieTarget)} kcal over target
+          </p>
+        )}
       </div>
 
       {/* Macro rings row (smaller) */}

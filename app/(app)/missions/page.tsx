@@ -480,7 +480,7 @@ export default function MissionsPage() {
             </div>
             <div className="flex-1">
               <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Combat Run Tracker</h4>
-              <p className="text-xs text-text-secondary">GPS-tracked assault routes. Crush 'em.</p>
+              <p className="text-xs text-text-secondary">GPS-tracked assault routes. Crush &apos;em.</p>
             </div>
             <Play size={16} className="text-green-primary" />
           </div>

@@ -18,6 +18,7 @@ import Timer from "@/components/ui/Timer";
 import ProgressBar from "@/components/ui/ProgressBar";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
+import MusicBar from "@/components/workout/MusicBar";
 import {
   Play,
   Pause,
@@ -165,6 +166,9 @@ export default function WorkoutPlayerPage() {
   // ── Debrief state ──
   const [xpEarned, setXpEarned] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  // ── Post-workout difficulty rating ──
+  const [rating, setRating] = useState<number | null>(null);
 
   // ── Feature 1: Audio countdown timer tracking ──
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -1089,6 +1093,9 @@ export default function WorkoutPlayerPage() {
           </div>
         )}
 
+        {/* ── Music launcher bar ── */}
+        {subPhase === "exercise" && <MusicBar />}
+
         {/* ── Bottom action buttons ── */}
         {subPhase === "exercise" && (
           <div className="px-4 pb-8 bg-bg-primary border-t border-green-dark pt-4 space-y-3">
@@ -1232,6 +1239,30 @@ export default function WorkoutPlayerPage() {
             </div>
           </div>
 
+          {/* Post-workout difficulty rating */}
+          <div className="w-full max-w-sm mb-8">
+            <h3 className="text-sm font-heading uppercase tracking-wider text-sand mb-3 text-center">
+              How Did That Feel?
+            </h3>
+            <div className="flex items-center justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setRating(n)}
+                  className={`flex flex-col items-center justify-center min-w-[52px] py-2 px-2 border text-xs font-mono transition-colors ${
+                    rating === n
+                      ? "bg-green-primary border-green-primary text-text-primary"
+                      : "bg-bg-panel border-green-dark text-text-secondary hover:border-green-primary"
+                  }`}
+                >
+                  <span className="text-lg font-bold">{n}</span>
+                  {n === 1 && <span className="text-[0.5rem] uppercase mt-0.5">Easy</span>}
+                  {n === 5 && <span className="text-[0.5rem] uppercase mt-0.5">Brutal</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Saving indicator */}
           {saving && (
             <p className="font-mono text-xs text-text-secondary mb-4 animate-pulse">
@@ -1243,7 +1274,12 @@ export default function WorkoutPlayerPage() {
           <Button
             fullWidth
             className="max-w-sm"
-            onClick={() => router.push("/missions")}
+            onClick={async () => {
+              if (rating && workoutId) {
+                await supabase.from("workouts").update({ rating }).eq("id", workoutId);
+              }
+              router.push("/missions");
+            }}
             disabled={saving}
           >
             RETURN TO BASE

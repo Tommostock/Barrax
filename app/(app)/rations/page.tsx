@@ -347,7 +347,7 @@ export default function RationsPage() {
       </div>
 
       {/* Recent foods for quick re-add */}
-      <RecentFoods mealType={addFoodMealType} onQuickAdd={(food) => addToDiary({ ...food, source: "manual" })} />
+      <RecentFoods onQuickAdd={(food) => addToDiary({ ...food, source: "manual" })} />
 
       {/* ========== WEEKLY MEAL PLAN ========== */}
       <div className="flex items-center justify-between pt-2">
