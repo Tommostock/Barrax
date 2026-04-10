@@ -243,10 +243,14 @@ export default function FoodDiaryPage() {
     quantity?: number;
     source: "manual" | "barcode" | "search";
   }) {
-    if (!addingMealType) return;
+    if (!addingMealType) {
+      throw new Error("No meal type selected");
+    }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      throw new Error("Not signed in");
+    }
 
     // Haptic feedback on add
     navigator.vibrate?.(50);
@@ -256,25 +260,40 @@ export default function FoodDiaryPage() {
     const logDate = new Date(selectedDate);
     logDate.setHours(12, 0, 0, 0);
 
-    const { error } = await supabase.from("food_diary").insert({
+    // Coerce numeric fields to valid numbers. Supabase DECIMAL columns can
+    // come back as strings and multiplication (quantity) can yield long
+    // floats that postgres will reject — round to 2 dp to be safe.
+    const toNum = (v: unknown): number => {
+      const n = typeof v === "number" ? v : Number(v);
+      return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+    };
+
+    const payload = {
       user_id: user.id,
-      food_name: food.food_name,
-      brand: food.brand ?? null,
-      barcode: food.barcode ?? null,
-      calories: food.calories,
-      protein_g: food.protein_g,
-      carbs_g: food.carbs_g,
-      fat_g: food.fat_g,
-      serving_size: food.serving_size ?? null,
+      food_name: String(food.food_name ?? "").trim(),
+      brand: food.brand ? String(food.brand) : null,
+      barcode: food.barcode ? String(food.barcode) : null,
+      calories: toNum(food.calories),
+      protein_g: toNum(food.protein_g),
+      carbs_g: toNum(food.carbs_g),
+      fat_g: toNum(food.fat_g),
+      serving_size: food.serving_size ? String(food.serving_size) : null,
       meal_type: addingMealType,
       source: food.source,
       logged_at: logDate.toISOString(),
-    });
+    };
+
+    if (!payload.food_name) {
+      throw new Error("Food name is required");
+    }
+
+    const { error } = await supabase.from("food_diary").insert(payload);
 
     // If the insert failed, throw so the caller (AddFoodSheet) knows
     if (error) {
-      console.error("Failed to log food:", error);
-      throw new Error(error.message);
+      console.error("Failed to log food:", error, "payload:", payload);
+      const detail = [error.message, error.details, error.hint].filter(Boolean).join(" — ");
+      throw new Error(detail || "Database insert failed");
     }
 
     // Refresh entries from the database

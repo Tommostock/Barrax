@@ -132,6 +132,9 @@ export default function TodayRations() {
   // Track which meals already have food diary entries today
   const [diaryMealTypes, setDiaryMealTypes] = useState<Set<string>>(new Set());
 
+  // Track the actual food names logged per meal type today
+  const [loggedFoodsByMeal, setLoggedFoodsByMeal] = useState<Record<string, string[]>>({});
+
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -158,10 +161,10 @@ export default function TodayRations() {
           .select("calorie_target")
           .eq("id", user.id)
           .single(),
-        // Get today's food diary entries for macro totals
+        // Get today's food diary entries — names + macros in one query
         supabase
           .from("food_diary")
-          .select("calories, protein_g, carbs_g, fat_g")
+          .select("food_name, meal_type, calories, protein_g, carbs_g, fat_g")
           .eq("user_id", user.id)
           .gte("logged_at", todayStart.toISOString())
           .lte("logged_at", todayEnd.toISOString()),
@@ -185,7 +188,7 @@ export default function TodayRations() {
         fat: Math.round(calTarget * 0.3 / 9),         // 30% fat
       });
 
-      // Process food diary entries into macro totals
+      // Process food diary entries into macro totals + logged-food map
       const entries = diaryResult.data;
       if (entries && entries.length > 0) {
         setMacros({
@@ -194,19 +197,16 @@ export default function TodayRations() {
           carbs: entries.reduce((sum, e) => sum + (e.carbs_g || 0), 0),
           fat: entries.reduce((sum, e) => sum + (e.fat_g || 0), 0),
         });
-      }
 
-      // Check which meal types already have diary entries today
-      // so we can show a check mark instead of "ATE THIS"
-      const { data: mealEntries } = await supabase
-        .from("food_diary")
-        .select("meal_type")
-        .eq("user_id", user.id)
-        .gte("logged_at", todayStart.toISOString())
-        .lte("logged_at", todayEnd.toISOString());
-
-      if (mealEntries && mealEntries.length > 0) {
-        setDiaryMealTypes(new Set(mealEntries.map((e) => e.meal_type)));
+        // Group food names by meal type for the meal rows below
+        const byMeal: Record<string, string[]> = {};
+        for (const e of entries) {
+          if (!e.meal_type || !e.food_name) continue;
+          if (!byMeal[e.meal_type]) byMeal[e.meal_type] = [];
+          byMeal[e.meal_type].push(e.food_name);
+        }
+        setLoggedFoodsByMeal(byMeal);
+        setDiaryMealTypes(new Set(Object.keys(byMeal)));
       }
 
       setLoading(false);
@@ -298,6 +298,11 @@ export default function TodayRations() {
       <div className="space-y-1">
         {todayMeals.length > 0 ? todayMeals.map((meal) => {
           const isLogged = loggedMeals.has(meal.meal_type) || diaryMealTypes.has(meal.meal_type);
+          // When logged, show the actual food(s) the user ate, not the plan name
+          const loggedNames = loggedFoodsByMeal[meal.meal_type];
+          const displayName = isLogged && loggedNames && loggedNames.length > 0
+            ? loggedNames.join(", ")
+            : meal.name;
 
           return (
             <div key={meal.meal_type}
@@ -305,7 +310,9 @@ export default function TodayRations() {
               <span className="text-[0.65rem] font-mono text-text-secondary uppercase tracking-wider w-20 flex-shrink-0">
                 {meal.meal_type}
               </span>
-              <span className="text-xs text-text-primary truncate flex-1 text-right mr-2">{meal.name}</span>
+              <span className={`text-xs truncate flex-1 text-right mr-2 ${isLogged ? "text-green-light" : "text-text-primary"}`}>
+                {displayName}
+              </span>
 
               {/* Ate This / Logged indicator */}
               {isLogged ? (

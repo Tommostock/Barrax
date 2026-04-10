@@ -104,27 +104,6 @@ function formatTime(totalSeconds: number): string {
   return `${pad(mins)}:${pad(secs)}`;
 }
 
-// ──────────────────────────────────────────────
-// Helper: estimate remaining time from remaining exercises
-// ──────────────────────────────────────────────
-
-function estimateRemainingSeconds(
-  exercises: WorkoutExercise[],
-  currentIndex: number,
-  currentSet: number
-): number {
-  let total = 0;
-
-  for (let i = currentIndex; i < exercises.length; i++) {
-    const ex = exercises[i];
-    const setsLeft = i === currentIndex ? ex.sets - currentSet + 1 : ex.sets;
-    const perSet = ex.reps ? 30 : (ex.duration_seconds ?? 30);
-    total += setsLeft * (perSet + (ex.rest_seconds ?? 0));
-  }
-
-  return total;
-}
-
 // ==============================================================
 // MAIN COMPONENT
 // ==============================================================
@@ -202,6 +181,7 @@ export default function WorkoutPlayerPage() {
   // ── Voice commands ──
   const [voiceActive, setVoiceActive] = useState(false);
   const [voiceCommand, setVoiceCommand] = useState<string | null>(null);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
@@ -354,6 +334,15 @@ export default function WorkoutPlayerPage() {
       releaseWakeLock();
     };
   }, []);
+
+  // Re-acquire wake lock whenever the active phase begins, in case the
+  // initial request from handleDeploy failed or the user came back from
+  // another app. The wake-lock module also reacquires on visibilitychange.
+  useEffect(() => {
+    if (phase === "active") {
+      requestWakeLock();
+    }
+  }, [phase]);
 
   // ────────────────────────────────────────────
   // Feature 5: Reset actualReps when exercise/set changes
@@ -607,7 +596,7 @@ export default function WorkoutPlayerPage() {
     if (!voiceActive) {
       if (recognitionRef.current) {
         recognitionRef.current.onend = null;
-        recognitionRef.current.stop();
+        try { recognitionRef.current.stop(); } catch { /* ignore */ }
         recognitionRef.current = null;
       }
       return;
@@ -616,65 +605,113 @@ export default function WorkoutPlayerPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
     if (!SR) {
-      // Browser doesn't support it — silently disable
+      setVoiceError("Voice commands not supported on this device/browser");
       setVoiceActive(false);
       return;
     }
 
-    const recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = "en-GB";
+    if (!window.isSecureContext) {
+      setVoiceError("Voice commands require HTTPS");
+      setVoiceActive(false);
+      return;
+    }
 
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results as ArrayLike<SpeechRecognitionResult>)
-        .slice(event.resultIndex)
-        .filter((r) => r.isFinal)
-        .map((r) => r[0].transcript.trim().toLowerCase())
-        .join(" ");
+    let cancelled = false;
 
-      if (!transcript) return;
-
-      setVoiceCommand(transcript);
-      setTimeout(() => setVoiceCommand(null), 1500);
-
-      const { subPhase: sp, paused: isPaused } = voiceStateRef.current;
-      const actions = voiceActionsRef.current;
-      const contains = (w: string) => transcript.includes(w);
-
-      if (sp === "rest") {
-        if (["next", "skip", "go", "ready", "let's go", "lets go"].some(contains)) {
-          actions.skipRest();
+    // Explicitly request microphone permission first so the user sees the
+    // Chrome permission prompt. Without this the SpeechRecognition sometimes
+    // fails silently on mobile PWAs.
+    (async () => {
+      try {
+        if (navigator.mediaDevices?.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Release the stream immediately — we only needed the permission
+          stream.getTracks().forEach((t) => t.stop());
         }
-      } else {
-        if (["done", "complete", "finished", "next", "yes"].some(contains)) {
-          actions.complete();
-        } else if (["skip"].some(contains)) {
-          actions.skipEx();
+      } catch {
+        if (!cancelled) {
+          setVoiceError("Microphone permission denied");
+          setVoiceActive(false);
         }
+        return;
       }
-      if (contains("pause") && !isPaused) actions.togglePause();
-      if ((contains("resume") || contains("continue")) && isPaused) actions.togglePause();
-    };
 
-    // Auto-restart on silence — recognition stops if no sound detected
-    recognition.onend = () => {
-      if (recognitionRef.current === recognition) {
-        try { recognition.start(); } catch { /* already running */ }
-      }
-    };
+      if (cancelled) return;
 
-    recognition.onerror = () => { /* ignore errors silently */ };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const recognition = new SR();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = "en-GB";
 
-    recognitionRef.current = recognition;
-    try { recognition.start(); } catch { /* already running */ }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results as ArrayLike<SpeechRecognitionResult>)
+          .slice(event.resultIndex)
+          .filter((r) => r.isFinal)
+          .map((r) => r[0].transcript.trim().toLowerCase())
+          .join(" ");
+
+        if (!transcript) return;
+
+        setVoiceCommand(transcript);
+        setTimeout(() => setVoiceCommand(null), 1500);
+
+        const { subPhase: sp, paused: isPaused } = voiceStateRef.current;
+        const actions = voiceActionsRef.current;
+        const contains = (w: string) => transcript.includes(w);
+
+        if (sp === "rest") {
+          if (["next", "skip", "go", "ready", "let's go", "lets go"].some(contains)) {
+            actions.skipRest();
+          }
+        } else {
+          if (["done", "complete", "finished", "next", "yes"].some(contains)) {
+            actions.complete();
+          } else if (["skip"].some(contains)) {
+            actions.skipEx();
+          }
+        }
+        if (contains("pause") && !isPaused) actions.togglePause();
+        if ((contains("resume") || contains("continue")) && isPaused) actions.togglePause();
+      };
+
+      // Auto-restart on silence — recognition stops if no sound detected
+      recognition.onend = () => {
+        if (recognitionRef.current === recognition) {
+          try { recognition.start(); } catch { /* already running */ }
+        }
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onerror = (event: any) => {
+        // not-allowed / no-speech / aborted — surface permission errors
+        if (event?.error === "not-allowed" || event?.error === "service-not-allowed") {
+          setVoiceError("Microphone permission denied");
+          setVoiceActive(false);
+        }
+      };
+
+      recognitionRef.current = recognition;
+      try { recognition.start(); } catch { /* already running */ }
+    })();
 
     return () => {
-      recognition.onend = null;
-      try { recognition.stop(); } catch { /* ignore */ }
-      recognitionRef.current = null;
+      cancelled = true;
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null;
+        try { recognitionRef.current.stop(); } catch { /* ignore */ }
+        recognitionRef.current = null;
+      }
     };
   }, [voiceActive]);
+
+  // Auto-dismiss voice error toast
+  useEffect(() => {
+    if (!voiceError) return;
+    const t = setTimeout(() => setVoiceError(null), 3500);
+    return () => clearTimeout(t);
+  }, [voiceError]);
 
   // Deactivate voice when leaving the active phase
   useEffect(() => {
@@ -816,12 +853,6 @@ export default function WorkoutPlayerPage() {
   const completedCount = results.filter((r) => !r.skipped).length;
   const skippedCount = results.filter((r) => r.skipped).length;
   const totalExerciseCount = allExercises.length;
-
-  // Feature 9: Estimated time remaining
-  const estimatedRemaining = phase === "active"
-    ? estimateRemainingSeconds(allExercises, currentExIndex, currentSet)
-    : 0;
-  const estimatedMinutes = Math.max(1, Math.round(estimatedRemaining / 60));
 
   // ────────────────────────────────────────────
   // 6. Render
@@ -1003,6 +1034,14 @@ export default function WorkoutPlayerPage() {
           </div>
         )}
 
+        {/* Voice error toast */}
+        {voiceError && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[300] border border-danger bg-bg-panel px-4 py-2 flex items-center gap-2 pointer-events-none max-w-[90vw]">
+            <MicOff size={14} className="text-danger" />
+            <span className="font-mono text-xs text-danger uppercase tracking-wider">{voiceError}</span>
+          </div>
+        )}
+
         {/* Feature 2: "EXERCISE DONE" well done moment */}
         {showWellDone && (
           <div className="fixed inset-0 z-[150] bg-bg-primary flex items-center justify-center">
@@ -1023,10 +1062,6 @@ export default function WorkoutPlayerPage() {
             <Clock size={16} className="text-text-secondary" />
             <span className="font-mono text-sm text-text-secondary">
               {formatTime(elapsedSeconds)}
-            </span>
-            {/* Feature 9: Estimated time remaining */}
-            <span className="font-mono text-xs text-text-secondary opacity-60">
-              ~{estimatedMinutes}m left
             </span>
           </div>
           <div className="flex items-center gap-1">
@@ -1137,9 +1172,9 @@ export default function WorkoutPlayerPage() {
 
         {/* ── Exercise display ── */}
         {subPhase === "exercise" && (
-          <div className="flex-1 flex flex-col px-4 pb-2">
+          <div className="flex-1 flex flex-col px-6 pb-2 justify-center">
             {/* Feature 6: Set-by-set tracking indicators */}
-            <div className="flex items-center justify-center gap-2 mb-3 mt-1">
+            <div className="flex items-center justify-center gap-2 mb-4">
               {Array.from({ length: totalSets }, (_, i) => {
                 const setNum = i + 1;
                 const isCompleted = completedSetsForExercise.includes(setNum);
@@ -1148,61 +1183,61 @@ export default function WorkoutPlayerPage() {
                 return (
                   <div
                     key={setNum}
-                    className={`flex items-center justify-center w-8 h-8 text-xs font-mono font-bold
+                    className={`flex items-center justify-center w-10 h-10 text-base font-mono font-bold
                       ${isCompleted
-                        ? "bg-green-primary/30 border border-green-primary text-green-light"
+                        ? "bg-green-primary/40 border-2 border-green-primary text-green-light"
                         : isCurrent
                           ? "bg-bg-panel border-2 border-sand text-sand"
-                          : "bg-bg-panel border border-green-dark text-text-secondary opacity-50"
+                          : "bg-bg-panel border border-green-dark text-text-secondary opacity-60"
                       }`}
                   >
-                    {isCompleted ? <Check size={14} /> : setNum}
+                    {isCompleted ? <Check size={18} /> : setNum}
                   </div>
                 );
               })}
             </div>
 
-            {/* Set indicator tag */}
-            <div className="text-center mb-2">
-              <Tag variant="active">
+            {/* Set indicator tag — bigger */}
+            <div className="text-center mb-3">
+              <span className="inline-block px-4 py-1.5 bg-green-primary/25 border-2 border-green-primary text-green-light text-sm font-heading font-bold uppercase tracking-widest">
                 {`ROUND ${currentSet} / ${totalSets}`}
-              </Tag>
+              </span>
             </div>
 
-            {/* Exercise name */}
-            <h2 className="text-2xl font-heading uppercase tracking-wider text-sand text-center mb-1">
+            {/* Exercise name — much bigger and brighter */}
+            <h2 className="text-4xl sm:text-5xl font-heading uppercase tracking-wider text-white text-center mb-2 leading-tight drop-shadow-[0_0_10px_rgba(74,222,128,0.3)]">
               {currentExercise.name}
             </h2>
 
             {/* Feature 8: Workout history */}
             {exerciseHistory && (
-              <p className="text-xs font-mono text-text-secondary text-center mb-1">
+              <p className="text-sm font-mono text-text-primary text-center mb-2 opacity-80">
                 {exerciseHistory}
               </p>
             )}
 
-            {/* Form cue — compact */}
+            {/* Form cue — bigger and brighter */}
             {(currentExercise.form_cue || currentExercise.description) && (
-              <p className="text-sm text-text-primary text-center mb-2 max-w-xs mx-auto leading-snug">
+              <p className="text-base text-text-primary text-center mb-3 max-w-md mx-auto leading-snug">
                 {currentExercise.form_cue || currentExercise.description}
               </p>
             )}
 
-            {/* HOW TO button — opens detailed breakdown */}
-            <div className="flex justify-center mb-2">
+            {/* HOW TO button — bigger */}
+            <div className="flex justify-center mb-3">
               <button
                 onClick={() => setDetailExercise(currentExercise)}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-green-dark bg-bg-panel text-green-light hover:bg-bg-panel-alt active:scale-[0.98] transition-all text-[0.65rem] font-mono uppercase tracking-wider min-h-[32px]"
+                className="flex items-center gap-2 px-4 py-2 border border-green-primary bg-bg-panel text-green-light hover:bg-bg-panel-alt active:scale-[0.98] transition-all text-sm font-mono uppercase tracking-wider min-h-[40px]"
               >
-                <Info size={12} /> How To Perform
+                <Info size={16} /> How To Perform
               </button>
             </div>
 
-            {/* Muscle tags */}
+            {/* Muscle tags — bigger */}
             {currentExercise.muscles && currentExercise.muscles.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 justify-center mb-3">
+              <div className="flex flex-wrap gap-2 justify-center mb-4">
                 {currentExercise.muscles.map((muscle) => (
-                  <span key={muscle} className="px-2 py-0.5 bg-green-primary/20 border border-green-primary/40 text-xs font-mono text-green-light uppercase">
+                  <span key={muscle} className="px-3 py-1 bg-green-primary/25 border border-green-primary text-sm font-mono font-bold text-green-light uppercase tracking-wider">
                     {muscle}
                   </span>
                 ))}
@@ -1210,10 +1245,10 @@ export default function WorkoutPlayerPage() {
             )}
 
             {/* Rep counter OR duration timer */}
-            <div className="flex items-center justify-center mb-2">
+            <div className="flex items-center justify-center">
               {isTimerExercise ? (
                 <div className="text-center">
-                  <p className="text-xs font-mono uppercase tracking-wider text-text-primary mb-1">COUNTDOWN</p>
+                  <p className="text-sm font-mono uppercase tracking-widest text-green-light mb-2 font-bold">COUNTDOWN</p>
                   <Timer
                     initialSeconds={currentExercise.duration_seconds!}
                     mode="countdown"
@@ -1224,35 +1259,35 @@ export default function WorkoutPlayerPage() {
                 </div>
               ) : (
                 <div className="text-center">
-                  <p className="text-xs font-mono uppercase tracking-wider text-text-primary mb-1">TARGET REPS</p>
-                  <span className="font-mono text-6xl font-bold text-sand">
+                  <p className="text-sm font-mono uppercase tracking-widest text-green-light mb-2 font-bold">TARGET REPS</p>
+                  <span className="font-mono text-8xl font-bold text-white drop-shadow-[0_0_15px_rgba(74,222,128,0.4)]">
                     {currentExercise.reps ?? "MAX"}
                   </span>
 
-                  {/* Feature 5: +/- rep counter buttons */}
+                  {/* Feature 5: +/- rep counter buttons — bigger */}
                   {isRepExercise && (
-                    <div className="flex items-center justify-center gap-4 mt-3">
+                    <div className="flex items-center justify-center gap-5 mt-4">
                       <button
                         onClick={() => setActualReps((prev) => Math.max(0, prev - 1))}
-                        className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-green-dark bg-bg-panel text-text-primary hover:bg-bg-panel-alt transition-colors"
+                        className="min-h-[56px] min-w-[56px] flex items-center justify-center border-2 border-green-primary bg-bg-panel text-text-primary hover:bg-bg-panel-alt active:scale-95 transition-all"
                         aria-label="Decrease reps"
                       >
-                        <Minus size={20} />
+                        <Minus size={28} />
                       </button>
-                      <div className="text-center">
-                        <span className="font-mono text-3xl font-bold text-green-light">
+                      <div className="text-center min-w-[80px]">
+                        <span className="font-mono text-5xl font-bold text-green-light">
                           {actualReps}
                         </span>
-                        <p className="text-[0.6rem] font-mono uppercase tracking-wider text-text-secondary">
+                        <p className="text-xs font-mono uppercase tracking-widest text-text-primary mt-1 font-bold">
                           ACTUAL
                         </p>
                       </div>
                       <button
                         onClick={() => setActualReps((prev) => prev + 1)}
-                        className="min-h-[44px] min-w-[44px] flex items-center justify-center border border-green-dark bg-bg-panel text-text-primary hover:bg-bg-panel-alt transition-colors"
+                        className="min-h-[56px] min-w-[56px] flex items-center justify-center border-2 border-green-primary bg-bg-panel text-text-primary hover:bg-bg-panel-alt active:scale-95 transition-all"
                         aria-label="Increase reps"
                       >
-                        <Plus size={20} />
+                        <Plus size={28} />
                       </button>
                     </div>
                   )}
@@ -1265,12 +1300,12 @@ export default function WorkoutPlayerPage() {
         {/* ── Music launcher bar ── */}
         {subPhase === "exercise" && <MusicBar />}
 
-        {/* ── Bottom action buttons ── */}
+        {/* ── Bottom action buttons — bigger and brighter ── */}
         {subPhase === "exercise" && (
-          <div className="px-4 pb-8 bg-bg-primary border-t border-green-dark pt-4 space-y-3">
-            <Button fullWidth onClick={handleCompleteExercise} className="py-3">
-              <span className="flex items-center justify-center gap-2 text-base">
-                <Check size={20} />
+          <div className="px-6 pb-8 bg-bg-primary border-t-2 border-green-primary pt-4 space-y-3">
+            <Button fullWidth onClick={handleCompleteExercise} className="py-5">
+              <span className="flex items-center justify-center gap-3 text-xl font-bold tracking-wider">
+                <Check size={26} />
                 {currentSet < totalSets
                   ? `DONE — ROUND ${currentSet}/${totalSets}`
                   : isRepExercise
@@ -1279,8 +1314,8 @@ export default function WorkoutPlayerPage() {
               </span>
             </Button>
             <Button variant="secondary" fullWidth onClick={handleSkipExercise} className="py-3">
-              <span className="flex items-center justify-center gap-2 text-sm">
-                <SkipForward size={16} /> SKIP EXERCISE
+              <span className="flex items-center justify-center gap-2 text-base font-bold">
+                <SkipForward size={20} /> SKIP EXERCISE
               </span>
             </Button>
           </div>

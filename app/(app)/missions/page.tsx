@@ -286,10 +286,19 @@ export default function MissionsPage() {
                       return <Swords size={12} className={activeColor} />;
                     })()}
                   </div>
-                  {/* Muscle group / workout type label — always rendered so all boxes stay the same height */}
-                  <p className={`text-[0.6rem] font-mono font-bold mt-1 truncate ${dayData?.workout?.focus && !isRest ? getWorkoutLabel(dayData.workout.focus).color : "invisible"}`}>
-                    {dayData?.workout?.focus && !isRest ? getWorkoutLabel(dayData.workout.focus).label : "X"}
-                  </p>
+                  {/* Muscle group / workout type label — colour follows the day state */}
+                  {(() => {
+                    const labelColor = isSelected ? "text-green-light"
+                      : isComplete ? "text-xp-gold"
+                      : isMissed ? "text-danger"
+                      : isToday ? "text-white"
+                      : "text-text-secondary";
+                    return (
+                      <p className={`text-[0.6rem] font-mono font-bold mt-1 truncate ${dayData?.workout?.focus && !isRest ? labelColor : "invisible"}`}>
+                        {dayData?.workout?.focus && !isRest ? getWorkoutLabel(dayData.workout.focus).label : "X"}
+                      </p>
+                    );
+                  })()}
                 </button>
                 {/* Today indicator — upward-pointing triangle beneath the day card */}
                 <div className="h-3 flex justify-center items-center">
