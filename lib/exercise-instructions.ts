@@ -1291,6 +1291,494 @@ export const EXERCISE_INSTRUCTIONS: Record<string, ExerciseInstructions> = {
       "Don't bounce — hold the stretch still.",
     ],
   },
+
+  // ─── PULL / BACK ─────────────────────────────────────
+  "Inverted Row (Table)": {
+    setup: [
+      "Find a sturdy table that can support your bodyweight — test it first.",
+      "Lie on your back underneath the table edge.",
+      "Grip the edge with both hands, shoulder-width apart, palms facing you.",
+      "Walk your heels out until your body is angled with arms straight.",
+    ],
+    execution: [
+      "Keeping your body in a straight line from heels to head, pull your chest up toward the table edge.",
+      "Squeeze your shoulder blades together at the top.",
+      "Lower yourself back down with control until arms are fully extended.",
+    ],
+    breathing: "Exhale as you pull up, inhale as you lower.",
+    commonMistakes: [
+      "Letting the hips sag — stay in one straight line.",
+      "Using momentum instead of pulling with your back.",
+      "Elbows flaring out too wide — keep them angled back.",
+      "Not going all the way up — chest should reach the edge.",
+    ],
+    tips: [
+      "The more horizontal your body, the harder it is. Bend your knees and walk feet in to scale back.",
+      "This is the single best bodyweight pull exercise without a bar.",
+      "Make sure the table is absolutely stable — place it against a wall if possible.",
+    ],
+  },
+
+  "Doorway Row": {
+    setup: [
+      "Find a sturdy closed door with a handle on both sides.",
+      "Loop a rolled towel around both door handles.",
+      "Grip an end of the towel in each hand, feet close to the door on either side.",
+      "Lean back with straight arms, heels planted, body angled.",
+    ],
+    execution: [
+      "Pull your chest toward the door by bending your elbows and squeezing your shoulder blades.",
+      "Pause briefly with the chest close to the door.",
+      "Lower yourself back with control.",
+    ],
+    breathing: "Exhale pulling in, inhale leaning back.",
+    commonMistakes: [
+      "Using a flimsy door — make sure it's solid and latched.",
+      "Pulling with the arms only — drive from the back.",
+      "Letting the hips sag or pike up.",
+    ],
+    tips: [
+      "Walk feet closer to the door for an easier angle, further for harder.",
+      "Great substitute for pull-ups if you don't have a bar.",
+      "Slow and controlled on the way down for extra challenge.",
+    ],
+  },
+
+  "Towel Pull-Apart": {
+    setup: [
+      "Grab a small towel with both hands, shoulder-width apart.",
+      "Hold the towel taut in front of you at chest height, arms straight.",
+    ],
+    execution: [
+      "Pull the towel apart firmly, squeezing your shoulder blades together.",
+      "Hold the tension for a second at the stretched position.",
+      "Control the return to the start.",
+    ],
+    breathing: "Exhale on the pull, inhale on the release.",
+    commonMistakes: [
+      "Bending the elbows — keep arms straight.",
+      "Pulling with the arms instead of the upper back.",
+      "Rushing through reps — the tension matters more than the speed.",
+    ],
+    tips: [
+      "Pretend you're trying to rip the towel in half.",
+      "Great warm-up for the shoulders and upper back.",
+      "The tighter you can make the towel, the harder the exercise.",
+    ],
+  },
+
+  "Scapular Push-Up": {
+    setup: [
+      "Get into a high plank position, hands under shoulders, body straight.",
+      "Lock out your elbows and keep them locked throughout.",
+    ],
+    execution: [
+      "Without bending your elbows, let your chest sink slightly as your shoulder blades pinch together.",
+      "Then push up through the shoulders as your shoulder blades spread wide apart.",
+      "Only the shoulder blades move — arms stay locked.",
+    ],
+    breathing: "Inhale as you sink, exhale as you push.",
+    commonMistakes: [
+      "Bending the elbows — they must stay straight.",
+      "Moving too fast — this is all about control.",
+      "Sagging or piking the hips.",
+    ],
+    tips: [
+      "Tiny range of motion — don't expect big movement.",
+      "Great for shoulder health and scapular control.",
+      "Drop to knees to scale back if core fatigue is a problem.",
+    ],
+  },
+
+  "Reverse Plank": {
+    setup: [
+      "Sit on the floor with legs extended straight in front of you.",
+      "Place your hands behind you, fingers pointing toward your feet.",
+      "Hands under your shoulders, arms straight.",
+    ],
+    execution: [
+      "Drive through your palms and heels to lift your hips off the floor.",
+      "Squeeze your glutes and form a straight line from heels to head.",
+      "Hold the position for the prescribed time.",
+    ],
+    breathing: "Slow, steady breathing — don't hold your breath.",
+    commonMistakes: [
+      "Letting the hips drop.",
+      "Head hanging back or craning forward — keep it neutral.",
+      "Hands too far behind you — keep them under your shoulders.",
+    ],
+    tips: [
+      "Squeeze your glutes hard — they do most of the work.",
+      "Point your toes to extend the line.",
+      "Bend the knees (reverse tabletop) to scale back.",
+    ],
+  },
+
+  // ─── UNILATERAL LEGS ─────────────────────────────────
+  "Bulgarian Split Squat": {
+    setup: [
+      "Stand about 2 feet in front of a bench, chair, or sturdy step.",
+      "Place the top of one foot behind you on the surface.",
+      "Front foot flat, core braced, chest up.",
+    ],
+    execution: [
+      "Lower straight down by bending your front knee.",
+      "Keep your front knee tracking over your ankle.",
+      "Stop when your back knee is just above the floor.",
+      "Drive through the front heel to return to the start.",
+    ],
+    breathing: "Inhale lowering, exhale driving up.",
+    commonMistakes: [
+      "Front knee caving inward or tracking past the toes.",
+      "Standing too close to the bench — take a bigger step forward.",
+      "Pushing off the back foot — all the work is the front leg.",
+    ],
+    tips: [
+      "The front foot should feel planted and stable throughout.",
+      "Keep most of your weight in the front heel.",
+      "Brutal on balance — hold a wall for the first few sessions.",
+    ],
+  },
+
+  "Cossack Squat": {
+    setup: [
+      "Stand with feet wide, about double shoulder-width.",
+      "Toes pointing slightly outward.",
+      "Hands clasped at your chest for balance.",
+    ],
+    execution: [
+      "Shift your weight to one side and lower toward that heel.",
+      "That knee bends deeply while the other leg stays straight.",
+      "Point the toes of the straight leg up toward the ceiling.",
+      "Push back up and transition smoothly to the other side.",
+    ],
+    breathing: "Inhale lowering, exhale pushing back up.",
+    commonMistakes: [
+      "Letting the heel of the bent leg lift off the floor.",
+      "Rounding the lower back at the bottom.",
+      "Not going deep enough.",
+    ],
+    tips: [
+      "Scale by holding onto something for balance.",
+      "Great for hip mobility and adductor flexibility.",
+      "Move slowly — this is a mobility and strength combo.",
+    ],
+  },
+
+  "Curtsy Lunge": {
+    setup: [
+      "Stand tall with feet hip-width apart.",
+      "Hands on hips or clasped at chest.",
+    ],
+    execution: [
+      "Step one leg diagonally back and across behind the other.",
+      "Lower straight down until both knees are bent about 90 degrees.",
+      "Your back knee approaches the floor behind the front heel.",
+      "Drive through the front heel to return to standing. Alternate sides.",
+    ],
+    breathing: "Inhale stepping back, exhale returning.",
+    commonMistakes: [
+      "Front knee caving inward — the biggest curtsy lunge error.",
+      "Leaning too far forward.",
+      "Not stepping far enough across.",
+    ],
+    tips: [
+      "Targets the glute medius — you'll feel it on the outside of the hip.",
+      "Keep your chest tall throughout.",
+      "Move slow enough to maintain balance.",
+    ],
+  },
+
+  "Single-Leg Romanian Deadlift": {
+    setup: [
+      "Stand on one leg with a slight bend in the knee.",
+      "Arms at your sides or extended for counterbalance.",
+    ],
+    execution: [
+      "Hinge forward at the hips, keeping your back flat.",
+      "Let the non-standing leg extend straight back for counterbalance.",
+      "Lower your torso until it's parallel to the floor (or as far as your hamstring allows).",
+      "Drive the standing hip forward to return to upright.",
+    ],
+    breathing: "Inhale as you hinge forward, exhale as you return.",
+    commonMistakes: [
+      "Rounding the lower back — hinge from the hips.",
+      "Bending the standing knee too much.",
+      "Letting the back leg drop below the hip.",
+    ],
+    tips: [
+      "Back leg and torso should form a straight line.",
+      "Move slowly — balance is half the challenge.",
+      "Touch a wall lightly for balance if you wobble.",
+    ],
+  },
+
+  "Single-Leg Calf Raise": {
+    setup: [
+      "Stand on one foot at the edge of a step, heel hanging off.",
+      "Use a wall or railing for balance if needed.",
+      "Other foot crossed behind the working leg.",
+    ],
+    execution: [
+      "Push up onto the ball of your foot, rising as high as possible.",
+      "Pause briefly at the top.",
+      "Lower your heel all the way below the step level.",
+      "Full stretch at the bottom.",
+    ],
+    breathing: "Exhale pushing up, inhale lowering.",
+    commonMistakes: [
+      "Rushing through reps.",
+      "Not getting the full stretch at the bottom.",
+      "Bending the knee to cheat the rep.",
+    ],
+    tips: [
+      "Slow down on the descent — the stretch is where growth happens.",
+      "A 1-second pause at the top makes this much harder.",
+      "Calves respond well to high reps — don't be afraid to chase 20+.",
+    ],
+  },
+
+  // ─── ADVANCED CORE ───────────────────────────────────
+  "Hollow Body Hold": {
+    setup: [
+      "Lie flat on your back with arms extended overhead.",
+      "Legs straight and together.",
+    ],
+    execution: [
+      "Press your lower back hard into the floor.",
+      "Simultaneously lift your shoulders and legs off the ground.",
+      "Your body should form a shallow 'banana' or 'boat' shape.",
+      "Hold the position without letting your lower back come off the floor.",
+    ],
+    breathing: "Short, controlled breaths — belly stays tight.",
+    commonMistakes: [
+      "Lower back coming off the floor — this is the whole point of the exercise.",
+      "Arms or legs too high — they should hover low, not point up.",
+      "Holding your breath.",
+    ],
+    tips: [
+      "Start with a tuck version (knees bent, arms at sides) and progress slowly.",
+      "Gymnastic staple — great for teaching full-body core tension.",
+      "If your back lifts, lower your legs or bend your knees until it doesn't.",
+    ],
+  },
+
+  "Arch Hold": {
+    setup: [
+      "Lie face down with arms extended overhead.",
+      "Legs straight and together.",
+    ],
+    execution: [
+      "Squeeze your glutes and lower back to lift your chest, arms, and legs off the floor simultaneously.",
+      "Reach long with your arms.",
+      "Hold the 'reverse banana' shape for the prescribed time.",
+    ],
+    breathing: "Steady breathing through the hold — don't hold your breath.",
+    commonMistakes: [
+      "Bending the arms or legs.",
+      "Only lifting the legs without the chest.",
+      "Not squeezing the glutes.",
+    ],
+    tips: [
+      "Counterpart to the hollow body hold — essential for spine health.",
+      "Imagine reaching your hands and toes away from each other.",
+      "Great for counteracting the effects of sitting.",
+    ],
+  },
+
+  "Russian Twist": {
+    setup: [
+      "Sit on the floor with knees bent, feet flat or lifted off the ground.",
+      "Lean back to about 45 degrees, keeping your back flat.",
+      "Hands clasped together in front of your chest.",
+    ],
+    execution: [
+      "Rotate your torso to one side and tap the floor beside your hip.",
+      "Rotate to the other side and tap.",
+      "Each touch counts as one rep.",
+    ],
+    breathing: "Exhale on each rotation.",
+    commonMistakes: [
+      "Rotating with the arms only — rotate from the core.",
+      "Rounding the lower back.",
+      "Feet on the ground when they should be lifted.",
+    ],
+    tips: [
+      "Lift your feet off the floor to make it significantly harder.",
+      "Move slow for maximum tension.",
+      "Pause and squeeze at each side.",
+    ],
+  },
+
+  "L-Sit Tuck Hold": {
+    setup: [
+      "Sit on the floor with legs extended in front of you.",
+      "Place your hands flat on the floor beside your hips.",
+      "Push your shoulders down (away from your ears).",
+    ],
+    execution: [
+      "Press hard through your palms to lift your hips off the floor.",
+      "Tuck your knees up toward your chest.",
+      "Hold with your entire body supported on your hands.",
+    ],
+    breathing: "Controlled breathing — tension throughout.",
+    commonMistakes: [
+      "Shoulders shrugging up — press them down.",
+      "Not fully tucking the knees.",
+      "Letting the feet touch the ground.",
+    ],
+    tips: [
+      "Foundation for the full L-sit.",
+      "Use parallettes or blocks to give your hands more clearance.",
+      "Serious triceps and core burn — scale with short holds.",
+    ],
+  },
+
+  "Windshield Wipers": {
+    setup: [
+      "Lie flat on your back with arms out to your sides for balance.",
+      "Lift your legs straight up to 90 degrees.",
+    ],
+    execution: [
+      "Keeping legs straight and together, lower them to one side toward the floor.",
+      "Stop just before your feet touch the ground.",
+      "Rotate back through centre and lower to the other side.",
+      "Each direction counts as one rep.",
+    ],
+    breathing: "Exhale as you lower to each side, inhale returning.",
+    commonMistakes: [
+      "Letting feet touch the ground and rest there.",
+      "Bending the knees.",
+      "Shoulders lifting off the floor — keep them pinned.",
+    ],
+    tips: [
+      "Bend the knees (bent-knee wipers) to scale back.",
+      "Press your arms into the ground for stability.",
+      "Focus on obliques doing the rotation, not momentum.",
+    ],
+  },
+
+  // ─── PLYOMETRICS / POWER ─────────────────────────────
+  "Broad Jump": {
+    setup: [
+      "Stand with feet shoulder-width apart at the start of a clear space.",
+      "Arms back, hips loaded in a partial squat.",
+    ],
+    execution: [
+      "Swing your arms forward and explode off the ground.",
+      "Drive your hips forward and jump for maximum horizontal distance.",
+      "Land softly on both feet with bent knees in an athletic stance.",
+      "Walk back to the start before the next rep.",
+    ],
+    breathing: "Sharp exhale on the jump, recover on the walk back.",
+    commonMistakes: [
+      "Landing stiff — always absorb with bent knees.",
+      "Arms not swinging — use them for momentum.",
+      "Fatiguing and losing height/distance — stop the set before form breaks.",
+    ],
+    tips: [
+      "This is a pure power exercise — rest fully between reps.",
+      "Measure your jumps to track progress over time.",
+      "Great test of lower body explosive power.",
+    ],
+  },
+
+  "Box Jump (Step)": {
+    setup: [
+      "Stand about a foot in front of a sturdy, non-slip step or bench.",
+      "Feet shoulder-width apart, slight knee bend.",
+    ],
+    execution: [
+      "Swing arms back and load the hips.",
+      "Explode upward, driving knees up to clear the box.",
+      "Land softly on top of the box with both feet, in an athletic quarter-squat.",
+      "Stand tall, then step (don't jump) back down.",
+    ],
+    breathing: "Sharp exhale on the jump, steady breath on the descent.",
+    commonMistakes: [
+      "Choosing a box that's too high — you should land comfortably.",
+      "Landing with straight legs.",
+      "Jumping down off the box — always STEP down.",
+    ],
+    tips: [
+      "Use a height you can clear by 2-3 inches — not a maximum test.",
+      "Focus on soft, quiet landings.",
+      "Step down to save the knees; never jump down repeatedly.",
+    ],
+  },
+
+  "Clap Push-Up": {
+    setup: [
+      "Get into a standard push-up position.",
+      "Brace your core hard.",
+    ],
+    execution: [
+      "Lower into a push-up with control.",
+      "Push up explosively — hard enough that your hands leave the ground.",
+      "Clap your hands together in mid-air.",
+      "Land with slightly bent elbows and immediately begin the next rep.",
+    ],
+    breathing: "Inhale on the descent, powerful exhale on the explosion.",
+    commonMistakes: [
+      "Landing on locked elbows — serious injury risk.",
+      "Slow or shallow push before the clap.",
+      "Losing core tension between reps.",
+    ],
+    tips: [
+      "Master explosive push-ups (no clap) first.",
+      "Always absorb the landing — never slam into straight arms.",
+      "Only attempt when you have solid push-up strength.",
+    ],
+  },
+
+  "Kneeling Jump to Stand": {
+    setup: [
+      "Kneel on the floor with the tops of your feet flat.",
+      "Knees hip-width apart.",
+      "Sit back lightly on your heels to load the jump.",
+    ],
+    execution: [
+      "Swing your arms back, then forward hard.",
+      "Simultaneously drive your hips forward and explode upward.",
+      "Tuck your feet under you mid-air.",
+      "Land in a standing squat position and stand tall.",
+    ],
+    breathing: "Sharp exhale on the jump.",
+    commonMistakes: [
+      "Not using the arm swing — it provides critical momentum.",
+      "Landing off-balance — aim for an athletic quarter-squat.",
+      "Trying it too fast without warming up.",
+    ],
+    tips: [
+      "Takes some practice — scale by using your hands to push off first.",
+      "Great test of hip power.",
+      "Soft surface is nicer on the knees.",
+    ],
+  },
+
+  "Depth Jump": {
+    setup: [
+      "Stand on a sturdy low step or platform (about knee height).",
+      "Clear space in front for the landing and jump.",
+    ],
+    execution: [
+      "Step off the platform (don't jump off — let gravity do it).",
+      "Land on both feet with bent knees.",
+      "As soon as you touch down, immediately explode up into a maximum vertical jump.",
+      "Land softly, then reset on the platform for the next rep.",
+    ],
+    breathing: "Sharp exhale on the jump up.",
+    commonMistakes: [
+      "Jumping off the platform instead of stepping off.",
+      "Absorbing too long — the goal is a fast reactive bounce.",
+      "Starting with a platform that's too high.",
+    ],
+    tips: [
+      "Low step first — this is an advanced plyometric.",
+      "Minimize ground contact time for maximum reactive strength.",
+      "Rest fully between reps — this is a power exercise.",
+    ],
+  },
 };
 
 /**

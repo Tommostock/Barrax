@@ -105,7 +105,16 @@ export default function ExerciseLibraryPage() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
-    // 2. Fetch all exercises from the exercise_library table
+    // 2. Silently top-up the exercise library with any new exercises
+    // added to the seed list since the user last visited. The route
+    // only inserts rows whose name isn't already present.
+    try {
+      await fetch("/api/seed-exercises", { method: "POST" });
+    } catch {
+      // Non-critical — library still loads from whatever's already there.
+    }
+
+    // 3. Fetch all exercises from the exercise_library table
     const { data: exerciseData } = await supabase
       .from("exercise_library")
       .select("*")

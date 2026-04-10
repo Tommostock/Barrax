@@ -62,7 +62,35 @@ const EXERCISES = [
   {"name":"Cat-Cow Stretch","description":"On all fours, alternate between arching and rounding the spine.","form_cue":"Inhale as you arch (cow), exhale as you round (cat). Move slowly.","muscles":["spine","core"],"difficulty":1,"category":"recovery","min_rank":1},
   {"name":"Hip Flexor Stretch","description":"Kneeling lunge stretch targeting the hip flexors of the rear leg.","form_cue":"Back knee on the ground, front foot flat. Push hips forward gently. Keep torso upright.","muscles":["hip flexors","quads"],"difficulty":1,"category":"recovery","min_rank":1},
   {"name":"Standing Quad Stretch","description":"Standing on one leg, pull the other foot to your glute stretching the quad.","form_cue":"Keep knees together. Stand tall. Hold a wall for balance if needed.","muscles":["quads"],"difficulty":1,"category":"recovery","min_rank":1},
-  {"name":"Hamstring Stretch","description":"Standing, place one heel on a low surface and lean forward to stretch the hamstring.","form_cue":"Keep the stretched leg straight. Hinge at the hips, do not round the back.","muscles":["hamstrings"],"difficulty":1,"category":"recovery","min_rank":1}
+  {"name":"Hamstring Stretch","description":"Standing, place one heel on a low surface and lean forward to stretch the hamstring.","form_cue":"Keep the stretched leg straight. Hinge at the hips, do not round the back.","muscles":["hamstrings"],"difficulty":1,"category":"recovery","min_rank":1},
+
+  // ─── PULL / BACK (no bar needed) ────────────────────────────
+  {"name":"Inverted Row (Table)","description":"Lying under a sturdy table, grip the edge and pull your chest up to it. The bodyweight 'reverse push-up'.","form_cue":"Grip the table edge. Heels on the floor, body straight. Pull chest to the table.","muscles":["back","biceps","shoulders"],"difficulty":2,"category":"strength","min_rank":1},
+  {"name":"Doorway Row","description":"Loop a towel around a sturdy door handle, lean back holding both ends, then row yourself upright.","form_cue":"Feet either side of the door. Lean back with straight arms. Pull your chest to the door.","muscles":["back","biceps"],"difficulty":2,"category":"strength","min_rank":1},
+  {"name":"Towel Pull-Apart","description":"Hold a towel taut at chest height and pull the ends apart, squeezing the shoulder blades together.","form_cue":"Arms straight. Pull the towel apart using your upper back, not your arms.","muscles":["upper back","shoulders"],"difficulty":1,"category":"strength","min_rank":1},
+  {"name":"Scapular Push-Up","description":"High plank position with locked arms. Retract and protract the shoulder blades only. Teaches scapular control.","form_cue":"Arms stay straight. Pinch shoulder blades together, then push them apart.","muscles":["shoulders","upper back","core"],"difficulty":1,"category":"strength","min_rank":1},
+  {"name":"Reverse Plank","description":"Seated with legs extended, hands behind you, drive your hips up to form a straight reverse plank.","form_cue":"Hands under shoulders, fingers forward. Squeeze glutes. Body in one line from head to heels.","muscles":["glutes","hamstrings","core","shoulders"],"difficulty":2,"category":"strength","min_rank":2},
+
+  // ─── UNILATERAL LEGS ──────────────────────────────────────────
+  {"name":"Bulgarian Split Squat","description":"Rear foot elevated on a bench, chair, or step. Lower into a deep split squat on the front leg.","form_cue":"Keep front knee over ankle. Lower back knee toward the floor. Drive through the front heel.","muscles":["quads","glutes","hamstrings"],"difficulty":3,"category":"strength","min_rank":2},
+  {"name":"Cossack Squat","description":"Wide stance, lower toward one heel while the other leg extends straight with toes up. Alternate sides.","form_cue":"Sit toward one heel. Other leg stays straight with toes pointing up. Chest proud.","muscles":["quads","glutes","adductors","hamstrings"],"difficulty":3,"category":"strength","min_rank":3},
+  {"name":"Curtsy Lunge","description":"Step one leg behind and across the other into a curtsy-like lunge. Hits the glute medius hard.","form_cue":"Step back and across at a 45 degree angle. Lower straight down. Front knee stays stable.","muscles":["glutes","quads","adductors"],"difficulty":2,"category":"strength","min_rank":1},
+  {"name":"Single-Leg Romanian Deadlift","description":"Balance on one leg and hinge forward, reaching toward the floor as the other leg extends straight back.","form_cue":"Hinge at the hips, flat back. Extended leg forms a straight line with the torso.","muscles":["hamstrings","glutes","lower back"],"difficulty":3,"category":"strength","min_rank":3},
+  {"name":"Single-Leg Calf Raise","description":"Stand on one leg at the edge of a step. Raise onto the toes, then lower the heel below the step.","form_cue":"Full range of motion. Slow and controlled. Pause at the top and bottom.","muscles":["calves"],"difficulty":2,"category":"strength","min_rank":2},
+
+  // ─── ADVANCED CORE ────────────────────────────────────────────
+  {"name":"Hollow Body Hold","description":"Lying face up, press lower back into the floor and lift shoulders and legs off the ground to form a banana shape.","form_cue":"Lower back glued to the floor. Arms and legs hover. Hold the shape, don't let the back arch.","muscles":["core"],"difficulty":3,"category":"core","min_rank":3},
+  {"name":"Arch Hold","description":"Lying face down, arms overhead. Lift chest, arms, and legs to form a reverse banana shape.","form_cue":"Squeeze glutes hard. Lift chest, arms, and legs together. Hold the tension.","muscles":["lower back","glutes","upper back"],"difficulty":3,"category":"core","min_rank":3},
+  {"name":"Russian Twist","description":"Seated with feet off the ground, twist your torso to tap the floor on each side alternately.","form_cue":"Lean back at 45 degrees. Keep chest up. Rotate from the torso, not the arms.","muscles":["obliques","core"],"difficulty":2,"category":"core","min_rank":1},
+  {"name":"L-Sit Tuck Hold","description":"Seated on the floor, press up on your hands and tuck your knees toward your chest while lifting your body.","form_cue":"Press hands into the ground. Push shoulders down. Lift hips and tuck knees high.","muscles":["core","triceps","shoulders"],"difficulty":4,"category":"core","min_rank":4},
+  {"name":"Windshield Wipers","description":"Lying on your back with legs raised vertically, rotate legs side to side like windshield wipers.","form_cue":"Keep legs straight and together. Control the movement. Don't let feet touch the floor.","muscles":["obliques","core","hip flexors"],"difficulty":3,"category":"core","min_rank":4},
+
+  // ─── PLYOMETRICS / POWER ──────────────────────────────────────
+  {"name":"Broad Jump","description":"Standing long jump for maximum horizontal distance. Walk back to start for the next rep.","form_cue":"Swing arms back, load hips. Jump forward as far as you can. Land soft and balanced.","muscles":["quads","glutes","calves","core"],"difficulty":3,"category":"cardio","min_rank":2},
+  {"name":"Box Jump (Step)","description":"Jump onto a sturdy step, low bench, or garden wall. Step back down to reset.","form_cue":"Load hips back, explode up. Land soft on the box in an athletic stance. Stand tall.","muscles":["quads","glutes","calves"],"difficulty":3,"category":"cardio","min_rank":3},
+  {"name":"Clap Push-Up","description":"Explosive push-up where hands clap together at the top before catching the landing.","form_cue":"Push hard enough to clear the ground. Fast clap. Soft landing with bent elbows.","muscles":["chest","triceps","shoulders"],"difficulty":4,"category":"strength","min_rank":5},
+  {"name":"Kneeling Jump to Stand","description":"Kneeling with tops of feet flat. Swing arms and explode up to land in a standing squat.","form_cue":"Swing arms hard, drive hips forward. Land in an athletic stance. Stand tall.","muscles":["glutes","quads","core"],"difficulty":3,"category":"cardio","min_rank":3},
+  {"name":"Depth Jump","description":"Step off a low step, land softly, and immediately explode into a maximum vertical jump.","form_cue":"Step off, don't jump off. Minimize ground contact. Explode up immediately.","muscles":["quads","glutes","calves"],"difficulty":4,"category":"cardio","min_rank":4}
 ];
 
 export async function POST() {
@@ -74,18 +102,28 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user already has exercises seeded
-    const { count } = await supabase
+    // Fetch the exercise names the user already has so we only insert
+    // new entries. This lets the route act as a top-up when we add
+    // exercises to the seed list over time.
+    const { data: existingRows, error: fetchError } = await supabase
       .from("exercise_library")
-      .select("*", { count: "exact", head: true })
+      .select("name")
       .eq("user_id", user.id);
 
-    if (count && count > 0) {
-      return NextResponse.json({ message: "Exercises already seeded", count });
+    if (fetchError) throw fetchError;
+
+    const existingNames = new Set((existingRows ?? []).map((r) => r.name));
+    const newExercises = EXERCISES.filter((ex) => !existingNames.has(ex.name));
+
+    if (newExercises.length === 0) {
+      return NextResponse.json({
+        message: "Exercise library already up to date",
+        existing: existingNames.size,
+        added: 0,
+      });
     }
 
-    // Insert all exercises for this user
-    const rows = EXERCISES.map((ex) => ({
+    const rows = newExercises.map((ex) => ({
       ...ex,
       user_id: user.id,
       is_favourite: false,
@@ -98,8 +136,11 @@ export async function POST() {
     if (insertError) throw insertError;
 
     return NextResponse.json({
-      message: `Seeded ${rows.length} exercises`,
-      count: rows.length,
+      message: existingNames.size === 0
+        ? `Seeded ${rows.length} exercises`
+        : `Added ${rows.length} new exercises to library`,
+      existing: existingNames.size,
+      added: rows.length,
     });
 
   } catch (error) {
