@@ -44,6 +44,7 @@ import {
   restOverBeep,
 } from "@/lib/workout-audio";
 import { requestWakeLock, releaseWakeLock } from "@/lib/wake-lock";
+import { queueOrExecute } from "@/lib/offline/queue";
 import type { WorkoutData, WorkoutExercise } from "@/types";
 
 // ──────────────────────────────────────────────
@@ -737,17 +738,31 @@ export default function WorkoutPlayerPage() {
     setXpEarned(xp);
 
     try {
-      // 4a. Update the workout row
+      // 4a. Mark the workout row complete. Wrapped in queueOrExecute
+      // so it survives an offline finish (gym basement) — the update
+      // replays on reconnect.
       if (workoutId) {
-        await supabase
-          .from("workouts")
-          .update({
-            status: "complete",
-            completed_at: new Date().toISOString(),
-            duration_seconds: totalDuration,
-            xp_earned: xp,
-          })
-          .eq("id", workoutId);
+        const workoutUpdate = {
+          status: "complete" as const,
+          completed_at: new Date().toISOString(),
+          duration_seconds: totalDuration,
+          xp_earned: xp,
+        };
+        await queueOrExecute(
+          async () => {
+            const { error } = await supabase
+              .from("workouts")
+              .update(workoutUpdate)
+              .eq("id", workoutId);
+            return { error };
+          },
+          {
+            table: "workouts",
+            operation: "update",
+            payload: workoutUpdate,
+            filter: { id: workoutId },
+          },
+        );
       }
 
       // 4b. Insert individual exercise logs into workout_exercises
@@ -781,7 +796,21 @@ export default function WorkoutPlayerPage() {
           order_index: r.orderIndex,
         }));
 
-        await supabase.from("workout_exercises").insert(rows);
+        // Queue-aware insert — preserves workout set logs across
+        // signal drops in gym basements.
+        await queueOrExecute(
+          async () => {
+            const { error } = await supabase
+              .from("workout_exercises")
+              .insert(rows);
+            return { error };
+          },
+          {
+            table: "workout_exercises",
+            operation: "insert",
+            payload: rows,
+          },
+        );
       }
 
       // 4c. Award XP + fire notification for workout complete and rank-up

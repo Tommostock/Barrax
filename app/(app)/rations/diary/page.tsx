@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import type { FoodDiaryEntry, MealType } from "@/types";
 import { calculateMacroTargets } from "@/lib/macros";
+import { queueOrExecute } from "@/lib/offline/queue";
 
 // ──────────────────────────────────────────────
 // Helper: format a Date as "06 APR 2026"
@@ -308,17 +309,46 @@ export default function FoodDiaryPage() {
       throw new Error("Food name is required");
     }
 
-    const { error } = await supabase.from("food_diary").insert(payload);
+    // Wrap the insert in queueOrExecute so offline logs still work.
+    // When offline (or on a transient error) the payload is persisted
+    // to IndexedDB and replayed on the next `online` event.
+    const result = await queueOrExecute(
+      async () => {
+        const { error } = await supabase.from("food_diary").insert(payload);
+        return { error };
+      },
+      { table: "food_diary", operation: "insert", payload },
+    );
 
-    // If the insert failed, throw so the caller (AddFoodSheet) knows
-    if (error) {
-      console.error("Failed to log food:", error, "payload:", payload);
-      const detail = [error.message, error.details, error.hint].filter(Boolean).join(" — ");
-      throw new Error(detail || "Database insert failed");
+    if (!result.success) {
+      throw new Error("Failed to save food — IndexedDB unavailable");
     }
 
-    // Refresh entries from the database
-    await loadEntries();
+    if (result.queued) {
+      // Optimistically append to local state so the entry appears
+      // immediately even though it hasn't hit the server yet.
+      // Use a temporary UUID — the real row will arrive on next refresh.
+      const tempEntry: FoodDiaryEntry = {
+        id: `pending_${Date.now()}`,
+        user_id: user.id,
+        food_name: payload.food_name,
+        brand: payload.brand,
+        barcode: payload.barcode,
+        calories: payload.calories,
+        protein_g: payload.protein_g,
+        carbs_g: payload.carbs_g,
+        fat_g: payload.fat_g,
+        quantity: food.quantity ?? 1,
+        serving_size: payload.serving_size,
+        meal_type: payload.meal_type,
+        source: payload.source,
+        logged_at: payload.logged_at,
+      };
+      setEntries((prev) => [...prev, tempEntry]);
+    } else {
+      // Online path: reload to get the real row with its server ID.
+      await loadEntries();
+    }
   }
 
   // ──────────────────────────────────────────

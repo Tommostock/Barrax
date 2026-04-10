@@ -12,6 +12,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Settings } from "lucide-react";
 import { RANK_THRESHOLDS } from "@/types";
+import OfflineIndicator from "./OfflineIndicator";
 
 export default function Header() {
   const router = useRouter();
@@ -78,15 +79,18 @@ export default function Header() {
           </p>
         </div>
 
-        {/* Settings cog — opens Base Operations */}
-        <button
-          onClick={() => router.push("/intel/settings")}
-          className="min-w-[44px] min-h-[44px] flex items-center justify-center
-                     text-text-secondary hover:text-green-light transition-colors"
-          aria-label="Settings"
-        >
-          <Settings size={20} />
-        </button>
+        {/* Right side: offline indicator + settings cog */}
+        <div className="flex items-center gap-2">
+          <OfflineIndicator />
+          <button
+            onClick={() => router.push("/intel/settings")}
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center
+                       text-text-secondary hover:text-green-light transition-colors"
+            aria-label="Settings"
+          >
+            <Settings size={20} />
+          </button>
+        </div>
       </div>
     </header>
   );
