@@ -13,7 +13,7 @@
 
 import { useEffect, useState } from "react";
 import type { CoachingState } from "@/types";
-import { Headphones, AlertTriangle, RefreshCw, Volume2 } from "lucide-react";
+import { Headphones, AlertTriangle, RefreshCw } from "lucide-react";
 
 interface Props {
   state: CoachingState;
