@@ -202,6 +202,14 @@ export default function MissionsPage() {
     }
   }
 
+  // Compute week start (Monday) so we can tell if a day is in the past
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const todayDOW = todayDate.getDay(); // 0=Sun…6=Sat
+  const daysFromMonday = todayDOW === 0 ? 6 : todayDOW - 1;
+  const weekStart = new Date(todayDate);
+  weekStart.setDate(todayDate.getDate() - daysFromMonday);
+
   // Get the programme data and workout for the selected day
   const selectedDayData = programme?.programme_data?.find((d) => d.day === selectedDay);
   const selectedWorkout = workouts.find((w) => {
@@ -246,16 +254,22 @@ export default function MissionsPage() {
             const isRest = dayData?.is_rest_day;
             const isComplete = workout?.status === "complete";
 
+            // Missed = past workout day that was not completed
+            const dayDate = new Date(weekStart);
+            dayDate.setDate(weekStart.getDate() + i);
+            const isMissed = dayDate < todayDate && dayData !== undefined && !isRest && !isComplete;
+
             return (
               <button key={dayName}
                 onClick={() => setSelectedDay(dayName)}
                 className={`p-2 text-center border transition-all min-h-[56px]
                   ${isSelected ? "border-green-primary bg-green-primary/15 scale-[1.02]"
                     : isComplete ? "border-xp-gold/60 bg-xp-gold/10"
+                    : isMissed ? "border-danger/60 bg-danger/10"
                     : isToday ? "border-white/60 bg-bg-panel"
                     : "border-green-dark bg-bg-panel hover:bg-bg-panel-alt"}`}
               >
-                <p className={`text-[0.55rem] font-mono ${isSelected ? "text-green-light font-bold" : isComplete ? "text-xp-gold font-bold" : isToday ? "text-white font-bold" : "text-text-secondary"}`}>
+                <p className={`text-[0.55rem] font-mono ${isSelected ? "text-green-light font-bold" : isComplete ? "text-xp-gold font-bold" : isMissed ? "text-danger font-bold" : isToday ? "text-white font-bold" : "text-text-secondary"}`}>
                   {DAY_LABELS[i]}
                 </p>
                 <div className="w-6 h-6 mx-auto mt-1 flex items-center justify-center">
