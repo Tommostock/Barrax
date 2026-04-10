@@ -117,20 +117,54 @@ export default function RationsPage() {
   }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
   // Add food to diary (with quantity support)
+  // IMPORTANT: build an EXPLICIT payload — do not spread `food`. The
+  // AddFoodSheet passes through fibre_g/sugar_g/salt_g from Open Food
+  // Facts, none of which are columns on the food_diary table, and
+  // postgres rejects the insert with a schema-cache error.
   async function addToDiary(food: {
     food_name: string; brand?: string; barcode?: string; calories: number;
     protein_g: number; carbs_g: number; fat_g: number; serving_size?: string;
     quantity?: number; source: "manual" | "barcode" | "search" | "meal_plan";
   }) {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const qty = food.quantity ?? 1;
-    const { data, error } = await supabase.from("food_diary").insert({
-      user_id: user.id, ...food, quantity: qty, meal_type: addFoodMealType,
-    }).select().single();
+    if (!user) {
+      throw new Error("Not signed in");
+    }
+
+    const toNum = (v: unknown): number => {
+      const n = typeof v === "number" ? v : Number(v);
+      return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
+    };
+
+    const payload = {
+      user_id: user.id,
+      food_name: String(food.food_name ?? "").trim(),
+      brand: food.brand ? String(food.brand) : null,
+      barcode: food.barcode ? String(food.barcode) : null,
+      calories: toNum(food.calories),
+      protein_g: toNum(food.protein_g),
+      carbs_g: toNum(food.carbs_g),
+      fat_g: toNum(food.fat_g),
+      serving_size: food.serving_size ? String(food.serving_size) : null,
+      quantity: toNum(food.quantity ?? 1) || 1,
+      meal_type: addFoodMealType,
+      source: food.source,
+    };
+
+    if (!payload.food_name) {
+      throw new Error("Food name is required");
+    }
+
+    const { data, error } = await supabase
+      .from("food_diary")
+      .insert(payload)
+      .select()
+      .single();
+
     if (error) {
-      alert(`Failed to log food: ${error.message}`);
-      return;
+      console.error("Failed to log food:", error, "payload:", payload);
+      const detail = [error.message, error.details, error.hint].filter(Boolean).join(" — ");
+      throw new Error(detail || "Database insert failed");
     }
     if (data) setDiaryEntries(prev => [...prev, data as FoodDiaryEntry]);
     navigator.vibrate?.(50);
