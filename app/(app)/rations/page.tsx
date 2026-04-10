@@ -240,6 +240,16 @@ export default function RationsPage() {
       const noGo = prefs?.filter(p => p.category === "no_go").map(p => p.food_name) ?? [];
       const approved = prefs?.filter(p => p.category === "approved").map(p => p.food_name) ?? [];
 
+      // Calorie split per meal type — snacks are much smaller than main meals
+      const mealCalorieRatios: Record<string, number> = {
+        breakfast: 0.25,
+        lunch: 0.30,
+        dinner: 0.30,
+        snack: 0.15,
+      };
+      const ratio = mealCalorieRatios[meal.meal_type] ?? 0.25;
+      const targetCalories = Math.round(calorieTarget * ratio);
+
       // Call the server-side swap API (Gemini needs server-side API key)
       const res = await fetch("/api/swap-meal", {
         method: "POST",
@@ -247,7 +257,7 @@ export default function RationsPage() {
         body: JSON.stringify({
           mealType: meal.meal_type,
           currentMealName: meal.name,
-          targetCalories: Math.round(calorieTarget / 4),
+          targetCalories,
           noGoFoods: noGo,
           approvedFoods: approved,
         }),
