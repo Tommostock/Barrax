@@ -239,6 +239,9 @@ export default function FoodDiaryPage() {
     protein_g: number;
     carbs_g: number;
     fat_g: number;
+    fibre_g?: number;
+    sugar_g?: number;
+    salt_g?: number;
     serving_size?: string;
     quantity?: number;
     source: "manual" | "barcode" | "search";
@@ -277,6 +280,9 @@ export default function FoodDiaryPage() {
       protein_g: toNum(food.protein_g),
       carbs_g: toNum(food.carbs_g),
       fat_g: toNum(food.fat_g),
+      fibre_g: toNum(food.fibre_g),
+      sugar_g: toNum(food.sugar_g),
+      salt_g: toNum(food.salt_g),
       serving_size: food.serving_size ? String(food.serving_size) : null,
       meal_type: addingMealType,
       source: food.source,

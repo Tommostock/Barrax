@@ -118,12 +118,14 @@ export default function RationsPage() {
 
   // Add food to diary (with quantity support)
   // IMPORTANT: build an EXPLICIT payload — do not spread `food`. The
-  // AddFoodSheet passes through fibre_g/sugar_g/salt_g from Open Food
-  // Facts, none of which are columns on the food_diary table, and
-  // postgres rejects the insert with a schema-cache error.
+  // payload must only contain columns that exist on the food_diary
+  // table. Migration 009 adds fibre_g/sugar_g/salt_g columns so the
+  // micronutrient data from Open Food Facts can be stored.
   async function addToDiary(food: {
     food_name: string; brand?: string; barcode?: string; calories: number;
-    protein_g: number; carbs_g: number; fat_g: number; serving_size?: string;
+    protein_g: number; carbs_g: number; fat_g: number;
+    fibre_g?: number; sugar_g?: number; salt_g?: number;
+    serving_size?: string;
     quantity?: number; source: "manual" | "barcode" | "search" | "meal_plan";
   }) {
     const { data: { user } } = await supabase.auth.getUser();
@@ -145,6 +147,9 @@ export default function RationsPage() {
       protein_g: toNum(food.protein_g),
       carbs_g: toNum(food.carbs_g),
       fat_g: toNum(food.fat_g),
+      fibre_g: toNum(food.fibre_g),
+      sugar_g: toNum(food.sugar_g),
+      salt_g: toNum(food.salt_g),
       serving_size: food.serving_size ? String(food.serving_size) : null,
       quantity: toNum(food.quantity ?? 1) || 1,
       meal_type: addFoodMealType,
