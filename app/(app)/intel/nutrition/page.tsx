@@ -50,6 +50,25 @@ const COLOURS = {
   target: "#7A7A6E",        // text-secondary
 };
 
+/* ------------------------------------------
+   CUSTOM TOOLTIP
+   Dark-themed tooltip matching the BARRAX design system.
+   Declared outside the component so it isn't recreated on each render.
+   ------------------------------------------ */
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
+  if (!active || !payload) return null;
+  return (
+    <div className="bg-bg-panel border border-green-dark p-2">
+      <p className="text-[0.6rem] font-mono text-text-secondary mb-1">{label}</p>
+      {payload.map((entry, i) => (
+        <p key={i} className="text-[0.6rem] font-mono" style={{ color: entry.color }}>
+          {entry.name}: {Math.round(entry.value)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 /* ==============================================
    MAIN COMPONENT
    ============================================== */
@@ -178,26 +197,6 @@ export default function NutritionTrendsPage() {
         Math.abs(d.calories - calorieTarget) > Math.abs(worst.calories - calorieTarget) ? d : worst
       )
     : null;
-
-  /* ------------------------------------------
-     CUSTOM TOOLTIP
-     Dark-themed tooltip matching the BARRAX
-     design system.
-     ------------------------------------------ */
-  function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
-    if (!active || !payload) return null;
-
-    return (
-      <div className="bg-bg-panel border border-green-dark p-2">
-        <p className="text-[0.6rem] font-mono text-text-secondary mb-1">{label}</p>
-        {payload.map((entry, i) => (
-          <p key={i} className="text-[0.6rem] font-mono" style={{ color: entry.color }}>
-            {entry.name}: {Math.round(entry.value)}
-          </p>
-        ))}
-      </div>
-    );
-  }
 
   /* ==============================================
      LOADING STATE

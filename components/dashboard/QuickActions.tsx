@@ -92,12 +92,8 @@ export default function QuickActions() {
       weight_kg: weight,
     });
 
-    // Award XP for logging weight
-    await fetch("/api/award-xp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: 10, source: "weight_logged" }),
-    });
+    const { awardXPAndNotify } = await import("@/lib/award-and-notify");
+    await awardXPAndNotify(10, "weight_logged");
 
     setWeightSaving(false);
     setWeightSaved(true);

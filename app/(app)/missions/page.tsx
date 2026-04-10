@@ -190,12 +190,8 @@ export default function MissionsPage() {
         })
         .eq("id", workout.id);
 
-      // Award XP
-      await fetch("/api/award-xp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: xp, source: "workout_complete" }),
-      });
+      const { awardXPAndNotify } = await import("@/lib/award-and-notify");
+      await awardXPAndNotify(xp, "workout_complete");
 
       // Refresh the data so the UI updates
       await loadProgramme();

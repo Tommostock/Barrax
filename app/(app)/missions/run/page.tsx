@@ -333,15 +333,8 @@ export default function RunTrackerPage() {
         console.error("Failed to save run:", insertError);
       }
 
-      // Award XP via the API route (handles rank-up logic server-side)
-      await fetch("/api/award-xp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: computed.xpEarned,
-          source: "run_complete",
-        }),
-      });
+      const { awardXPAndNotify } = await import("@/lib/award-and-notify");
+      await awardXPAndNotify(computed.xpEarned, "run_complete");
 
       // Check and award badges
       const { checkRunBadges, checkTimeBadges } = await import("@/lib/badges");
