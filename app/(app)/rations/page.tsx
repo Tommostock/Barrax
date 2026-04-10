@@ -26,6 +26,7 @@ import {
   CircleCheck, Trash2,
 } from "lucide-react";
 import type { FoodDiaryEntry, MealType } from "@/types";
+import { calculateMacroTargets } from "@/lib/macros";
 
 interface MealIngredient { name: string; quantity: string; checked: boolean; }
 interface Meal {
@@ -62,6 +63,8 @@ export default function RationsPage() {
   // Food diary state (today's entries)
   const [diaryEntries, setDiaryEntries] = useState<FoodDiaryEntry[]>([]);
   const [calorieTarget, setCalorieTarget] = useState(2000);
+  // Macro split % — defaults to balanced 30/40/30, overridden from profile
+  const [macroSplit, setMacroSplit] = useState({ protein: 30, carbs: 40, fat: 30 });
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   // Smart default: pick meal type based on time of day
   const hour = new Date().getHours();
@@ -81,7 +84,7 @@ export default function RationsPage() {
     const [planResult, diaryResult, profileResult, savedResult] = await Promise.all([
       supabase.from("meal_plans").select("id, week_start, plan_data").eq("user_id", user.id).order("week_start", { ascending: false }).limit(1).single(),
       supabase.from("food_diary").select("*").eq("user_id", user.id).gte("logged_at", todayStart.toISOString()).lte("logged_at", todayEnd.toISOString()).order("logged_at", { ascending: true }),
-      supabase.from("profiles").select("calorie_target, rest_day_calorie_target, training_schedule").eq("id", user.id).single(),
+      supabase.from("profiles").select("calorie_target, rest_day_calorie_target, training_schedule, protein_pct, carb_pct, fat_pct").eq("id", user.id).single(),
       supabase.from("saved_foods").select("food_name").eq("user_id", user.id),
     ]);
 
@@ -95,6 +98,11 @@ export default function RationsPage() {
           ? profileResult.data.rest_day_calorie_target
           : profileResult.data.calorie_target ?? 2000
       );
+      setMacroSplit({
+        protein: profileResult.data.protein_pct ?? 30,
+        carbs: profileResult.data.carb_pct ?? 40,
+        fat: profileResult.data.fat_pct ?? 30,
+      });
     }
     if (savedResult.data) setSavedMeals(new Set(savedResult.data.map((s: { food_name: string }) => s.food_name)));
 
@@ -103,10 +111,17 @@ export default function RationsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Macro targets from calorie target (30% P, 40% C, 30% F)
-  const proteinTarget = Math.round(calorieTarget * 0.3 / 4);
-  const carbsTarget = Math.round(calorieTarget * 0.4 / 4);
-  const fatTarget = Math.round(calorieTarget * 0.3 / 9);
+  // Macro targets derived from the user's calorie target + their
+  // chosen split. Defaults to balanced 30/40/30 until the profile loads.
+  const macroTargets = calculateMacroTargets(
+    calorieTarget,
+    macroSplit.protein,
+    macroSplit.carbs,
+    macroSplit.fat,
+  );
+  const proteinTarget = macroTargets.protein;
+  const carbsTarget = macroTargets.carbs;
+  const fatTarget = macroTargets.fat;
 
   // Today's totals from diary entries
   const todayTotals = diaryEntries.reduce((acc, e) => ({

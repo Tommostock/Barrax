@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import { Utensils, Check } from "lucide-react";
 import type { MealType } from "@/types";
+import { calculateMacroTargets } from "@/lib/macros";
 
 interface MealData {
   meal_type: string;
@@ -155,10 +156,10 @@ export default function TodayRations() {
           .order("week_start", { ascending: false })
           .limit(1)
           .single(),
-        // Get calorie target from profile
+        // Get calorie target + macro split from profile
         supabase
           .from("profiles")
-          .select("calorie_target")
+          .select("calorie_target, protein_pct, carb_pct, fat_pct")
           .eq("id", user.id)
           .single(),
         // Get today's food diary entries — names + macros in one query
@@ -179,14 +180,12 @@ export default function TodayRations() {
         if (today?.meals) setTodayMeals(today.meals);
       }
 
-      // Process calorie target into macro targets
+      // Process calorie target + macro split into gram targets
       const calTarget = profileResult.data?.calorie_target ?? 2000;
-      setTargets({
-        calories: calTarget,
-        protein: Math.round(calTarget * 0.3 / 4),   // 30% protein
-        carbs: Math.round(calTarget * 0.4 / 4),      // 40% carbs
-        fat: Math.round(calTarget * 0.3 / 9),         // 30% fat
-      });
+      const proteinPct = profileResult.data?.protein_pct ?? 30;
+      const carbPct = profileResult.data?.carb_pct ?? 40;
+      const fatPct = profileResult.data?.fat_pct ?? 30;
+      setTargets(calculateMacroTargets(calTarget, proteinPct, carbPct, fatPct));
 
       // Process food diary entries into macro totals + logged-food map
       const entries = diaryResult.data;

@@ -32,6 +32,9 @@ export interface Profile {
   default_workout_minutes: number;
   calorie_target: number;
   rest_day_calorie_target: number | null;
+  protein_pct: number;
+  carb_pct: number;
+  fat_pct: number;
   unit_preference: UnitPreference;
   notification_settings: NotificationSettings;
   training_schedule: TrainingSchedule;

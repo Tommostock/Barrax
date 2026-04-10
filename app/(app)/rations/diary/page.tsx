@@ -36,6 +36,7 @@ import {
   Heart,
 } from "lucide-react";
 import type { FoodDiaryEntry, MealType } from "@/types";
+import { calculateMacroTargets } from "@/lib/macros";
 
 // ──────────────────────────────────────────────
 // Helper: format a Date as "06 APR 2026"
@@ -103,6 +104,8 @@ export default function FoodDiaryPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());   // defaults to today
   const [entries, setEntries] = useState<FoodDiaryEntry[]>([]);         // food diary rows for the day
   const [calorieTarget, setCalorieTarget] = useState<number>(2000);     // from profile
+  // Macro split % from profile — defaults to balanced 30/40/30
+  const [macroSplit, setMacroSplit] = useState({ protein: 30, carbs: 40, fat: 30 });
   const [loading, setLoading] = useState(true);
 
   // Track which foods have been saved to My Foods (by food_name)
@@ -127,12 +130,17 @@ export default function FoodDiaryPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   // ── Derived macro targets ──────────────────
-  // protein  = 30% of calories / 4 cal per gram
-  // carbs    = 40% of calories / 4 cal per gram
-  // fat      = 30% of calories / 9 cal per gram
-  const proteinTarget = Math.round((calorieTarget * 0.3) / 4);
-  const carbsTarget = Math.round((calorieTarget * 0.4) / 4);
-  const fatTarget = Math.round((calorieTarget * 0.3) / 9);
+  // Uses the user's chosen P/C/F split from the profile (or balanced
+  // 30/40/30 defaults). Gram conversion is P/C = 4 kcal/g, F = 9 kcal/g.
+  const macroTargets = calculateMacroTargets(
+    calorieTarget,
+    macroSplit.protein,
+    macroSplit.carbs,
+    macroSplit.fat,
+  );
+  const proteinTarget = macroTargets.protein;
+  const carbsTarget = macroTargets.carbs;
+  const fatTarget = macroTargets.fat;
 
   // ── Derived daily totals ───────────────────
   const totalCalories = entries.reduce((sum, e) => sum + e.calories, 0);
@@ -149,15 +157,22 @@ export default function FoodDiaryPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Load calorie target from profile (only need once but simple to re-fetch)
+    // Load calorie target + macro split from profile (simple re-fetch)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("calorie_target")
+      .select("calorie_target, protein_pct, carb_pct, fat_pct")
       .eq("id", user.id)
       .single();
 
     if (profile?.calorie_target) {
       setCalorieTarget(profile.calorie_target);
+    }
+    if (profile) {
+      setMacroSplit({
+        protein: profile.protein_pct ?? 30,
+        carbs: profile.carb_pct ?? 40,
+        fat: profile.fat_pct ?? 30,
+      });
     }
 
     // Fetch diary entries for the selected date range

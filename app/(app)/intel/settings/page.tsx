@@ -17,6 +17,7 @@ import BottomSheet from "@/components/ui/BottomSheet";
 import { ArrowLeft, Save, Trash2, LogOut } from "lucide-react";
 import Link from "next/link";
 import type { Profile, FoodPreference, TrainingSchedule, ScheduleDay, DayType } from "@/types";
+import { MACRO_PRESETS, calculateMacroTargets, isValidMacroSplit } from "@/lib/macros";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -75,6 +76,18 @@ export default function SettingsPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Guard: refuse to save an invalid macro split. The UI should
+    // already prevent this, but belt-and-braces in case of bad state.
+    const pPct = profile.protein_pct ?? 30;
+    const cPct = profile.carb_pct ?? 40;
+    const fPct = profile.fat_pct ?? 30;
+    if (!isValidMacroSplit(pPct, cPct, fPct)) {
+      setSaving(false);
+      setMessage("Macro split must add up to 100%.");
+      setTimeout(() => setMessage(null), 3000);
+      return;
+    }
+
     const { error } = await supabase.from("profiles").update({
       name: profile.name,
       age: profile.age,
@@ -83,6 +96,9 @@ export default function SettingsPage() {
       default_workout_minutes: profile.default_workout_minutes,
       calorie_target: profile.calorie_target,
       rest_day_calorie_target: profile.rest_day_calorie_target ?? null,
+      protein_pct: pPct,
+      carb_pct: cPct,
+      fat_pct: fPct,
       unit_preference: profile.unit_preference,
       notification_settings: profile.notification_settings,
       training_schedule: profile.training_schedule ?? {},
@@ -304,6 +320,17 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {/* Macro split — protein/carbs/fat percentage editor */}
+      <MacroSplitEditor
+        calorieTarget={profile.calorie_target ?? 2000}
+        proteinPct={profile.protein_pct ?? 30}
+        carbPct={profile.carb_pct ?? 40}
+        fatPct={profile.fat_pct ?? 30}
+        onChange={(p, c, f) =>
+          setProfile({ ...profile, protein_pct: p, carb_pct: c, fat_pct: f })
+        }
+      />
+
       {/* Food preferences */}
       <Card tag="FOOD PREFS" tagVariant="active">
         <div className="space-y-3">
@@ -390,6 +417,134 @@ export default function SettingsPage() {
         </div>
       </BottomSheet>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────
+// Macro Split Editor
+// Lets the user customise their protein/carbs/fat
+// percentage split via presets or manual entry.
+// The three values must sum to 100 to save.
+// ──────────────────────────────────────────────
+
+function MacroSplitEditor({
+  calorieTarget,
+  proteinPct,
+  carbPct,
+  fatPct,
+  onChange,
+}: {
+  calorieTarget: number;
+  proteinPct: number;
+  carbPct: number;
+  fatPct: number;
+  onChange: (protein: number, carbs: number, fat: number) => void;
+}) {
+  const total = proteinPct + carbPct + fatPct;
+  const isValid = total === 100;
+  const targets = calculateMacroTargets(calorieTarget, proteinPct, carbPct, fatPct);
+
+  // Which preset (if any) matches the current split
+  const activePreset = MACRO_PRESETS.find(
+    (p) => p.protein === proteinPct && p.carbs === carbPct && p.fat === fatPct,
+  );
+
+  return (
+    <Card tag="MACRO SPLIT" tagVariant="active">
+      <p className="text-[0.6rem] font-mono text-text-secondary mb-3">
+        Adjust the protein / carbs / fat ratio of your calorie target.
+        Tap a preset or enter custom values.
+      </p>
+
+      {/* Preset grid — 2 columns */}
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {MACRO_PRESETS.map((preset) => {
+          const active = activePreset?.name === preset.name;
+          return (
+            <button
+              key={preset.name}
+              onClick={() => onChange(preset.protein, preset.carbs, preset.fat)}
+              className={`p-2 border text-left transition-colors min-h-[44px]
+                ${active
+                  ? "bg-green-primary/30 border-green-primary"
+                  : "bg-bg-panel border-green-dark hover:bg-bg-panel-alt"}`}
+            >
+              <div className="text-[0.6rem] font-mono uppercase tracking-wider text-sand">
+                {preset.name}
+              </div>
+              <div className="text-[0.55rem] font-mono text-text-secondary mt-0.5">
+                {preset.protein}/{preset.carbs}/{preset.fat}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Three numeric inputs */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <div>
+          <label className="block text-[0.55rem] uppercase tracking-wider text-text-secondary mb-1 font-mono">
+            Protein %
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={proteinPct}
+            onChange={(e) => onChange(Number(e.target.value) || 0, carbPct, fatPct)}
+            className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary
+                       focus:border-green-primary focus:outline-none text-sm text-center font-mono"
+          />
+          <div className="text-[0.55rem] font-mono text-text-secondary text-center mt-1">
+            {targets.protein}g
+          </div>
+        </div>
+        <div>
+          <label className="block text-[0.55rem] uppercase tracking-wider text-text-secondary mb-1 font-mono">
+            Carbs %
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={carbPct}
+            onChange={(e) => onChange(proteinPct, Number(e.target.value) || 0, fatPct)}
+            className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary
+                       focus:border-green-primary focus:outline-none text-sm text-center font-mono"
+          />
+          <div className="text-[0.55rem] font-mono text-text-secondary text-center mt-1">
+            {targets.carbs}g
+          </div>
+        </div>
+        <div>
+          <label className="block text-[0.55rem] uppercase tracking-wider text-text-secondary mb-1 font-mono">
+            Fat %
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={fatPct}
+            onChange={(e) => onChange(proteinPct, carbPct, Number(e.target.value) || 0)}
+            className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary
+                       focus:border-green-primary focus:outline-none text-sm text-center font-mono"
+          />
+          <div className="text-[0.55rem] font-mono text-text-secondary text-center mt-1">
+            {targets.fat}g
+          </div>
+        </div>
+      </div>
+
+      {/* Total validation row */}
+      <div
+        className={`text-[0.6rem] font-mono text-center py-1.5 border
+          ${isValid
+            ? "border-green-dark text-green-light"
+            : "border-danger/50 text-danger bg-danger/10"}`}
+      >
+        {isValid ? `TOTAL: 100% ✓` : `TOTAL: ${total}% — MUST EQUAL 100%`}
+      </div>
+    </Card>
   );
 }
 
