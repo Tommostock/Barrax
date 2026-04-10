@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
+import BodyHeatmap from "@/components/intel/BodyHeatmap";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import {
@@ -27,38 +28,98 @@ import {
 // ──────────────────────────────────────────────
 
 const EXERCISE_MUSCLE_MAP: Record<string, string> = {
+  // Chest
   "Push-Up": "chest",
   "Wide Push-Up": "chest",
   "Diamond Push-Up": "chest",
   "Decline Push-Up": "chest",
-  "Bodyweight Squat": "legs",
-  "Jump Squat": "legs",
-  "Sumo Squat": "legs",
-  "Wall Sit": "legs",
-  "Forward Lunge": "legs",
-  "Reverse Lunge": "legs",
+  "Incline Push-Up": "chest",
+  "Close-Grip Push-Up": "chest",
+  "Archer Push-Up": "chest",
+  "Clapping Push-Up": "chest",
+
+  // Shoulders
+  "Pike Push-Up": "shoulders",
+  "Handstand Hold": "shoulders",
+  "Handstand Push-Up": "shoulders",
+  "Wall Walk": "shoulders",
+  "Shoulder Tap": "shoulders",
+
+  // Back
+  "Superman": "back",
+  "Reverse Snow Angel": "back",
+  "Good Morning": "back",
+  "Back Extension": "back",
+  "Bird Dog": "back",
+  "Dead Bug": "back",
+  "Prone Y Raise": "back",
+  "Prone T Raise": "back",
+
+  // Arms
+  "Tricep Dip": "arms",
+  "Close-Grip Push-Up (arms)": "arms",
+  "Diamond Push-Up (arms)": "arms",
+  "Chin-Up": "arms",
+  "Narrow Row": "arms",
+
+  // Core
   "Plank": "core",
   "Side Plank": "core",
   "Bicycle Crunch": "core",
   "Leg Raises": "core",
   "Flutter Kicks": "core",
   "V-Up": "core",
-  "Dead Bug": "core",
-  "Burpee": "cardio",
-  "Mountain Climber": "cardio",
-  "High Knees": "cardio",
-  "Star Jump": "cardio",
+  "Hollow Body Hold": "core",
+  "Ab Wheel Rollout": "core",
+  "Russian Twist": "core",
+  "Toe Touches": "core",
+  "Crunch": "core",
+  "Reverse Crunch": "core",
+  "Mountain Climber": "core",
+  "Plank Hip Dip": "core",
+  "Dragon Flag": "core",
+  "L-Sit Hold": "core",
+  "Windshield Wipers": "core",
+
+  // Legs
+  "Bodyweight Squat": "legs",
+  "Jump Squat": "legs",
+  "Sumo Squat": "legs",
+  "Wall Sit": "legs",
+  "Forward Lunge": "legs",
+  "Reverse Lunge": "legs",
+  "Lateral Lunge": "legs",
+  "Bulgarian Split Squat": "legs",
+  "Step-Up": "legs",
+  "Box Jump": "legs",
+  "Pistol Squat": "legs",
+  "Calf Raise": "legs",
+  "Nordic Hamstring Curl": "legs",
+
+  // Glutes
   "Glute Bridge": "glutes",
   "Single Leg Glute Bridge": "glutes",
-  "Tricep Dip": "arms",
-  "Superman": "back",
-  "Reverse Snow Angel": "back",
+  "Hip Thrust": "glutes",
+  "Donkey Kick": "glutes",
+  "Fire Hydrant": "glutes",
+  "Clam Shell": "glutes",
+  "Glute Kickback": "glutes",
+
+  // Cardio
+  "Burpee": "cardio",
+  "High Knees": "cardio",
+  "Star Jump": "cardio",
+  "Jumping Jack": "cardio",
+  "Jump Rope": "cardio",
+  "Skater Jump": "cardio",
+  "Sprawl": "cardio",
+  "Tuck Jump": "cardio",
+  "Bear Crawl": "cardio",
+  "Inchworm": "cardio",
 };
 
 function getMuscleGroup(exerciseName: string): string {
-  // Exact match first
   if (EXERCISE_MUSCLE_MAP[exerciseName]) return EXERCISE_MUSCLE_MAP[exerciseName];
-  // Case-insensitive search
   const lower = exerciseName.toLowerCase();
   for (const [key, val] of Object.entries(EXERCISE_MUSCLE_MAP)) {
     if (lower === key.toLowerCase()) return val;
@@ -71,6 +132,9 @@ interface MuscleStats {
   sets: number;
   reps: number;
 }
+
+// Display order for the bar chart
+const MUSCLE_ORDER = ["chest", "shoulders", "back", "arms", "core", "glutes", "legs", "cardio", "other"];
 
 export default function VolumePage() {
   const supabase = createClient();
@@ -87,14 +151,11 @@ export default function VolumePage() {
         return;
       }
 
-      // Fetch all non-skipped workout exercises for this user
-      // Join through workouts table to filter by user_id
       const { data: exercises } = await supabase
         .from("workout_exercises")
         .select("exercise_name, sets_completed, reps_completed, workout_id")
         .eq("skipped", false);
 
-      // Also fetch user's workout IDs to filter
       const { data: workouts } = await supabase
         .from("workouts")
         .select("id")
@@ -106,8 +167,6 @@ export default function VolumePage() {
       }
 
       const userWorkoutIds = new Set(workouts.map((w) => w.id));
-
-      // Group by muscle
       const muscleMap: Record<string, { sets: number; reps: number }> = {};
 
       for (const ex of exercises) {
@@ -120,7 +179,11 @@ export default function VolumePage() {
 
       const result: MuscleStats[] = Object.entries(muscleMap)
         .map(([muscle, stats]) => ({ muscle, ...stats }))
-        .sort((a, b) => b.sets - a.sets);
+        .sort(
+          (a, b) =>
+            (MUSCLE_ORDER.indexOf(a.muscle) === -1 ? 99 : MUSCLE_ORDER.indexOf(a.muscle)) -
+            (MUSCLE_ORDER.indexOf(b.muscle) === -1 ? 99 : MUSCLE_ORDER.indexOf(b.muscle))
+        );
 
       setData(result);
       setLoading(false);
@@ -147,6 +210,7 @@ export default function VolumePage() {
       {loading ? (
         <div className="space-y-4">
           <div className="skeleton h-64" />
+          <div className="skeleton h-64" />
           <div className="skeleton h-16" />
           <div className="skeleton h-16" />
         </div>
@@ -158,6 +222,14 @@ export default function VolumePage() {
         </Card>
       ) : (
         <>
+          {/* Body heatmap */}
+          <Card>
+            <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider mb-4">
+              Muscle Group Heatmap
+            </p>
+            <BodyHeatmap data={data} />
+          </Card>
+
           {/* Bar chart */}
           <Card>
             <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider mb-3">

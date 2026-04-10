@@ -33,6 +33,8 @@ import {
   Minus,
   Plus,
   Info,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import {
   countdownBeep,
@@ -196,6 +198,12 @@ export default function WorkoutPlayerPage() {
 
   // ── How-to detail sheet (works in briefing and active phases) ──
   const [detailExercise, setDetailExercise] = useState<WorkoutExercise | null>(null);
+
+  // ── Voice commands ──
+  const [voiceActive, setVoiceActive] = useState(false);
+  const [voiceCommand, setVoiceCommand] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   // ────────────────────────────────────────────
   // 1. Load workout from Supabase on mount
@@ -571,6 +579,109 @@ export default function WorkoutPlayerPage() {
   }, []);
 
   // ────────────────────────────────────────────
+  // Voice commands — refs keep the recognition callback
+  // up-to-date without restarting the recogniser on every render.
+  // ────────────────────────────────────────────
+
+  const voiceStateRef = useRef({ subPhase, paused });
+  const voiceActionsRef = useRef({
+    complete: handleCompleteExercise,
+    skipEx: handleSkipExercise,
+    skipRest: handleSkipRest,
+    togglePause: handleTogglePause,
+  });
+
+  useEffect(() => { voiceStateRef.current.subPhase = subPhase; }, [subPhase]);
+  useEffect(() => { voiceStateRef.current.paused = paused; }, [paused]);
+  useEffect(() => {
+    voiceActionsRef.current = {
+      complete: handleCompleteExercise,
+      skipEx: handleSkipExercise,
+      skipRest: handleSkipRest,
+      togglePause: handleTogglePause,
+    };
+  }, [handleCompleteExercise, handleSkipExercise, handleSkipRest, handleTogglePause]);
+
+  // Start / stop recognition when voiceActive toggles
+  useEffect(() => {
+    if (!voiceActive) {
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
+      }
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      // Browser doesn't support it — silently disable
+      setVoiceActive(false);
+      return;
+    }
+
+    const recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-GB";
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results as ArrayLike<SpeechRecognitionResult>)
+        .slice(event.resultIndex)
+        .filter((r) => r.isFinal)
+        .map((r) => r[0].transcript.trim().toLowerCase())
+        .join(" ");
+
+      if (!transcript) return;
+
+      setVoiceCommand(transcript);
+      setTimeout(() => setVoiceCommand(null), 1500);
+
+      const { subPhase: sp, paused: isPaused } = voiceStateRef.current;
+      const actions = voiceActionsRef.current;
+      const contains = (w: string) => transcript.includes(w);
+
+      if (sp === "rest") {
+        if (["next", "skip", "go", "ready", "let's go", "lets go"].some(contains)) {
+          actions.skipRest();
+        }
+      } else {
+        if (["done", "complete", "finished", "next", "yes"].some(contains)) {
+          actions.complete();
+        } else if (["skip"].some(contains)) {
+          actions.skipEx();
+        }
+      }
+      if (contains("pause") && !isPaused) actions.togglePause();
+      if ((contains("resume") || contains("continue")) && isPaused) actions.togglePause();
+    };
+
+    // Auto-restart on silence — recognition stops if no sound detected
+    recognition.onend = () => {
+      if (recognitionRef.current === recognition) {
+        try { recognition.start(); } catch { /* already running */ }
+      }
+    };
+
+    recognition.onerror = () => { /* ignore errors silently */ };
+
+    recognitionRef.current = recognition;
+    try { recognition.start(); } catch { /* already running */ }
+
+    return () => {
+      recognition.onend = null;
+      try { recognition.stop(); } catch { /* ignore */ }
+      recognitionRef.current = null;
+    };
+  }, [voiceActive]);
+
+  // Deactivate voice when leaving the active phase
+  useEffect(() => {
+    if (phase !== "active") setVoiceActive(false);
+  }, [phase]);
+
+  // ────────────────────────────────────────────
   // 4. Finish & save results
   // ────────────────────────────────────────────
 
@@ -884,6 +995,14 @@ export default function WorkoutPlayerPage() {
           />
         )}
 
+        {/* Voice command recognised toast */}
+        {voiceCommand && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[300] border border-green-primary bg-bg-panel px-4 py-2 flex items-center gap-2 pointer-events-none">
+            <Mic size={14} className="text-green-light" />
+            <span className="font-mono text-sm text-green-light uppercase tracking-wider">{voiceCommand}</span>
+          </div>
+        )}
+
         {/* Feature 2: "EXERCISE DONE" well done moment */}
         {showWellDone && (
           <div className="fixed inset-0 z-[150] bg-bg-primary flex items-center justify-center">
@@ -918,6 +1037,16 @@ export default function WorkoutPlayerPage() {
               aria-label="Open music"
             >
               <Music size={18} />
+            </button>
+
+            {/* Voice commands toggle */}
+            <button
+              onClick={() => setVoiceActive((v) => !v)}
+              className={`min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors
+                         ${voiceActive ? "text-green-light" : "text-text-secondary hover:text-green-light"}`}
+              aria-label={voiceActive ? "Disable voice commands" : "Enable voice commands"}
+            >
+              {voiceActive ? <Mic size={18} /> : <MicOff size={18} />}
             </button>
 
             {/* Finish workout early — two-tap safety */}
