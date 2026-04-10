@@ -44,12 +44,9 @@ export async function awardXPAndNotify(
     // Fire rank-up notification if promoted
     if (result.rankedUp && result.rankTitle) {
       notifyRankUp(result.rankTitle);
-      // Fire global event for full-screen rank-up overlay
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("rankup", {
-          detail: { rank: result.newRank, title: result.rankTitle, xp: result.newTotalXP },
-        }));
-      }
+      window.dispatchEvent(new CustomEvent("rankup", {
+        detail: { rank: result.newRank, xp: result.newTotalXP },
+      }));
     }
 
     return result;

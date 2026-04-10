@@ -670,18 +670,18 @@ export default function WorkoutPlayerPage() {
           }
         }
       }
-      // Progressive overload: if user hit their targets, suggest increasing
+      // Progressive overload: suggest increasing reps/duration for exercises where targets were hit
       try {
+        const exerciseMap = new Map(allExercises.map((ex) => [ex.name, ex]));
         const suggestions: { name: string; current: string; next: string }[] = [];
         for (const result of allResults.filter((r) => !r.skipped)) {
-          const planned = allExercises.find((ex) => ex.name === result.name);
+          const planned = exerciseMap.get(result.name);
           if (!planned) continue;
           const plannedSets = planned.sets || 1;
           if (planned.reps && result.repsCompleted !== null && result.repsCompleted >= planned.reps && result.setsCompleted >= plannedSets) {
             suggestions.push({ name: result.name, current: `${plannedSets}×${planned.reps}`, next: `${plannedSets}×${planned.reps + 1}` });
           } else if (planned.duration_seconds && result.durationSeconds !== null && result.durationSeconds >= planned.duration_seconds && result.setsCompleted >= plannedSets) {
-            const nextDur = planned.duration_seconds + 10;
-            suggestions.push({ name: result.name, current: `${plannedSets}×${planned.duration_seconds}s`, next: `${plannedSets}×${nextDur}s` });
+            suggestions.push({ name: result.name, current: `${plannedSets}×${planned.duration_seconds}s`, next: `${plannedSets}×${planned.duration_seconds + 10}s` });
           }
         }
         if (suggestions.length > 0) setOverloadSuggestions(suggestions.slice(0, 3));

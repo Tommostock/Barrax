@@ -21,6 +21,8 @@ import { ArrowLeft, Plus, Scale, Camera, Trash2, ArrowLeftRight } from "lucide-r
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import type { WeightLog } from "@/types";
 
+interface ProgressPhoto { id: string; photo_url: string; note: string | null; taken_at: string; }
+
 export default function BodyTrackingPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -30,8 +32,6 @@ export default function BodyTrackingPage() {
   const [showInput, setShowInput] = useState(false);
   const [newWeight, setNewWeight] = useState("");
 
-  // Progress photos state
-  interface ProgressPhoto { id: string; photo_url: string; note: string | null; taken_at: string; }
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
@@ -83,12 +83,8 @@ export default function BodyTrackingPage() {
       return;
     }
 
-    // Award XP for logging weight
-    await fetch("/api/award-xp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: 10, source: "weight_logged" }),
-    });
+    const { awardXPAndNotify } = await import("@/lib/award-and-notify");
+    await awardXPAndNotify(10, "weight_logged");
 
     setNewWeight("");
     setShowInput(false);
@@ -158,6 +154,9 @@ export default function BodyTrackingPage() {
   const latestWeight = weightLogs[0]?.weight_kg;
   const previousWeight = weightLogs[1]?.weight_kg;
   const weightChange = latestWeight && previousWeight ? latestWeight - previousWeight : null;
+
+  const comparePhotoA = selectedForCompare.length === 2 ? photos.find(p => p.id === selectedForCompare[0]) : undefined;
+  const comparePhotoB = selectedForCompare.length === 2 ? photos.find(p => p.id === selectedForCompare[1]) : undefined;
 
   if (loading) {
     return <div className="px-4 py-4 space-y-4"><div className="skeleton h-6 w-32" /><SkeletonCard /><SkeletonCard /></div>;
@@ -252,38 +251,30 @@ export default function BodyTrackingPage() {
             <p className="text-[0.6rem] font-mono text-green-light uppercase text-center">
               Select {2 - selectedForCompare.length} photo{selectedForCompare.length === 0 ? "s" : ""} to compare
             </p>
-          ) : (
-            /* Side-by-side comparison view */
-            (() => {
-              const photoA = photos.find(p => p.id === selectedForCompare[0]);
-              const photoB = photos.find(p => p.id === selectedForCompare[1]);
-              if (!photoA || !photoB) return null;
-              return (
-                <div className="bg-bg-panel border border-green-dark p-3">
-                  <div className="flex items-center gap-1 mb-2">
-                    <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
-                      {new Date(photoA.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
-                    </span>
-                    <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
-                      {new Date(photoB.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photoA.photo_url} alt="Photo A" className="w-full aspect-[3/4] object-cover" />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photoB.photo_url} alt="Photo B" className="w-full aspect-[3/4] object-cover" />
-                  </div>
-                  <button
-                    onClick={() => setSelectedForCompare([])}
-                    className="w-full mt-2 text-[0.55rem] font-mono text-text-secondary uppercase py-1 border border-green-dark hover:text-green-light transition-colors"
-                  >
-                    Change Selection
-                  </button>
-                </div>
-              );
-            })()
-          )}
+          ) : comparePhotoA && comparePhotoB ? (
+            <div className="bg-bg-panel border border-green-dark p-3">
+              <div className="flex items-center gap-1 mb-2">
+                <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
+                  {new Date(comparePhotoA.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
+                </span>
+                <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
+                  {new Date(comparePhotoB.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={comparePhotoA.photo_url} alt="Photo A" className="w-full aspect-[3/4] object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={comparePhotoB.photo_url} alt="Photo B" className="w-full aspect-[3/4] object-cover" />
+              </div>
+              <button
+                onClick={() => setSelectedForCompare([])}
+                className="w-full mt-2 text-[0.55rem] font-mono text-text-secondary uppercase py-1 border border-green-dark hover:text-green-light transition-colors"
+              >
+                Change Selection
+              </button>
+            </div>
+          ) : null}
 
           {/* Selectable photo grid */}
           <div className="grid grid-cols-3 gap-1">

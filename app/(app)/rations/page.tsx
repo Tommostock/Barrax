@@ -52,8 +52,8 @@ export default function RationsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const todayAutoExpand = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][new Date().getDay()];
-  const [expandedDay, setExpandedDay] = useState<string | null>(todayAutoExpand);
+  const todayName = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][new Date().getDay()];
+  const [expandedDay, setExpandedDay] = useState<string | null>(todayName);
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [savedMeals, setSavedMeals] = useState<Set<string>>(new Set());
   const [eatenMeals, setEatenMeals] = useState<Set<string>>(new Set());
@@ -70,49 +70,36 @@ export default function RationsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [portionScale, setPortionScale] = useState(1);
 
-  const todayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  const todayName = todayNames[new Date().getDay()];
-
-  // Load meal plan + today's diary entries + profile
   const loadData = useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    // Load meal plan
-    const { data: planData } = await supabase
-      .from("meal_plans").select("id, plan_data")
-      .eq("user_id", user.id).order("week_start", { ascending: false }).limit(1).single();
-    if (planData) setPlan(planData as { id: string; plan_data: PlanDay[] });
-
-    // Load today's food diary
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    const { data: diary } = await supabase.from("food_diary").select("*")
-      .eq("user_id", user.id)
-      .gte("logged_at", todayStart.toISOString())
-      .lte("logged_at", todayEnd.toISOString())
-      .order("logged_at", { ascending: true });
-    if (diary) setDiaryEntries(diary as FoodDiaryEntry[]);
 
-    // Load calorie target — use rest day target if today is a rest day
-    const { data: profile } = await supabase.from("profiles").select("calorie_target, rest_day_calorie_target, training_schedule").eq("id", user.id).single();
-    if (profile) {
-      const schedule = (profile.training_schedule ?? {}) as Record<string, { type: string }>;
-      const todayScheduleDay = schedule[todayName];
-      const isRestDay = todayScheduleDay?.type === "rest";
-      const effective = isRestDay && profile.rest_day_calorie_target
-        ? profile.rest_day_calorie_target
-        : profile.calorie_target ?? 2000;
-      setCalorieTarget(effective);
+    const [planResult, diaryResult, profileResult, savedResult] = await Promise.all([
+      supabase.from("meal_plans").select("id, plan_data").eq("user_id", user.id).order("week_start", { ascending: false }).limit(1).single(),
+      supabase.from("food_diary").select("*").eq("user_id", user.id).gte("logged_at", todayStart.toISOString()).lte("logged_at", todayEnd.toISOString()).order("logged_at", { ascending: true }),
+      supabase.from("profiles").select("calorie_target, rest_day_calorie_target, training_schedule").eq("id", user.id).single(),
+      supabase.from("saved_foods").select("food_name").eq("user_id", user.id),
+    ]);
+
+    if (planResult.data) setPlan(planResult.data as { id: string; plan_data: PlanDay[] });
+    if (diaryResult.data) setDiaryEntries(diaryResult.data as FoodDiaryEntry[]);
+    if (profileResult.data) {
+      const schedule = (profileResult.data.training_schedule ?? {}) as Record<string, { type: string }>;
+      const isRestDay = schedule[todayName]?.type === "rest";
+      setCalorieTarget(
+        isRestDay && profileResult.data.rest_day_calorie_target
+          ? profileResult.data.rest_day_calorie_target
+          : profileResult.data.calorie_target ?? 2000
+      );
     }
-
-    // Load saved food names so we can show which meals are already saved
-    const { data: saved } = await supabase.from("saved_foods").select("food_name").eq("user_id", user.id);
-    if (saved) setSavedMeals(new Set(saved.map((s: { food_name: string }) => s.food_name)));
+    if (savedResult.data) setSavedMeals(new Set(savedResult.data.map((s: { food_name: string }) => s.food_name)));
 
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, todayName]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
