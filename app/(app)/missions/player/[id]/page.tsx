@@ -170,6 +170,9 @@ export default function WorkoutPlayerPage() {
   // ── Post-workout difficulty rating ──
   const [rating, setRating] = useState<number | null>(null);
 
+  // ── Progressive overload suggestions ──
+  const [overloadSuggestions, setOverloadSuggestions] = useState<{ name: string; current: string; next: string }[]>([]);
+
   // ── Feature 1: Audio countdown timer tracking ──
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -667,6 +670,22 @@ export default function WorkoutPlayerPage() {
           }
         }
       }
+      // Progressive overload: if user hit their targets, suggest increasing
+      try {
+        const suggestions: { name: string; current: string; next: string }[] = [];
+        for (const result of allResults.filter((r) => !r.skipped)) {
+          const planned = allExercises.find((ex) => ex.name === result.name);
+          if (!planned) continue;
+          const plannedSets = planned.sets || 1;
+          if (planned.reps && result.repsCompleted !== null && result.repsCompleted >= planned.reps && result.setsCompleted >= plannedSets) {
+            suggestions.push({ name: result.name, current: `${plannedSets}×${planned.reps}`, next: `${plannedSets}×${planned.reps + 1}` });
+          } else if (planned.duration_seconds && result.durationSeconds !== null && result.durationSeconds >= planned.duration_seconds && result.setsCompleted >= plannedSets) {
+            const nextDur = planned.duration_seconds + 10;
+            suggestions.push({ name: result.name, current: `${plannedSets}×${planned.duration_seconds}s`, next: `${plannedSets}×${nextDur}s` });
+          }
+        }
+        if (suggestions.length > 0) setOverloadSuggestions(suggestions.slice(0, 3));
+      } catch { /* non-critical */ }
     } catch (err) {
       console.error("Error saving workout results:", err);
     } finally {
@@ -1238,6 +1257,25 @@ export default function WorkoutPlayerPage() {
               ))}
             </div>
           </div>
+
+          {/* Progressive overload suggestions */}
+          {overloadSuggestions.length > 0 && (
+            <div className="w-full max-w-sm mb-8">
+              <h3 className="text-xs font-heading uppercase tracking-wider text-green-light mb-3 text-center">
+                Ready to Level Up
+              </h3>
+              <div className="space-y-2">
+                {overloadSuggestions.map((s, i) => (
+                  <div key={i} className="border border-green-primary/40 bg-bg-panel p-3 flex items-center justify-between">
+                    <span className="text-xs font-heading uppercase tracking-wider text-sand truncate flex-1 mr-2">{s.name}</span>
+                    <span className="text-xs font-mono text-text-secondary line-through shrink-0">{s.current}</span>
+                    <span className="text-xs font-mono text-green-light ml-2 shrink-0">→ {s.next}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[0.5rem] font-mono text-text-secondary uppercase text-center mt-2">Try these targets next session</p>
+            </div>
+          )}
 
           {/* Post-workout difficulty rating */}
           <div className="w-full max-w-sm mb-8">

@@ -12,6 +12,7 @@ import NotificationPermission from "@/components/layout/NotificationPermission";
 import WeighInReminder from "@/components/layout/WeighInReminder";
 import WeeklySummary from "@/components/layout/WeeklySummary";
 import AuthGuard from "@/components/layout/AuthGuard";
+import RankUpOverlay from "@/components/ui/RankUpOverlay";
 
 export default function AppLayout({
   children,
@@ -27,6 +28,7 @@ export default function AppLayout({
       <NotificationPermission />
       <WeighInReminder />
       <WeeklySummary />
+      <RankUpOverlay />
     </AuthGuard>
   );
 }

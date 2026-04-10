@@ -82,6 +82,7 @@ export default function SettingsPage() {
       fitness_level: profile.fitness_level,
       default_workout_minutes: profile.default_workout_minutes,
       calorie_target: profile.calorie_target,
+      rest_day_calorie_target: profile.rest_day_calorie_target ?? null,
       unit_preference: profile.unit_preference,
       notification_settings: profile.notification_settings,
       training_schedule: profile.training_schedule ?? {},
@@ -251,12 +252,25 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-wider text-text-secondary mb-1 font-mono">Calorie Target</label>
+            <label className="block text-xs uppercase tracking-wider text-text-secondary mb-1 font-mono">Calorie Target (Workout Days)</label>
             <input
               type="number"
               value={profile.calorie_target ?? 2000}
               onChange={(e) => setProfile({ ...profile, calorie_target: Number(e.target.value) })}
               className="w-full px-4 py-3 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-text-secondary mb-1 font-mono">
+              Calorie Target (Rest Days)
+              <span className="ml-2 text-text-secondary/60 normal-case">optional — leave blank to use same target</span>
+            </label>
+            <input
+              type="number"
+              value={profile.rest_day_calorie_target ?? ""}
+              onChange={(e) => setProfile({ ...profile, rest_day_calorie_target: e.target.value ? Number(e.target.value) : null })}
+              placeholder={String(profile.calorie_target ?? 2000)}
+              className="w-full px-4 py-3 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm placeholder:text-text-secondary/40"
             />
           </div>
           <div>

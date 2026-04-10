@@ -35,6 +35,7 @@ export default function BodyTrackingPage() {
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
   const [deletePhotoTarget, setDeletePhotoTarget] = useState<{ id: string; url: string } | null>(null);
 
   const loadData = useCallback(async () => {
@@ -231,10 +232,10 @@ export default function BodyTrackingPage() {
         <h3 className="text-sm font-heading uppercase tracking-wider text-text-secondary">Progress Photos</h3>
         <div className="flex items-center gap-2">
           {photos.length >= 2 && (
-            <button onClick={() => setCompareMode(!compareMode)}
+            <button onClick={() => { setCompareMode(!compareMode); setSelectedForCompare([]); }}
               className={`flex items-center gap-1 text-[0.6rem] font-mono uppercase px-2 py-1 border transition-colors min-h-[32px]
                 ${compareMode ? "border-green-primary text-green-light" : "border-green-dark text-text-secondary"}`}>
-              <ArrowLeftRight size={12} /> COMPARE
+              <ArrowLeftRight size={12} /> {compareMode ? "DONE" : "COMPARE"}
             </button>
           )}
           <label className={`flex items-center gap-1 text-[0.6rem] font-mono uppercase px-2 py-1 border border-green-dark text-text-secondary cursor-pointer hover:text-green-light min-h-[32px] ${uploading ? "opacity-50" : ""}`}>
@@ -244,28 +245,82 @@ export default function BodyTrackingPage() {
         </div>
       </div>
 
-      {/* Side-by-side comparison view */}
-      {compareMode && photos.length >= 2 && (
-        <div className="bg-bg-panel border border-green-dark p-3">
-          <div className="flex items-center gap-1 mb-2">
-            <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
-              {new Date(photos[photos.length - 1].taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-            </span>
-            <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
-              {new Date(photos[0].taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-            </span>
+      {/* Compare mode: select two photos */}
+      {compareMode && (
+        <>
+          {selectedForCompare.length < 2 ? (
+            <p className="text-[0.6rem] font-mono text-green-light uppercase text-center">
+              Select {2 - selectedForCompare.length} photo{selectedForCompare.length === 0 ? "s" : ""} to compare
+            </p>
+          ) : (
+            /* Side-by-side comparison view */
+            (() => {
+              const photoA = photos.find(p => p.id === selectedForCompare[0]);
+              const photoB = photos.find(p => p.id === selectedForCompare[1]);
+              if (!photoA || !photoB) return null;
+              return (
+                <div className="bg-bg-panel border border-green-dark p-3">
+                  <div className="flex items-center gap-1 mb-2">
+                    <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
+                      {new Date(photoA.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
+                    </span>
+                    <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
+                      {new Date(photoB.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photoA.photo_url} alt="Photo A" className="w-full aspect-[3/4] object-cover" />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={photoB.photo_url} alt="Photo B" className="w-full aspect-[3/4] object-cover" />
+                  </div>
+                  <button
+                    onClick={() => setSelectedForCompare([])}
+                    className="w-full mt-2 text-[0.55rem] font-mono text-text-secondary uppercase py-1 border border-green-dark hover:text-green-light transition-colors"
+                  >
+                    Change Selection
+                  </button>
+                </div>
+              );
+            })()
+          )}
+
+          {/* Selectable photo grid */}
+          <div className="grid grid-cols-3 gap-1">
+            {photos.map((photo) => {
+              const selIndex = selectedForCompare.indexOf(photo.id);
+              const isSelected = selIndex !== -1;
+              const isDisabled = !isSelected && selectedForCompare.length >= 2;
+              return (
+                <button
+                  key={photo.id}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectedForCompare(prev => prev.filter(id => id !== photo.id));
+                    } else if (!isDisabled) {
+                      setSelectedForCompare(prev => [...prev, photo.id]);
+                    }
+                  }}
+                  className={`relative text-left ${isDisabled ? "opacity-40" : ""}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo.photo_url} alt="Progress" className={`w-full aspect-square object-cover border ${isSelected ? "border-green-primary" : "border-green-dark/30"}`} />
+                  {isSelected && (
+                    <div className="absolute top-1 left-1 w-5 h-5 bg-green-primary flex items-center justify-center">
+                      <span className="text-[0.6rem] font-mono font-bold text-black">{selIndex + 1}</span>
+                    </div>
+                  )}
+                  <p className="absolute bottom-0 left-0 right-0 bg-black/60 text-[0.45rem] font-mono text-text-secondary text-center py-0.5">
+                    {new Date(photo.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  </p>
+                </button>
+              );
+            })}
           </div>
-          <div className="grid grid-cols-2 gap-1">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photos[photos.length - 1].photo_url} alt="First photo" className="w-full aspect-[3/4] object-cover" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photos[0].photo_url} alt="Latest photo" className="w-full aspect-[3/4] object-cover" />
-          </div>
-          <p className="text-[0.5rem] font-mono text-text-secondary text-center mt-2 uppercase">First vs Latest</p>
-        </div>
+        </>
       )}
 
-      {/* Photo grid */}
+      {/* Photo grid (normal mode) */}
       {photos.length === 0 ? (
         <Card><p className="text-xs text-text-secondary text-center py-4">No photos yet. Tap ADD PHOTO to capture your first progress shot.</p></Card>
       ) : !compareMode && (

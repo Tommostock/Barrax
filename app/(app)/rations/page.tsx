@@ -95,9 +95,17 @@ export default function RationsPage() {
       .order("logged_at", { ascending: true });
     if (diary) setDiaryEntries(diary as FoodDiaryEntry[]);
 
-    // Load calorie target
-    const { data: profile } = await supabase.from("profiles").select("calorie_target").eq("id", user.id).single();
-    if (profile?.calorie_target) setCalorieTarget(profile.calorie_target);
+    // Load calorie target — use rest day target if today is a rest day
+    const { data: profile } = await supabase.from("profiles").select("calorie_target, rest_day_calorie_target, training_schedule").eq("id", user.id).single();
+    if (profile) {
+      const schedule = (profile.training_schedule ?? {}) as Record<string, { type: string }>;
+      const todayScheduleDay = schedule[todayName];
+      const isRestDay = todayScheduleDay?.type === "rest";
+      const effective = isRestDay && profile.rest_day_calorie_target
+        ? profile.rest_day_calorie_target
+        : profile.calorie_target ?? 2000;
+      setCalorieTarget(effective);
+    }
 
     // Load saved food names so we can show which meals are already saved
     const { data: saved } = await supabase.from("saved_foods").select("food_name").eq("user_id", user.id);
@@ -288,7 +296,23 @@ export default function RationsPage() {
   }
 
   if (loading) {
-    return <div className="px-4 py-4 space-y-4"><div className="skeleton h-32 w-full" /><SkeletonCard /><SkeletonCard /></div>;
+    return (
+      <div className="px-4 py-4 space-y-4">
+        {/* Macro rings skeleton */}
+        <div className="skeleton h-48 w-full" />
+        {/* Meal type pills skeleton */}
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton h-8 flex-1" />)}
+        </div>
+        {/* Food diary items skeleton */}
+        <SkeletonCard />
+        <SkeletonCard />
+        {/* Meal plan header skeleton */}
+        <div className="skeleton h-6 w-40" />
+        {/* Day cards skeleton */}
+        {[1, 2, 3].map(i => <div key={i} className="skeleton h-16 w-full" />)}
+      </div>
+    );
   }
 
   return (

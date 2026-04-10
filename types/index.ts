@@ -31,6 +31,7 @@ export interface Profile {
   goals: string[];
   default_workout_minutes: number;
   calorie_target: number;
+  rest_day_calorie_target: number | null;
   unit_preference: UnitPreference;
   notification_settings: NotificationSettings;
   training_schedule: TrainingSchedule;

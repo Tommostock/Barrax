@@ -216,9 +216,13 @@ export default function MissionsPage() {
   if (loading) {
     return (
       <div className="px-4 py-4 space-y-4">
-        <div className="skeleton h-6 w-48" />
+        <div className="flex items-center justify-between">
+          <div className="skeleton h-6 w-40" />
+          <div className="skeleton h-8 w-20" />
+        </div>
         <div className="grid grid-cols-7 gap-1">{DAY_LABELS.map((d) => <div key={d} className="skeleton h-16" />)}</div>
         <SkeletonCard />
+        <div className="skeleton h-12 w-full" />
       </div>
     );
   }
