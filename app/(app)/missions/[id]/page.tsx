@@ -12,9 +12,10 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
-import { ArrowLeft, Play, Clock, Zap, Swords, Flame } from "lucide-react";
+import ExerciseDetailSheet from "@/components/workout/ExerciseDetailSheet";
+import { ArrowLeft, Play, Clock, Zap, Swords, Flame, Info } from "lucide-react";
 import { estimateCaloriesBurned } from "@/lib/calories";
-import type { Workout, WorkoutData } from "@/types";
+import type { Workout, WorkoutData, WorkoutExercise } from "@/types";
 
 export default function WorkoutDetailPage() {
   const params = useParams();
@@ -24,6 +25,7 @@ export default function WorkoutDetailPage() {
 
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeExercise, setActiveExercise] = useState<WorkoutExercise | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -103,15 +105,23 @@ export default function WorkoutDetailPage() {
         </div>
       )}
 
-      {/* Exercise list */}
+      {/* Exercise list — tap any card to see the full breakdown */}
       <div>
-        <h3 className="text-xs font-heading uppercase tracking-wider text-text-secondary mb-2">Exercises</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-heading uppercase tracking-wider text-text-secondary">Exercises</h3>
+          <span className="text-[0.55rem] font-mono text-text-secondary italic flex items-center gap-1">
+            <Info size={10} /> TAP FOR HOW-TO
+          </span>
+        </div>
         {wd.exercises?.map((ex, i) => (
-          <Card key={i} className="mb-2">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-heading uppercase tracking-wider text-sand">{ex.name}</p>
-                <p className="text-xs text-text-secondary mt-1">{ex.form_cue}</p>
+          <Card key={i} className="mb-2 press-scale" onClick={() => setActiveExercise(ex)}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-heading uppercase tracking-wider text-sand">{ex.name}</p>
+                  <Info size={12} className="text-green-light shrink-0" />
+                </div>
+                <p className="text-xs text-text-secondary mt-1 line-clamp-2">{ex.form_cue}</p>
                 <div className="flex items-center gap-3 mt-2">
                   <span className="text-[0.65rem] font-mono text-text-primary">
                     {ex.sets} sets x {ex.reps ? `${ex.reps} reps` : `${ex.duration_seconds}s`}
@@ -121,13 +131,16 @@ export default function WorkoutDetailPage() {
                   </span>
                 </div>
               </div>
-              <span className="text-[0.6rem] font-mono text-text-secondary">
-                {ex.muscles?.join(", ")}
+              <span className="text-[0.6rem] font-mono text-text-secondary shrink-0 text-right">
+                {ex.muscles?.slice(0, 2).join(", ")}
               </span>
             </div>
           </Card>
         ))}
       </div>
+
+      {/* Exercise detail bottom sheet */}
+      <ExerciseDetailSheet exercise={activeExercise} onClose={() => setActiveExercise(null)} />
 
       {/* Cooldown section */}
       {wd.cooldown && wd.cooldown.length > 0 && (

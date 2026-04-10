@@ -19,6 +19,7 @@ import ProgressBar from "@/components/ui/ProgressBar";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
 import MusicBar from "@/components/workout/MusicBar";
+import ExerciseDetailSheet from "@/components/workout/ExerciseDetailSheet";
 import {
   Play,
   Pause,
@@ -31,6 +32,7 @@ import {
   Music,
   Minus,
   Plus,
+  Info,
 } from "lucide-react";
 import {
   countdownBeep,
@@ -191,6 +193,9 @@ export default function WorkoutPlayerPage() {
 
   // ── Feature 8: Workout history per exercise ──
   const [exerciseHistory, setExerciseHistory] = useState<string | null>(null);
+
+  // ── How-to detail sheet (works in briefing and active phases) ──
+  const [detailExercise, setDetailExercise] = useState<WorkoutExercise | null>(null);
 
   // ────────────────────────────────────────────
   // 1. Load workout from Supabase on mount
@@ -793,7 +798,7 @@ export default function WorkoutPlayerPage() {
               </h3>
               <div className="space-y-2">
                 {workoutData.warmup.map((ex, i) => (
-                  <ExerciseBriefingRow key={`warmup-${i}`} exercise={ex} />
+                  <ExerciseBriefingRow key={`warmup-${i}`} exercise={ex} onOpenDetail={setDetailExercise} />
                 ))}
               </div>
             </div>
@@ -807,7 +812,7 @@ export default function WorkoutPlayerPage() {
               </h3>
               <div className="space-y-2">
                 {workoutData.exercises.map((ex, i) => (
-                  <ExerciseBriefingRow key={`ex-${i}`} exercise={ex} />
+                  <ExerciseBriefingRow key={`ex-${i}`} exercise={ex} onOpenDetail={setDetailExercise} />
                 ))}
               </div>
             </div>
@@ -821,7 +826,7 @@ export default function WorkoutPlayerPage() {
               </h3>
               <div className="space-y-2">
                 {workoutData.cooldown.map((ex, i) => (
-                  <ExerciseBriefingRow key={`cooldown-${i}`} exercise={ex} />
+                  <ExerciseBriefingRow key={`cooldown-${i}`} exercise={ex} onOpenDetail={setDetailExercise} />
                 ))}
               </div>
             </div>
@@ -846,6 +851,12 @@ export default function WorkoutPlayerPage() {
             </span>
           </Button>
         </div>
+
+        {/* Exercise detail sheet — tap any exercise row to see the breakdown */}
+        <ExerciseDetailSheet
+          exercise={detailExercise}
+          onClose={() => setDetailExercise(null)}
+        />
       </div>
     );
   }
@@ -1048,6 +1059,16 @@ export default function WorkoutPlayerPage() {
               </p>
             )}
 
+            {/* HOW TO button — opens detailed breakdown */}
+            <div className="flex justify-center mb-2">
+              <button
+                onClick={() => setDetailExercise(currentExercise)}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-green-dark bg-bg-panel text-green-light hover:bg-bg-panel-alt active:scale-[0.98] transition-all text-[0.65rem] font-mono uppercase tracking-wider min-h-[32px]"
+              >
+                <Info size={12} /> How To Perform
+              </button>
+            </div>
+
             {/* Muscle tags */}
             {currentExercise.muscles && currentExercise.muscles.length > 0 && (
               <div className="flex flex-wrap gap-1.5 justify-center mb-3">
@@ -1135,6 +1156,12 @@ export default function WorkoutPlayerPage() {
             </Button>
           </div>
         )}
+
+        {/* Exercise detail sheet — detailed HOW TO breakdown */}
+        <ExerciseDetailSheet
+          exercise={detailExercise}
+          onClose={() => setDetailExercise(null)}
+        />
 
         {/* Feature 3: CSS keyframe for flash fadeout */}
         <style jsx>{`
@@ -1335,14 +1362,27 @@ export default function WorkoutPlayerPage() {
 // Sub-component: Exercise row in the briefing
 // ──────────────────────────────────────────────
 
-function ExerciseBriefingRow({ exercise }: { exercise: WorkoutExercise }) {
+function ExerciseBriefingRow({
+  exercise,
+  onOpenDetail,
+}: {
+  exercise: WorkoutExercise;
+  onOpenDetail?: (ex: WorkoutExercise) => void;
+}) {
   return (
-    <div className="border border-green-dark bg-bg-panel p-3 flex items-center justify-between">
-      <div>
+    <button
+      type="button"
+      onClick={() => onOpenDetail?.(exercise)}
+      className="w-full text-left border border-green-dark bg-bg-panel p-3 flex items-center justify-between press-scale hover:bg-bg-panel-alt transition-colors"
+    >
+      <div className="flex-1 min-w-0">
         {/* Exercise name */}
-        <p className="text-sm font-heading uppercase tracking-wider text-sand">
-          {exercise.name}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-heading uppercase tracking-wider text-sand">
+            {exercise.name}
+          </p>
+          <Info size={12} className="text-green-light shrink-0" />
+        </div>
         {/* Sets x reps OR sets x duration */}
         <p className="text-xs font-mono text-text-secondary mt-1">
           {exercise.sets} set{exercise.sets > 1 ? "s" : ""}
@@ -1354,13 +1394,13 @@ function ExerciseBriefingRow({ exercise }: { exercise: WorkoutExercise }) {
         </p>
       </div>
       {/* Muscle tags */}
-      <div className="flex gap-1 flex-wrap justify-end">
+      <div className="flex gap-1 flex-wrap justify-end shrink-0">
         {exercise.muscles?.slice(0, 2).map((m) => (
           <Tag key={m} variant="default">
             {m}
           </Tag>
         ))}
       </div>
-    </div>
+    </button>
   );
 }
