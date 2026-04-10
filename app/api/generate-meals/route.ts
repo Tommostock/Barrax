@@ -47,7 +47,7 @@ The JSON must match this exact structure:
 }
 
 Rules:
-- Generate exactly 7 days (Monday to Sunday)
+- Generate the days requested in the user prompt (usually a full 7-day week, but sometimes only a partial week from a given day onwards)
 - Each day has exactly 4 meals: breakfast, lunch, dinner, snack
 - Keep meals SIMPLE — familiar comfort foods made healthier, not fancy restaurant dishes
 - Meals should be family-friendly and can feed multiple people
@@ -73,7 +73,29 @@ interface GenerateMealsRequest {
   householdSize?: number;
   favourites?: string[];
   dietaryRequirements?: string[];
+  // Partial rebuild — regenerate only from `fromDay` through Sunday and
+  // merge into the existing plan row. All three must be provided together.
+  fromDay?: string;
+  existingPlanId?: string;
+  existingPlanData?: Array<{
+    day: string;
+    meals: Array<{
+      meal_type: string;
+      name: string;
+      description?: string;
+      ingredients: { name: string; quantity: string; checked?: boolean }[];
+      method: string[];
+      prep_time_minutes: number;
+      calories: number;
+      protein_g: number;
+      carbs_g: number;
+      fat_g: number;
+      is_maybe_food: boolean;
+    }>;
+  }>;
 }
+
+const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 export async function POST(request: Request) {
   try {
@@ -86,7 +108,24 @@ export async function POST(request: Request) {
 
     const body: GenerateMealsRequest = await request.json();
 
-    const userPrompt = `Generate a 7-day meal plan with these requirements:
+    // Decide which days to generate. Full rebuild = all 7 days. Partial
+    // rebuild = from `fromDay` through Sunday (merged into the existing plan).
+    const isPartial = !!(body.fromDay && body.existingPlanId && body.existingPlanData);
+    let daysToGenerate = DAY_ORDER;
+    if (isPartial) {
+      const fromIdx = DAY_ORDER.indexOf((body.fromDay as string).toLowerCase());
+      if (fromIdx === -1) {
+        return NextResponse.json({ error: "Invalid fromDay" }, { status: 400 });
+      }
+      daysToGenerate = DAY_ORDER.slice(fromIdx);
+    }
+
+    const dayListForPrompt = daysToGenerate.join(", ");
+    const header = isPartial
+      ? `Generate meals for ONLY these specific days: ${dayListForPrompt}. Return exactly ${daysToGenerate.length} day entries — one for each listed day, in that order. Each day must have exactly 4 meals: breakfast, lunch, dinner, snack. The "day" field in each entry must match one of the listed day names (lowercase).`
+      : `Generate a 7-day meal plan with these requirements:`;
+
+    const userPrompt = `${header}
 
 NO GO FOODS (NEVER include these — hard exclusion):
 ${body.noGoFoods.length > 0 ? body.noGoFoods.join(", ") : "None specified"}
@@ -131,9 +170,11 @@ Remember: keep it simple. British comfort food. Nothing fancy.`;
       userPrompt,
     });
 
-    // Validate response
-    if (!mealPlan.days || mealPlan.days.length !== 7) {
-      throw new Error("Meal plan must have exactly 7 days");
+    // Validate response — must match the number of days we asked for
+    if (!mealPlan.days || mealPlan.days.length !== daysToGenerate.length) {
+      throw new Error(
+        `Meal plan must have exactly ${daysToGenerate.length} day${daysToGenerate.length === 1 ? "" : "s"}`
+      );
     }
 
     // Calculate week start (Monday)
@@ -145,36 +186,67 @@ Remember: keep it simple. British comfort food. Nothing fancy.`;
     const weekStartStr = weekStart.toISOString().split("T")[0];
 
     // Add checked: false to shopping items and ingredients
-    const shoppingList = (mealPlan.shopping_list || []).map((item) => ({
+    const newShoppingList = (mealPlan.shopping_list || []).map((item) => ({
       ...item,
       checked: false,
     }));
 
-    const planData = mealPlan.days.map((day) => ({
+    const newDays = mealPlan.days.map((day) => ({
       ...day,
+      day: day.day.toLowerCase(), // normalise so merge lookups work
       meals: day.meals.map((meal) => ({
         ...meal,
         ingredients: meal.ingredients.map((ing) => ({ ...ing, checked: false })),
       })),
     }));
 
-    // Save to database
-    const { data: saved, error: saveError } = await supabase
-      .from("meal_plans")
-      .insert({
-        user_id: user.id,
-        week_start: weekStartStr,
-        plan_data: planData,
-        shopping_list: shoppingList,
-      })
-      .select()
-      .single();
+    let saved;
+    if (isPartial && body.existingPlanData && body.existingPlanId) {
+      // Merge: keep days BEFORE fromDay from the existing plan, replace
+      // fromDay→Sunday with the freshly generated days.
+      const regeneratedDays = new Set(daysToGenerate);
+      const keptDays = body.existingPlanData.filter(
+        (d) => !regeneratedDays.has(d.day.toLowerCase())
+      );
+      const mergedDays = [...keptDays, ...newDays].sort(
+        (a, b) => DAY_ORDER.indexOf(a.day.toLowerCase()) - DAY_ORDER.indexOf(b.day.toLowerCase())
+      );
 
-    if (saveError) throw saveError;
+      const { data: updated, error: updateError } = await supabase
+        .from("meal_plans")
+        .update({
+          plan_data: mergedDays,
+          shopping_list: newShoppingList, // replace with the new shopping items
+        })
+        .eq("id", body.existingPlanId)
+        .eq("user_id", user.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+      saved = updated;
+    } else {
+      // Full rebuild — insert a new plan row for this week
+      const { data: inserted, error: saveError } = await supabase
+        .from("meal_plans")
+        .insert({
+          user_id: user.id,
+          week_start: weekStartStr,
+          plan_data: newDays,
+          shopping_list: newShoppingList,
+        })
+        .select()
+        .single();
+
+      if (saveError) throw saveError;
+      saved = inserted;
+    }
 
     return NextResponse.json({
       mealPlan: saved,
-      message: "Meal plan generated successfully.",
+      message: isPartial
+        ? `Rebuilt meals from ${body.fromDay} onwards.`
+        : "Meal plan generated successfully.",
     });
 
   } catch (error) {

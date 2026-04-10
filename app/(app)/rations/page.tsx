@@ -48,7 +48,7 @@ export default function RationsPage() {
   const supabase = createClient();
 
   // Meal plan state
-  const [plan, setPlan] = useState<{ id: string; plan_data: PlanDay[] } | null>(null);
+  const [plan, setPlan] = useState<{ id: string; week_start: string; plan_data: PlanDay[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,13 +79,13 @@ export default function RationsPage() {
     const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
     const [planResult, diaryResult, profileResult, savedResult] = await Promise.all([
-      supabase.from("meal_plans").select("id, plan_data").eq("user_id", user.id).order("week_start", { ascending: false }).limit(1).single(),
+      supabase.from("meal_plans").select("id, week_start, plan_data").eq("user_id", user.id).order("week_start", { ascending: false }).limit(1).single(),
       supabase.from("food_diary").select("*").eq("user_id", user.id).gte("logged_at", todayStart.toISOString()).lte("logged_at", todayEnd.toISOString()).order("logged_at", { ascending: true }),
       supabase.from("profiles").select("calorie_target, rest_day_calorie_target, training_schedule").eq("id", user.id).single(),
       supabase.from("saved_foods").select("food_name").eq("user_id", user.id),
     ]);
 
-    if (planResult.data) setPlan(planResult.data as { id: string; plan_data: PlanDay[] });
+    if (planResult.data) setPlan(planResult.data as { id: string; week_start: string; plan_data: PlanDay[] });
     if (diaryResult.data) setDiaryEntries(diaryResult.data as FoodDiaryEntry[]);
     if (profileResult.data) {
       const schedule = (profileResult.data.training_schedule ?? {}) as Record<string, { type: string }>;
@@ -147,6 +147,9 @@ export default function RationsPage() {
   }
 
   // Generate meal plan
+  // If there's an existing plan for the CURRENT week, rebuild only the
+  // days from today onwards (keeping the earlier days untouched). If
+  // there's no current-week plan, do a full 7-day generation.
   async function generatePlan() {
     setGenerating(true); setError(null);
     try {
@@ -156,9 +159,34 @@ export default function RationsPage() {
       const noGo = prefs?.filter(p => p.category === "no_go").map(p => p.food_name) ?? [];
       const approved = prefs?.filter(p => p.category === "approved").map(p => p.food_name) ?? [];
       const maybe = prefs?.filter(p => p.category === "maybe").map(p => p.food_name) ?? [];
+
+      // Compute this week's Monday (YYYY-MM-DD) to check if the existing
+      // plan is still the active week.
+      const now = new Date();
+      const dow = now.getDay(); // 0=Sun...6=Sat
+      const mondayOffset = dow === 0 ? -6 : 1 - dow;
+      const thisWeekMonday = new Date(now);
+      thisWeekMonday.setDate(now.getDate() + mondayOffset);
+      const thisWeekMondayStr = thisWeekMonday.toISOString().split("T")[0];
+
+      const isPartialRebuild =
+        plan !== null && plan.week_start === thisWeekMondayStr;
+
+      const body: Record<string, unknown> = {
+        noGoFoods: noGo,
+        approvedFoods: approved,
+        maybeFoods: maybe,
+        calorieTarget,
+      };
+      if (isPartialRebuild && plan) {
+        body.fromDay = todayName;
+        body.existingPlanId = plan.id;
+        body.existingPlanData = plan.plan_data;
+      }
+
       const response = await fetch("/api/generate-meals", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ noGoFoods: noGo, approvedFoods: approved, maybeFoods: maybe, calorieTarget }),
+        body: JSON.stringify(body),
       });
       if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Failed"); }
       await loadData();
