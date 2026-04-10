@@ -29,6 +29,7 @@ import {
   bestPace,
 } from "@/lib/geolocation";
 import { getRunXP } from "@/lib/xp";
+import { countdownBeep, completeBeep } from "@/lib/workout-audio";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
@@ -50,7 +51,12 @@ import type { GpsPoint, RunSplit } from "@/types";
 const RunMap = nextDynamic(() => import("@/components/run/RunMap"), { ssr: false });
 
 // ---------- Page states ----------
-type RunState = "ready" | "running" | "complete";
+// "countdown" is the 5-second prep window after the user taps GO,
+// before GPS tracking actually begins.
+type RunState = "ready" | "countdown" | "running" | "complete";
+
+/** Duration of the GO → GPS-watch-start prep countdown, in seconds. */
+const RUN_PREP_COUNTDOWN_SECONDS = 5;
 
 // ---------- Post-run stats computed once when stopping ----------
 interface RunStats {
@@ -69,8 +75,13 @@ export default function RunTrackerPage() {
 
   // ===================== STATE =====================
 
-  // Which screen the user sees (ready / running / complete)
+  // Which screen the user sees (ready / countdown / running / complete)
   const [runState, setRunState] = useState<RunState>("ready");
+
+  // Prep-countdown seconds remaining. Only relevant when runState="countdown".
+  // Set to 5 when the user taps GO and ticks down to 0, at which point the
+  // real GPS watch + elapsed timer start.
+  const [prepSecondsLeft, setPrepSecondsLeft] = useState<number | null>(null);
 
   // Array of every GPS reading during the run
   const [points, setPoints] = useState<GpsPoint[]>([]);
@@ -198,15 +209,14 @@ export default function RunTrackerPage() {
 
   // ===================== START RUN =====================
 
+  /** User tapped GO on the ready screen. Enter the 5-second prep
+      countdown — the GPS watch and elapsed clock don't start until
+      the countdown hits zero (see prep countdown effect below). */
   function startRun() {
-    // Haptic feedback on supported devices
+    // Haptic on the tap itself for confirmation
     navigator.vibrate?.(200);
 
-    // Record the start time
-    startTimeRef.current = Date.now();
-    pausedDurationRef.current = 0;
-
-    // Reset state
+    // Reset any prior state before counting down
     setPoints([]);
     setElapsed(0);
     setPaused(false);
@@ -216,6 +226,17 @@ export default function RunTrackerPage() {
     setSaved(false);
     setGpsError(null);
 
+    setPrepSecondsLeft(RUN_PREP_COUNTDOWN_SECONDS);
+    setRunState("countdown");
+  }
+
+  /** The real run starter — called by the prep countdown effect when
+      it hits zero. Begins GPS tracking and the elapsed clock. */
+  const beginRunNow = useCallback(() => {
+    // Record the start time
+    startTimeRef.current = Date.now();
+    pausedDurationRef.current = 0;
+
     // Begin watching the user's position with high accuracy
     const id = navigator.geolocation.watchPosition(
       handleGpsPosition,
@@ -224,7 +245,7 @@ export default function RunTrackerPage() {
         enableHighAccuracy: true,
         maximumAge: 3000,    // Accept cached positions up to 3s old
         timeout: 10000,      // Wait up to 10s for a fix
-      }
+      },
     );
     watchIdRef.current = id;
 
@@ -233,7 +254,33 @@ export default function RunTrackerPage() {
 
     // Switch to the running view
     setRunState("running");
-  }
+  }, [handleGpsPosition, handleGpsError, startTimer]);
+
+  // ===================== PREP COUNTDOWN TICK =====================
+  // Ticks prepSecondsLeft down 1/sec while runState="countdown".
+  // Plays countdown beeps at 3, 2, 1 and a final "go" beep at 0.
+  // When it hits 0, calls beginRunNow() to start the real tracking.
+  useEffect(() => {
+    if (runState !== "countdown" || prepSecondsLeft === null) return;
+
+    if (prepSecondsLeft === 3 || prepSecondsLeft === 2 || prepSecondsLeft === 1) {
+      countdownBeep();
+    }
+
+    if (prepSecondsLeft === 0) {
+      // Final "go" cue — loud double-beep — then start the run
+      completeBeep();
+      navigator.vibrate?.([100, 50, 100]);
+      beginRunNow();
+      setPrepSecondsLeft(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setPrepSecondsLeft((prev) => (prev === null ? null : prev - 1));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [runState, prepSecondsLeft, beginRunNow]);
 
   // ===================== PAUSE / RESUME =====================
 
@@ -466,6 +513,36 @@ export default function RunTrackerPage() {
           {/* Tip for the user */}
           <p className="text-[0.65rem] text-text-secondary font-mono text-center">
             GPS ARMED. Outdoors only. No cheating.
+          </p>
+        </div>
+      )}
+
+      {/* ========== COUNTDOWN STATE ========== */}
+      {/* 5-second prep window after the user taps GO. GPS watcher and
+          elapsed clock don't start until the countdown effect calls
+          beginRunNow() at 0. */}
+      {runState === "countdown" && (
+        <div className="min-h-[70vh] flex flex-col items-center justify-center gap-6 text-center">
+          <Tag variant="default">GET READY</Tag>
+
+          <p className="text-xs font-mono uppercase tracking-wider text-text-secondary">
+            GPS ARMED
+          </p>
+          <h2 className="text-2xl sm:text-3xl font-heading uppercase tracking-wider text-sand leading-tight">
+            Lights Out, Move Out
+          </h2>
+
+          <div className="flex items-center justify-center w-40 h-40 border-2 border-green-primary bg-bg-panel">
+            <span className="text-7xl font-heading text-green-light tabular-nums drop-shadow-[0_0_15px_rgba(74,222,128,0.4)]">
+              {prepSecondsLeft ?? RUN_PREP_COUNTDOWN_SECONDS}
+            </span>
+          </div>
+
+          <p className="text-xs font-mono uppercase tracking-wider text-text-secondary animate-pulse">
+            TRACKING BEGINS IN {prepSecondsLeft ?? RUN_PREP_COUNTDOWN_SECONDS} SECONDS
+          </p>
+          <p className="text-[0.65rem] font-mono text-text-secondary opacity-70 max-w-xs leading-snug">
+            Get to your start line, phone secure. Auto-starts when counter hits zero.
           </p>
         </div>
       )}

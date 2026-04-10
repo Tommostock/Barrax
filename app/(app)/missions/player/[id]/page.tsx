@@ -58,7 +58,10 @@ import type { WorkoutData, WorkoutExercise } from "@/types";
 // ──────────────────────────────────────────────
 
 /** Which phase the player is in */
-type Phase = "briefing" | "active" | "debrief";
+type Phase = "briefing" | "countdown" | "active" | "debrief";
+
+/** Duration of the DEPLOY → first-exercise prep countdown, in seconds. */
+const PREP_COUNTDOWN_SECONDS = 5;
 
 /** What is happening inside the "active" phase */
 type ActiveSubPhase = "exercise" | "rest";
@@ -128,6 +131,11 @@ export default function WorkoutPlayerPage() {
 
   // ── Phase state ──
   const [phase, setPhase] = useState<Phase>("briefing");
+
+  // ── DEPLOY prep countdown (5s → 0 before first exercise) ──
+  // Starts when the user taps DEPLOY, counts down while showing the
+  // first exercise as a preview, then transitions to phase="active".
+  const [prepSecondsLeft, setPrepSecondsLeft] = useState<number | null>(null);
 
   // ── Active-phase state ──
   const [allExercises, setAllExercises] = useState<WorkoutExercise[]>([]);
@@ -482,6 +490,36 @@ export default function WorkoutPlayerPage() {
   }, [phase]);
 
   // ────────────────────────────────────────────
+  // Prep countdown (briefing → countdown → active)
+  // ────────────────────────────────────────────
+
+  // Ticks prepSecondsLeft down once per second while phase==="countdown".
+  // When it hits 0, flips phase to "active" and resets the counter.
+  // The existing duration-countdown + exercise-start effects then fire
+  // naturally as phase transitions to "active".
+  useEffect(() => {
+    if (phase !== "countdown" || prepSecondsLeft === null) return;
+
+    // Play a beep at 3, 2, 1 (matches the duration countdown pattern)
+    if (prepSecondsLeft === 3 || prepSecondsLeft === 2 || prepSecondsLeft === 1) {
+      countdownBeep();
+    }
+
+    if (prepSecondsLeft === 0) {
+      // Prep finished — start the actual workout clock and flip to active.
+      startTimeRef.current = new Date();
+      setPhase("active");
+      setPrepSecondsLeft(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setPrepSecondsLeft((prev) => (prev === null ? null : prev - 1));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [phase, prepSecondsLeft]);
+
+  // ────────────────────────────────────────────
   // Feature 5: Reset actualReps when exercise/set changes
   // ────────────────────────────────────────────
 
@@ -544,7 +582,11 @@ export default function WorkoutPlayerPage() {
   // 3. Actions
   // ────────────────────────────────────────────
 
-  /** Start the workout (transition from briefing -> active) */
+  /** Start the workout — transitions briefing → countdown → active.
+      The 5s prep countdown is shown first so the user can get into
+      position and read the first exercise description. The elapsed
+      clock and the real workout state do not start until the countdown
+      hits zero (see the prep-countdown effect below). */
   const handleDeploy = useCallback(async () => {
     // ───── CRITICAL: init audio inside the user gesture ─────
     // On iOS Safari, the silent-loop trick only works if
@@ -562,9 +604,8 @@ export default function WorkoutPlayerPage() {
       setVoiceActive(false);
     }
 
-    startTimeRef.current = new Date();
-
-    // Feature 4: Keep screen awake
+    // Feature 4: Keep screen awake — do this at the start of the
+    // countdown so the screen stays on during prep too.
     requestWakeLock();
 
     // Mark workout as "in_progress" in the database
@@ -575,11 +616,15 @@ export default function WorkoutPlayerPage() {
         .eq("id", workoutId);
     }
 
-    setPhase("active");
+    // Enter the prep countdown. The effect below ticks it down and
+    // transitions to active when it hits zero.
+    setPrepSecondsLeft(PREP_COUNTDOWN_SECONDS);
+    setPhase("countdown");
 
-    // Fire manifest fetch after transitioning. It resolves asynchronously;
-    // cues that aren't loaded yet are silently skipped (findCue returns
-    // null) until the manifest lands.
+    // Fire manifest fetch in parallel with the countdown. This hides
+    // the Gemini + Edge TTS latency behind the 5-second prep window —
+    // by the time the countdown finishes, the cues should be decoded
+    // and ready to dispatch on the first exercise_start.
     if (coaching.enabled) {
       void coaching.loadManifest().then(() => {
         coaching.dispatch("mission_start");
@@ -1200,10 +1245,54 @@ export default function WorkoutPlayerPage() {
   }
 
   // =============================================
-  // PHASE 2: ACTIVE WORKOUT
+  // PHASE 1.5: PREP COUNTDOWN
   // =============================================
 
   const currentExercise = allExercises[currentExIndex] ?? null;
+
+  if (phase === "countdown" && currentExercise) {
+    const firstEx = allExercises[0] ?? currentExercise;
+    const targetLine = firstEx.reps
+      ? `${firstEx.sets} × ${firstEx.reps} reps`
+      : firstEx.duration_seconds
+        ? `${firstEx.sets} × ${firstEx.duration_seconds}s`
+        : `${firstEx.sets} sets`;
+    return (
+      <div className="flex flex-col min-h-dvh bg-bg-primary px-6" style={{ paddingTop: "max(env(safe-area-inset-top, 20px), 60px)" }}>
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center">
+          <Tag variant="default">GET READY</Tag>
+
+          <p className="text-xs font-mono uppercase tracking-wider text-text-secondary">
+            FIRST UP
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-heading uppercase tracking-wider text-sand leading-tight">
+            {firstEx.name}
+          </h2>
+          <p className="text-sm font-mono text-green-light">{targetLine}</p>
+
+          {(firstEx.form_cue || firstEx.description) && (
+            <p className="text-base text-text-primary max-w-md leading-snug">
+              {firstEx.form_cue || firstEx.description}
+            </p>
+          )}
+
+          <div className="mt-4 flex items-center justify-center w-40 h-40 border-2 border-green-primary bg-bg-panel">
+            <span className="text-7xl font-heading text-green-light tabular-nums drop-shadow-[0_0_15px_rgba(74,222,128,0.4)]">
+              {prepSecondsLeft ?? PREP_COUNTDOWN_SECONDS}
+            </span>
+          </div>
+
+          <p className="text-xs font-mono uppercase tracking-wider text-text-secondary animate-pulse">
+            MISSION BEGINS IN {prepSecondsLeft ?? PREP_COUNTDOWN_SECONDS} SECONDS
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // =============================================
+  // PHASE 2: ACTIVE WORKOUT
+  // =============================================
 
   if (phase === "active" && currentExercise) {
     const isTimerExercise = !!currentExercise.duration_seconds;
@@ -1353,8 +1442,11 @@ export default function WorkoutPlayerPage() {
               Recovery Timer
             </h2>
 
-            {/* Feature 2: Show what's coming next more prominently */}
-            <div className="text-center border border-green-dark bg-bg-panel px-6 py-3">
+            {/* Feature 2: Show what's coming next more prominently.
+                Includes the exercise description so the user can prepare
+                during the rest period — they shouldn't have to wait for
+                the rest timer to end before knowing what to do. */}
+            <div className="text-center border border-green-dark bg-bg-panel px-6 py-4 max-w-md mx-auto">
               <p className="text-xs font-mono uppercase tracking-wider text-text-secondary mb-1">
                 UP NEXT
               </p>
@@ -1364,6 +1456,11 @@ export default function WorkoutPlayerPage() {
               <p className="text-sm font-mono text-green-light mt-1">
                 Round {currentSet} of {totalSets}
               </p>
+              {(currentExercise.form_cue || currentExercise.description) && (
+                <p className="mt-3 text-sm text-text-primary leading-snug">
+                  {currentExercise.form_cue || currentExercise.description}
+                </p>
+              )}
             </div>
 
             {/* key={restKey} forces the Timer to remount and reset even if
