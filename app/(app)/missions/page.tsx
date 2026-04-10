@@ -260,39 +260,54 @@ export default function MissionsPage() {
             const isMissed = dayDate < todayDate && dayData !== undefined && !isRest && !isComplete;
 
             return (
-              <button key={dayName}
-                onClick={() => setSelectedDay(dayName)}
-                className={`p-2 text-center border transition-all min-h-[56px]
-                  ${isSelected ? "border-green-primary bg-green-primary/15 scale-[1.02]"
-                    : isComplete ? "border-xp-gold/60 bg-xp-gold/10"
-                    : isMissed ? "border-danger/60 bg-danger/10"
-                    : isToday ? "border-white/60 bg-bg-panel"
-                    : "border-green-dark bg-bg-panel hover:bg-bg-panel-alt"}`}
-              >
-                <p className={`text-[0.55rem] font-mono ${isSelected ? "text-green-light font-bold" : isComplete ? "text-xp-gold font-bold" : isMissed ? "text-danger font-bold" : isToday ? "text-white font-bold" : "text-text-secondary"}`}>
-                  {DAY_LABELS[i]}
-                </p>
-                <div className="w-6 h-6 mx-auto mt-1 flex items-center justify-center">
-                  {(() => {
-                    // Use the training schedule to pick the right icon
-                    const scheduleRule = trainingSchedule[dayName as keyof TrainingSchedule];
-                    const activeColor = isSelected || isToday ? "text-green-primary" : "text-text-secondary";
-
-                    if (isComplete) return <Check size={14} className="text-xp-gold" />;
-                    if (scheduleRule?.type === "run") return <Route size={12} className={activeColor} />;
-                    if (scheduleRule?.type === "activity") return <Trophy size={12} className={isSelected || isToday ? "text-khaki" : "text-text-secondary"} />;
-                    if (isRest) return <Moon size={11} className="text-text-secondary" />;
-                    return <Swords size={12} className={activeColor} />;
-                  })()}
-                </div>
-                {/* Muscle group / workout type label */}
-                {dayData?.workout?.focus && !isRest && (
-                  <p className={`text-[0.35rem] font-mono mt-0.5 truncate ${getWorkoutLabel(dayData.workout.focus).color}`}>
-                    {getWorkoutLabel(dayData.workout.focus).label}
+              <div key={dayName} className="flex flex-col">
+                <button
+                  onClick={() => setSelectedDay(dayName)}
+                  className={`p-2 text-center border transition-all min-h-[64px]
+                    ${isSelected ? "border-green-primary bg-green-primary/15 scale-[1.02]"
+                      : isComplete ? "border-xp-gold/60 bg-xp-gold/10"
+                      : isMissed ? "border-danger/60 bg-danger/10"
+                      : isToday ? "border-white/60 bg-bg-panel"
+                      : "border-green-dark bg-bg-panel hover:bg-bg-panel-alt"}`}
+                >
+                  <p className={`text-[0.55rem] font-mono ${isSelected ? "text-green-light font-bold" : isComplete ? "text-xp-gold font-bold" : isMissed ? "text-danger font-bold" : isToday ? "text-white font-bold" : "text-text-secondary"}`}>
+                    {DAY_LABELS[i]}
                   </p>
-                )}
-                {isToday && <div className="w-1.5 h-1.5 mx-auto mt-0.5 bg-white" />}
-              </button>
+                  <div className="w-6 h-6 mx-auto mt-1 flex items-center justify-center">
+                    {(() => {
+                      // Use the training schedule to pick the right icon
+                      const scheduleRule = trainingSchedule[dayName as keyof TrainingSchedule];
+                      const activeColor = isSelected || isToday ? "text-green-primary" : "text-text-secondary";
+
+                      if (isComplete) return <Check size={14} className="text-xp-gold" />;
+                      if (scheduleRule?.type === "run") return <Route size={12} className={activeColor} />;
+                      if (scheduleRule?.type === "activity") return <Trophy size={12} className={isSelected || isToday ? "text-khaki" : "text-text-secondary"} />;
+                      if (isRest) return <Moon size={11} className="text-text-secondary" />;
+                      return <Swords size={12} className={activeColor} />;
+                    })()}
+                  </div>
+                  {/* Muscle group / workout type label */}
+                  {dayData?.workout?.focus && !isRest && (
+                    <p className={`text-[0.6rem] font-mono font-bold mt-1 truncate ${getWorkoutLabel(dayData.workout.focus).color}`}>
+                      {getWorkoutLabel(dayData.workout.focus).label}
+                    </p>
+                  )}
+                </button>
+                {/* Today indicator — upward-pointing triangle beneath the day card */}
+                <div className="h-3 flex justify-center items-center">
+                  {isToday && (
+                    <div
+                      className="w-0 h-0"
+                      style={{
+                        borderLeft: "5px solid transparent",
+                        borderRight: "5px solid transparent",
+                        borderBottom: "7px solid white",
+                      }}
+                      aria-label="Today"
+                    />
+                  )}
+                </div>
+              </div>
             );
           })}
         </div>
