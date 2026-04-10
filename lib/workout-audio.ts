@@ -2,11 +2,30 @@
    Workout Audio Cues
    Generates beep sounds using the Web Audio API.
    No audio files needed — pure synthesized tones.
+
+   The AudioContext can be shared with the
+   CoachingAudioController so both systems play
+   through the same iOS silent-mode-bypass graph.
+   Call `setWorkoutAudioContext(ctx)` from the player
+   after `useCoachingAudio.initAudio()`.
    ============================================ */
 
 let audioCtx: AudioContext | null = null;
+let externalCtx: AudioContext | null = null;
+
+/**
+ * Inject an external AudioContext (typically owned by CoachingAudioController).
+ * When set, beeps play through this context so they share the silent-loop
+ * unlock and don't fight the coach for audio focus on iOS.
+ *
+ * Pass `null` to restore the lazy fallback behaviour.
+ */
+export function setWorkoutAudioContext(ctx: AudioContext | null): void {
+  externalCtx = ctx;
+}
 
 function getAudioContext(): AudioContext {
+  if (externalCtx) return externalCtx;
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
   }

@@ -18,6 +18,15 @@ import { ArrowLeft, Save, Trash2, LogOut } from "lucide-react";
 import Link from "next/link";
 import type { Profile, FoodPreference, TrainingSchedule, ScheduleDay, DayType } from "@/types";
 import { MACRO_PRESETS, calculateMacroTargets, isValidMacroSplit } from "@/lib/macros";
+import { clearCoachingCache } from "@/lib/coaching/cache";
+
+// AI coach voice options — mirrors lib/coaching/edge-tts.ts VOICES
+const COACH_VOICES = [
+  { id: "en-GB-RyanNeural", label: "RYAN (UK COMMANDER)" },
+  { id: "en-US-DavisNeural", label: "DAVIS (US DRILL)" },
+  { id: "en-US-GuyNeural", label: "GUY (US OFFICER)" },
+  { id: "en-AU-WilliamNeural", label: "WILLIAM (AUSSIE SAS)" },
+] as const;
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -33,7 +42,12 @@ export default function SettingsPage() {
   const [activeFoodList, setActiveFoodList] = useState<"no_go" | "maybe" | "approved">("no_go");
   const [oledMode, setOledMode] = useState(false);
 
-  // Read OLED mode from localStorage on mount
+  // AI Coach settings (all stored in localStorage)
+  const [coachEnabled, setCoachEnabled] = useState(true);
+  const [coachMuted, setCoachMuted] = useState(false);
+  const [coachVoice, setCoachVoice] = useState<string>("en-GB-RyanNeural");
+
+  // Read OLED mode + coach settings from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem("barrax_oled_mode");
@@ -41,6 +55,12 @@ export default function SettingsPage() {
         setOledMode(true);
         document.documentElement.style.setProperty("--bg-primary", "#000000");
       }
+      const coachE = localStorage.getItem("barrax_coach_enabled");
+      if (coachE !== null) setCoachEnabled(coachE === "true");
+      const coachM = localStorage.getItem("barrax_coach_muted");
+      if (coachM !== null) setCoachMuted(coachM === "true");
+      const coachV = localStorage.getItem("barrax_coach_voice");
+      if (coachV) setCoachVoice(coachV);
     } catch {}
   }, []);
 
@@ -330,6 +350,105 @@ export default function SettingsPage() {
           setProfile({ ...profile, protein_pct: p, carb_pct: c, fat_pct: f })
         }
       />
+
+      {/* AI Audio Coach (Battle Buddy) */}
+      <Card tag="AUDIO COACH" tagVariant="active">
+        <div className="space-y-4">
+          <p className="text-xs font-mono text-text-secondary leading-snug">
+            Drill-sergeant AI calls sets, rest, and motivation through your workout.
+            Pre-generated at DEPLOY time — works offline after first use and plays
+            through iPhone silent mode while Spotify keeps playing.
+          </p>
+
+          {/* Master enable toggle */}
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-text-secondary mb-1 font-mono">
+              Coach
+            </label>
+            <div className="flex border border-green-dark">
+              <button
+                onClick={() => {
+                  setCoachEnabled(true);
+                  localStorage.setItem("barrax_coach_enabled", "true");
+                }}
+                className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider transition-colors ${coachEnabled ? "bg-green-primary text-text-primary" : "bg-bg-panel text-text-secondary"}`}
+              >
+                ENABLED
+              </button>
+              <button
+                onClick={() => {
+                  setCoachEnabled(false);
+                  localStorage.setItem("barrax_coach_enabled", "false");
+                }}
+                className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider transition-colors ${!coachEnabled ? "bg-green-primary text-text-primary" : "bg-bg-panel text-text-secondary"}`}
+              >
+                OFF
+              </button>
+            </div>
+          </div>
+
+          {/* Mute toggle (when enabled) */}
+          {coachEnabled && (
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-text-secondary mb-1 font-mono">
+                Audio
+              </label>
+              <div className="flex border border-green-dark">
+                <button
+                  onClick={() => {
+                    setCoachMuted(false);
+                    localStorage.setItem("barrax_coach_muted", "false");
+                  }}
+                  className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider transition-colors ${!coachMuted ? "bg-green-primary text-text-primary" : "bg-bg-panel text-text-secondary"}`}
+                >
+                  VOICE + SUBTITLES
+                </button>
+                <button
+                  onClick={() => {
+                    setCoachMuted(true);
+                    localStorage.setItem("barrax_coach_muted", "true");
+                  }}
+                  className={`flex-1 py-2 text-xs font-mono uppercase tracking-wider transition-colors ${coachMuted ? "bg-green-primary text-text-primary" : "bg-bg-panel text-text-secondary"}`}
+                >
+                  SUBTITLES ONLY
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Voice picker (when enabled) */}
+          {coachEnabled && (
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-text-secondary mb-1 font-mono">
+                Voice
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {COACH_VOICES.map((v) => {
+                  const active = coachVoice === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => {
+                        setCoachVoice(v.id);
+                        localStorage.setItem("barrax_coach_voice", v.id);
+                        // Voice change invalidates cached scripts + blobs.
+                        // Next workout DEPLOY will regenerate with the new voice.
+                        void clearCoachingCache();
+                      }}
+                      className={`py-2 px-2 text-[0.6rem] font-mono uppercase tracking-wider border transition-colors ${active ? "border-green-primary bg-green-primary/20 text-green-light" : "border-green-dark bg-bg-panel text-text-secondary"}`}
+                    >
+                      {v.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[0.6rem] font-mono text-text-secondary mt-2 opacity-70">
+                Changing voice clears the coach cache. Next mission regenerates.
+              </p>
+            </div>
+          )}
+        </div>
+      </Card>
 
       {/* Food preferences */}
       <Card tag="FOOD PREFS" tagVariant="active">
