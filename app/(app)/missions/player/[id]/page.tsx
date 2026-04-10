@@ -1031,6 +1031,15 @@ export default function WorkoutPlayerPage() {
 
       // Check and award badges
       const { data: { user } } = await supabase.auth.getUser();
+
+      // 4d. Recompute daily contract + classified op progress from the new
+      // workout_exercises rows. Fire-and-forget -- we don't block the
+      // completion flow on this.
+      if (user) {
+        import("@/lib/missions/progress")
+          .then(({ updateMissionsProgress }) => updateMissionsProgress(supabase, user.id))
+          .catch(() => {});
+      }
       if (user) {
         const { checkWorkoutBadges, checkTimeBadges } = await import("@/lib/badges");
         const { notifyBadgeEarned } = await import("@/lib/notifications");

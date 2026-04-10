@@ -383,6 +383,11 @@ export default function RunTrackerPage() {
       const { awardXPAndNotify } = await import("@/lib/award-and-notify");
       await awardXPAndNotify(computed.xpEarned, "run_complete");
 
+      // Recompute daily contract + classified op progress. Fire-and-forget.
+      import("@/lib/missions/progress")
+        .then(({ updateMissionsProgress }) => updateMissionsProgress(supabase, user.id))
+        .catch(() => {});
+
       // Check and award badges
       const { checkRunBadges, checkTimeBadges } = await import("@/lib/badges");
       const { notifyBadgeEarned } = await import("@/lib/notifications");

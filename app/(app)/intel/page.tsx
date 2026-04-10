@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import WorkoutCalendar from "@/components/intel/WorkoutCalendar";
-import { TrendingUp, Trophy, Activity, PieChart, FileText, Settings, BarChart3, Target } from "lucide-react";
+import { TrendingUp, Trophy, Activity, PieChart, FileText, Settings, BarChart3, Target, ListChecks } from "lucide-react";
 import { formatDistance } from "@/lib/geolocation";
 import Link from "next/link";
 
@@ -59,6 +59,7 @@ export default function IntelPage() {
     { href: "/intel/runs", icon: TrendingUp, title: "Combat Running", description: "Distance, pace, territory covered" },
     { href: "/intel/records", icon: Trophy, title: "Elite Achievements", description: "Your maximum performance records" },
     { href: "/intel/challenges", icon: Target, title: "Challenge Events", description: "Multi-day missions. Prove yourself." },
+    { href: "/intel/xp-log", icon: ListChecks, title: "XP Audit Log", description: "Every point earned, with source" },
     { href: "/intel/report", icon: FileText, title: "Mission Debrief", description: "Weekly performance evaluation" },
   ];
 

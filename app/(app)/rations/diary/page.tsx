@@ -349,6 +349,13 @@ export default function FoodDiaryPage() {
       // Online path: reload to get the real row with its server ID.
       await loadEntries();
     }
+
+    // Recompute mission progress for scavenger/nutrition contracts.
+    // Fire-and-forget: the progress helper is queue-aware itself so
+    // it works offline too.
+    import("@/lib/missions/progress")
+      .then(({ updateMissionsProgress }) => updateMissionsProgress(supabase, user.id))
+      .catch(() => {});
   }
 
   // ──────────────────────────────────────────

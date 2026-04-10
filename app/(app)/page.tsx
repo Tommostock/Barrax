@@ -13,7 +13,8 @@ import RankStrip from "@/components/dashboard/RankStrip";
 import QuickActions from "@/components/dashboard/QuickActions";
 import TodayMission from "@/components/dashboard/TodayMission";
 import TodayRations from "@/components/dashboard/TodayRations";
-import DailyChallenge from "@/components/dashboard/DailyChallenge";
+import ContractCard from "@/components/dashboard/ContractCard";
+import ClassifiedOpCard from "@/components/dashboard/ClassifiedOpCard";
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -43,6 +44,7 @@ export default function DashboardPage() {
         <div className="skeleton h-12 w-full" />
         <div className="skeleton h-28 w-full" />
         <div className="skeleton h-28 w-full" />
+        <div className="skeleton h-28 w-full" />
         <div className="grid grid-cols-3 gap-3">
           <div className="skeleton h-20" />
           <div className="skeleton h-20" />
@@ -62,7 +64,8 @@ export default function DashboardPage() {
       <QuickActions />
       <TodayMission />
       <TodayRations />
-      <DailyChallenge />
+      <ContractCard />
+      <ClassifiedOpCard />
     </div>
   );
 }

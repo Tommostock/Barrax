@@ -13,6 +13,7 @@ import WeighInReminder from "@/components/layout/WeighInReminder";
 import WeeklySummary from "@/components/layout/WeeklySummary";
 import AuthGuard from "@/components/layout/AuthGuard";
 import RankUpOverlay from "@/components/ui/RankUpOverlay";
+import ClassifiedOpBriefingOverlay from "@/components/mission/ClassifiedOpBriefingOverlay";
 
 export default function AppLayout({
   children,
@@ -29,6 +30,7 @@ export default function AppLayout({
       <WeighInReminder />
       <WeeklySummary />
       <RankUpOverlay />
+      <ClassifiedOpBriefingOverlay />
     </AuthGuard>
   );
 }
