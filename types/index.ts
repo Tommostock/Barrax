@@ -387,3 +387,43 @@ export interface FoodLookupResult {
   salt_g: number;
   source?: "openfoodfacts" | "usda";
 }
+
+// --- AI Audio Coach (Battle Buddy) ---
+// Cues are pre-generated at mission start by Gemini + Microsoft Edge TTS,
+// cached in Supabase Storage + IndexedDB, and dispatched from the workout
+// player state machine. See `/api/coaching-script` and lib/coaching/*.
+
+export type CueTrigger =
+  | "mission_start"
+  | "exercise_start"
+  | "exercise_halfway"
+  | "exercise_countdown_10s"
+  | "exercise_countdown_go"
+  | "exercise_done"
+  | "rest_start"
+  | "rest_countdown_10s"
+  | "final_exercise_intro"
+  | "mission_end";
+
+export interface CoachingCue {
+  id: string;                      // stable kebab-case: "mission-start", "ex-0-set-1-start", ...
+  trigger: CueTrigger;
+  exerciseIndex: number | null;    // null when not exercise-specific (e.g. mission_start)
+  setNumber: number | null;        // 1-based set number when relevant
+  text: string;                    // ≤15 words, British English, drill sergeant
+  audioUrl: string | null;         // signed Supabase Storage URL; null = subtitle-only fallback
+  durationMs?: number;             // reserved for future scheduling use
+}
+
+export interface CoachingScript {
+  voice: string;                   // echoed Voice shortname, e.g. "en-GB-RyanNeural"
+  cues: CoachingCue[];
+}
+
+export type CoachingState =
+  | "idle"           // controller created but not initialised (pre-gesture)
+  | "initialised"    // audio context + silent loop running, no manifest yet
+  | "loading"        // fetching/decoding manifest
+  | "ready"          // manifest loaded, ready to dispatch
+  | "lost"           // audio session interrupted (phone call, Siri); needs user tap
+  | "error";         // unrecoverable failure; fall back to beeps-only
