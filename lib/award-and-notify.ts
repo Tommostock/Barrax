@@ -25,16 +25,25 @@ interface AwardResult {
   rankTitle?: string;
 }
 
-// Award XP and fire notifications for rank-ups
+// Award XP and fire notifications for rank-ups. Optional referenceId
+// lets callers correlate the XP event with its source row (workout,
+// contract, classified op, etc.) in the xp_events audit log.
 export async function awardXPAndNotify(
   amount: number,
-  source: string
+  source: string,
+  referenceId?: string,
+  note?: string,
 ): Promise<AwardResult | null> {
   try {
     const response = await fetch("/api/award-xp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount, source }),
+      body: JSON.stringify({
+        amount,
+        source,
+        reference_id: referenceId,
+        note,
+      }),
     });
 
     if (!response.ok) return null;
@@ -75,5 +84,16 @@ export async function completeChallengeAndNotify(xp: number) {
 export async function hitWaterGoalAndNotify() {
   notifyWaterGoalHit();
   return awardXPAndNotify(10, "water_goal_hit");
+}
+
+// Contracts + Classified Ops -- the local notification is fired from
+// inside updateContractProgress / updateOpProgress when the completion
+// transition happens, so these wrappers only award XP.
+export async function completeContractAndNotify(xp: number, contractId?: string) {
+  return awardXPAndNotify(xp, "daily_contract", contractId);
+}
+
+export async function completeClassifiedOpAndNotify(xp: number, opId?: string) {
+  return awardXPAndNotify(xp, "classified_op", opId);
 }
 

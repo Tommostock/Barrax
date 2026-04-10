@@ -11,7 +11,9 @@ import { RANK_THRESHOLDS } from "@/types";
 
 interface AwardXPRequest {
   amount: number;
-  source: string; // e.g. "workout_complete", "run_complete", etc.
+  source: string;        // e.g. "workout_complete", "run_complete", "daily_contract", etc.
+  reference_id?: string; // optional UUID of the source row (workout_id, contract_id, op_id)
+  note?: string;         // optional free-form context shown in /intel/xp-log
 }
 
 export async function POST(request: Request) {
@@ -79,6 +81,23 @@ export async function POST(request: Request) {
 
     if (updateError) {
       return NextResponse.json({ error: "Could not update XP" }, { status: 500 });
+    }
+
+    // Audit log: append every XP gain with its source. reference_id
+    // and note are optional -- callers like the Contract system set
+    // reference_id to the contract/op UUID so the /intel/xp-log
+    // screen can link back. Failure here is logged but not fatal --
+    // the primary XP total is already persisted.
+    try {
+      await supabase.from("xp_events").insert({
+        user_id: user.id,
+        source: body.source,
+        amount: body.amount,
+        reference_id: body.reference_id ?? null,
+        note: body.note ?? null,
+      });
+    } catch (auditErr) {
+      console.warn("[award-xp] audit log insert failed:", auditErr);
     }
 
     return NextResponse.json({

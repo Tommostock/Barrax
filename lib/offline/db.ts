@@ -17,8 +17,13 @@ import type { CoachingScript } from "@/types";
 export interface QueuedMutation {
   id?: number;
   /** Which Supabase table this mutation targets. */
-  table: "food_diary" | "workout_exercises" | "workouts";
-  /** Insert is the common case; update is only used for workouts status flip. */
+  table:
+    | "food_diary"
+    | "workout_exercises"
+    | "workouts"
+    | "daily_contracts"
+    | "classified_ops";
+  /** Insert for new rows, update for progress ticks and status flips. */
   operation: "insert" | "update";
   /** The row or rows to insert / the columns to update. */
   payload: Record<string, unknown> | Record<string, unknown>[];

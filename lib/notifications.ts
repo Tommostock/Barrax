@@ -107,6 +107,25 @@ export function notifyChallengeComplete(xp: number) {
   );
 }
 
+// Two-tier mission system notifications
+export function notifyContractComplete(xp: number, title: string) {
+  showNotification(
+    "CONTRACT CLEARED",
+    `${title}. +${xp} XP. Target acquired.`,
+    "contract-complete",
+    "/"
+  );
+}
+
+export function notifyClassifiedOpComplete(xp: number, codename: string) {
+  showNotification(
+    "MISSION ACCOMPLISHED",
+    `${codename} complete. +${xp} XP. Exceptional work, soldier.`,
+    "classified-op-complete",
+    "/"
+  );
+}
+
 export function notifyPersonalRecord(category: string, value: string) {
   showNotification(
     "NEW PERSONAL RECORD",
