@@ -51,3 +51,77 @@ export function dayBoundsISO(startDate: string, endDate: string): { startTs: str
 export function currentMonthName(): string {
   return new Date().toLocaleString("en-GB", { month: "long" });
 }
+
+// ---------------------------------------------------------------------------
+// Mission deadline helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Expiry moment for a daily contract. Contracts cover a single local
+ * day and expire at midnight local time on the FOLLOWING day -- i.e.
+ * a contract with date "2026-04-11" is alive until 2026-04-12 00:00:00
+ * local time.
+ */
+export function contractExpiry(dateISO: string): Date {
+  const [y, m, d] = dateISO.split("-").map(Number);
+  return new Date(y, m - 1, d + 1, 0, 0, 0, 0);
+}
+
+/**
+ * Expiry moment for a classified op. Ops cover a local calendar month
+ * (month_start is always day 01) and expire at midnight local time on
+ * the first day of the NEXT month.
+ */
+export function classifiedOpExpiry(monthStartISO: string): Date {
+  const [y, m] = monthStartISO.split("-").map(Number);
+  // month is 1-indexed in the string, Date() takes 0-indexed month.
+  // Passing month (=next month 0-indexed) with day 1 gives the 1st of
+  // next month at 00:00 local.
+  return new Date(y, m, 1, 0, 0, 0, 0);
+}
+
+/**
+ * Format a countdown from `now` until `target` in a compact, military
+ * style. Returns the display string plus an `urgent` flag so the UI
+ * can switch to a warning colour when time is short.
+ *
+ * Threshold rules:
+ *   >= 1 day    "2D 5H LEFT"            (not urgent)
+ *   >= 2 hours  "5H 23M LEFT"           (not urgent)
+ *   >= 1 hour   "1H 12M LEFT"           (urgent)
+ *   >= 1 minute "15M 30S LEFT"          (urgent)
+ *   < 1 minute  "45S LEFT"              (urgent)
+ *   <= 0        "EXPIRED"               (urgent + expired)
+ */
+export interface CountdownDisplay {
+  text: string;
+  urgent: boolean;
+  expired: boolean;
+}
+
+export function formatCountdown(target: Date, nowMs: number): CountdownDisplay {
+  const remainingMs = target.getTime() - nowMs;
+  if (remainingMs <= 0) {
+    return { text: "EXPIRED", urgent: true, expired: true };
+  }
+
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const mins = Math.floor((totalSeconds % 3600) / 60);
+  const secs = totalSeconds % 60;
+
+  if (days >= 1) {
+    return { text: `${days}D ${hours}H LEFT`, urgent: false, expired: false };
+  }
+  if (hours >= 2) {
+    return { text: `${hours}H ${mins}M LEFT`, urgent: false, expired: false };
+  }
+  if (hours >= 1) {
+    return { text: `${hours}H ${mins}M LEFT`, urgent: true, expired: false };
+  }
+  if (mins >= 1) {
+    return { text: `${mins}M ${secs}S LEFT`, urgent: true, expired: false };
+  }
+  return { text: `${secs}S LEFT`, urgent: true, expired: false };
+}

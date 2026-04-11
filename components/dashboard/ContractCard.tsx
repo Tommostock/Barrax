@@ -9,12 +9,12 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import { Crosshair, Eye, ListChecks, Lock, Check, Plus } from "lucide-react";
-import { todayLocalISO } from "@/lib/missions/date";
+import { todayLocalISO, contractExpiry, formatCountdown } from "@/lib/missions/date";
 import type { DailyContract, ContractType, ProgressKey } from "@/types/missions";
 import LogProgressModal from "@/components/mission/LogProgressModal";
 
@@ -77,6 +77,7 @@ export default function ContractCard() {
   const [rank, setRank] = useState(1);
   const [contract, setContract] = useState<DailyContract | null>(null);
   const [logModalOpen, setLogModalOpen] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const reload = useCallback(async () => {
     const {
@@ -151,6 +152,23 @@ export default function ContractCard() {
     window.addEventListener("contract-complete", handler);
     return () => window.removeEventListener("contract-complete", handler);
   }, [reload]);
+
+  // 1-second tick so the countdown stays live. Minimal perf cost for
+  // a single component on HQ, and keeps mm:ss accurate when time is
+  // short without extra bookkeeping.
+  useEffect(() => {
+    if (!contract || contract.completed) return;
+    const interval = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [contract]);
+
+  // Computed countdown display based on the contract's date and the
+  // latest nowMs tick. Memoised so the JSX stays stable across ticks
+  // when nothing relevant has changed.
+  const countdown = useMemo(() => {
+    if (!contract) return null;
+    return formatCountdown(contractExpiry(contract.date), nowMs);
+  }, [contract, nowMs]);
 
   if (loading) return <div className="skeleton h-28 w-full" />;
 
@@ -240,10 +258,15 @@ export default function ContractCard() {
               {contract.description}
             </p>
 
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
               <Tag variant={completed ? "complete" : VARIANT_BY_TYPE[type]}>
                 {`+${contract.xp_value} XP`}
               </Tag>
+              {countdown && !completed && (
+                <Tag variant={countdown.urgent ? "danger" : "default"}>
+                  {countdown.text}
+                </Tag>
+              )}
             </div>
 
             {/* Progress bar -- chunkier so it reads at a glance */}

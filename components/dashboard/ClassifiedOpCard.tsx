@@ -9,12 +9,16 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import { Lock, Check, Shield, Plus } from "lucide-react";
-import { monthStartLocalISO } from "@/lib/missions/date";
+import {
+  monthStartLocalISO,
+  classifiedOpExpiry,
+  formatCountdown,
+} from "@/lib/missions/date";
 import type { ClassifiedOp, OpTier, ProgressKey } from "@/types/missions";
 import LogProgressModal from "@/components/mission/LogProgressModal";
 
@@ -52,6 +56,7 @@ export default function ClassifiedOpCard() {
   const [loading, setLoading] = useState(true);
   const [op, setOp] = useState<ClassifiedOp | null>(null);
   const [logModalOpen, setLogModalOpen] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const reload = useCallback(async () => {
     const {
@@ -108,6 +113,20 @@ export default function ClassifiedOpCard() {
     window.addEventListener("classified-op-complete", handler);
     return () => window.removeEventListener("classified-op-complete", handler);
   }, [reload]);
+
+  // Monthly ops tick every minute (ish) rather than every second --
+  // they measure in days, so per-second updates are wasteful. Still
+  // bumps nowMs regularly enough to feel live.
+  useEffect(() => {
+    if (!op || op.completed) return;
+    const interval = setInterval(() => setNowMs(Date.now()), 60 * 1000);
+    return () => clearInterval(interval);
+  }, [op]);
+
+  const countdown = useMemo(() => {
+    if (!op) return null;
+    return formatCountdown(classifiedOpExpiry(op.month_start), nowMs);
+  }, [op, nowMs]);
 
   const openBriefing = () => {
     if (!op) return;
@@ -176,10 +195,15 @@ export default function ClassifiedOpCard() {
               {op.briefing.replace(/\*\*/g, "")}
             </p>
 
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
               <Tag variant={completed ? "complete" : "gold"}>
                 {`+${op.xp_value} XP`}
               </Tag>
+              {countdown && !completed && (
+                <Tag variant={countdown.urgent ? "danger" : "default"}>
+                  {countdown.text}
+                </Tag>
+              )}
             </div>
 
             {/* Progress bar -- chunkier so it reads at a glance */}

@@ -336,25 +336,3 @@ h1, h2, h3, h4, h5, h6 {
   display: none !important;
 }
 
-/* --- Tactical HUD: radar sweep behind rank insignia ---
-   Subtle rotating conic-gradient wedge. 8s per revolution,
-   25% opacity so it reads as ambient HUD motion rather than
-   flashy noise. GPU-accelerated via transform: rotate. */
-@keyframes radar-sweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-.radar-sweep {
-  position: absolute;
-  inset: -4px;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    rgba(107, 143, 90, 0.25) 45deg,
-    transparent 90deg,
-    transparent 360deg
-  );
-  animation: radar-sweep 8s linear infinite;
-  pointer-events: none;
-}

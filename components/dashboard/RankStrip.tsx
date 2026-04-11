@@ -90,13 +90,9 @@ export default function RankStrip({ currentRank, totalXp }: RankStripProps) {
         </svg>
       ))}
 
-      {/* Rank insignia — top right corner, with subtle rotating
-          radar-sweep wedge behind it for ambient HUD motion */}
+      {/* Rank insignia — top right corner */}
       <div className="absolute top-2 right-3 opacity-80 z-10">
-        <div className="relative">
-          <span className="radar-sweep" aria-hidden />
-          <RankInsignia rank={currentRank} />
-        </div>
+        <RankInsignia rank={currentRank} />
       </div>
 
       <div className="relative z-10">
