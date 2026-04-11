@@ -1,14 +1,36 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'>
+  <defs>
+    <!-- Metallic gold vertical gradient -->
+    <linearGradient id='goldMetal' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%'  stop-color='#FFF6C4'/>
+      <stop offset='14%' stop-color='#FFE27A'/>
+      <stop offset='38%' stop-color='#FFC733'/>
+      <stop offset='62%' stop-color='#D89B1F'/>
+      <stop offset='85%' stop-color='#9A6B10'/>
+      <stop offset='100%' stop-color='#5C3E06'/>
+    </linearGradient>
+    <!-- Specular sheen stripe -->
+    <linearGradient id='goldSheen' x1='0' y1='0' x2='1' y2='0'>
+      <stop offset='0%'  stop-color='#FFFFFF' stop-opacity='0'/>
+      <stop offset='50%' stop-color='#FFFFFF' stop-opacity='0.9'/>
+      <stop offset='100%' stop-color='#FFFFFF' stop-opacity='0'/>
+    </linearGradient>
+  </defs>
+
   <!-- Dark military green background -->
-  <rect width='192' height='192' fill='#1A2E14'/>
+  <rect width='192' height='192' fill='#0F1B0A'/>
 
-  <!-- Bold double chevron — military rank insignia -->
-  <!-- Gold (#B8A04A) on dark green, sharp corners, no curves -->
   <g transform='translate(96, 96)'>
-    <!-- Top chevron (upper stripe) -->
-    <polygon points='-56,-8 0,-41 56,-8 56,11 0,-22 -56,11' fill='#B8A04A'/>
+    <!-- TOP CHEVRON -->
+    <polygon points='-56,-8 0,-41 56,-8 56,11 0,-22 -56,11' fill='url(#goldMetal)'/>
+    <polygon points='-56,11 0,-22 56,11 56,8 0,-26 -56,8' fill='#4A330A' opacity='0.75'/>
+    <polygon points='-56,-8 0,-41 56,-8 50,-5 0,-35 -50,-5' fill='url(#goldSheen)'/>
+    <polygon points='-56,11 0,-22 56,11 54,12 0,-20 -54,12' fill='#FFE27A' opacity='0.4'/>
 
-    <!-- Bottom chevron (lower stripe) -->
-    <polygon points='-56,26 0,-7 56,26 56,45 0,12 -56,45' fill='#B8A04A'/>
+    <!-- BOTTOM CHEVRON -->
+    <polygon points='-56,26 0,-8 56,26 56,45 0,11 -56,45' fill='url(#goldMetal)'/>
+    <polygon points='-56,45 0,11 56,45 56,41 0,8 -56,41' fill='#4A330A' opacity='0.75'/>
+    <polygon points='-56,26 0,-8 56,26 50,29 0,-2 -50,29' fill='url(#goldSheen)'/>
+    <polygon points='-56,45 0,11 56,45 54,46 0,14 -54,46' fill='#FFE27A' opacity='0.4'/>
   </g>
 </svg>

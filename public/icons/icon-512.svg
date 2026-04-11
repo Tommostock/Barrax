@@ -1,14 +1,86 @@
 <svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>
-  <!-- Dark military green background -->
-  <rect width='512' height='512' fill='#1A2E14'/>
+  <defs>
+    <!--
+      Metallic gold vertical gradient.
+      Runs from a near-white highlight at the top of each chevron,
+      through bright gold, mid gold, and into a dark gold shadow at
+      the bottom to give the bar a beveled 3D appearance.
+    -->
+    <linearGradient id='goldMetal' x1='0' y1='0' x2='0' y2='1'>
+      <stop offset='0%'  stop-color='#FFF6C4'/>
+      <stop offset='14%' stop-color='#FFE27A'/>
+      <stop offset='38%' stop-color='#FFC733'/>
+      <stop offset='62%' stop-color='#D89B1F'/>
+      <stop offset='85%' stop-color='#9A6B10'/>
+      <stop offset='100%' stop-color='#5C3E06'/>
+    </linearGradient>
 
-  <!-- Bold double chevron — military rank insignia -->
-  <!-- Gold (#B8A04A) on dark green, sharp corners, no curves -->
+    <!--
+      Thin diagonal highlight stripe overlay gradient so the top
+      edge of each chevron reads as a specular reflection catching
+      light. Near-transparent at both ends, bright in the middle.
+    -->
+    <linearGradient id='goldSheen' x1='0' y1='0' x2='1' y2='0'>
+      <stop offset='0%'  stop-color='#FFFFFF' stop-opacity='0'/>
+      <stop offset='50%' stop-color='#FFFFFF' stop-opacity='0.9'/>
+      <stop offset='100%' stop-color='#FFFFFF' stop-opacity='0'/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark military green background (matches existing theme) -->
+  <rect width='512' height='512' fill='#0F1B0A'/>
+
   <g transform='translate(256, 256)'>
-    <!-- Top chevron (upper stripe) -->
-    <polygon points='-150,-20 0,-110 150,-20 150,30 0,-60 -150,30' fill='#B8A04A'/>
+    <!-- TOP CHEVRON STRIPE: metallic gradient fill -->
+    <polygon
+      points='-150,-20 0,-110 150,-20 150,30 0,-60 -150,30'
+      fill='url(#goldMetal)'
+    />
 
-    <!-- Bottom chevron (lower stripe) -->
-    <polygon points='-150,70 0,-20 150,70 150,120 0,30 -150,120' fill='#B8A04A'/>
+    <!-- Dark bevel along the bottom edge for depth -->
+    <polygon
+      points='-150,30 0,-60 150,30 150,20 0,-70 -150,20'
+      fill='#4A330A'
+      opacity='0.75'
+    />
+
+    <!-- Bright specular highlight stripe along the top edge -->
+    <polygon
+      points='-150,-20 0,-110 150,-20 132,-14 0,-94 -132,-14'
+      fill='url(#goldSheen)'
+    />
+
+    <!-- Fine inner edge on the inside V (inner rim highlight) -->
+    <polygon
+      points='-150,30 0,-60 150,30 144,32 0,-52 -144,32'
+      fill='#FFE27A'
+      opacity='0.4'
+    />
+
+    <!-- BOTTOM CHEVRON STRIPE: same treatment, shifted down -->
+    <polygon
+      points='-150,70 0,-20 150,70 150,120 0,30 -150,120'
+      fill='url(#goldMetal)'
+    />
+
+    <!-- Dark bevel along the bottom edge -->
+    <polygon
+      points='-150,120 0,30 150,120 150,110 0,20 -150,110'
+      fill='#4A330A'
+      opacity='0.75'
+    />
+
+    <!-- Bright specular highlight stripe along the top edge -->
+    <polygon
+      points='-150,70 0,-20 150,70 132,76 0,-4 -132,76'
+      fill='url(#goldSheen)'
+    />
+
+    <!-- Inner rim highlight -->
+    <polygon
+      points='-150,120 0,30 150,120 144,122 0,38 -144,122'
+      fill='#FFE27A'
+      opacity='0.4'
+    />
   </g>
 </svg>
