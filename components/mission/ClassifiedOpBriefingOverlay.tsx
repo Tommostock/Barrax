@@ -74,7 +74,7 @@ export default function ClassifiedOpBriefingOverlay() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="classified-op-codename"
-      className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-page-enter"
+      className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-page-enter"
       onClick={close}
     >
       <div

@@ -122,7 +122,7 @@ export default function LogProgressModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="log-progress-title"
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-end sm:items-center justify-center"
       onClick={onClose}
     >
       <div

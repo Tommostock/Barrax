@@ -413,12 +413,13 @@ export default function BodyTrackingPage() {
         </div>
       )}
 
-      {/* Fullscreen photo viewer */}
+      {/* Fullscreen photo viewer -- z-[200] puts it above the
+          fixed bottom nav (z-50) so the delete button is tappable. */}
       {viewerIndex !== null && photos[viewerIndex] && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col"
+          className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-sm flex flex-col"
           onClick={() => setViewerIndex(null)}
         >
           {/* Top bar: date + close -- add the safe-area inset ON TOP
