@@ -421,9 +421,11 @@ export default function BodyTrackingPage() {
           className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col"
           onClick={() => setViewerIndex(null)}
         >
-          {/* Top bar: date + close */}
+          {/* Top bar: date + close -- safe-area-inset-top keeps it
+              clear of the iPhone notch / dynamic island. */}
           <div
             className="flex items-center justify-between px-4 py-4"
+            style={{ paddingTop: "max(16px, env(safe-area-inset-top))" }}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-xs font-mono uppercase tracking-wider text-text-secondary">
@@ -475,9 +477,11 @@ export default function BodyTrackingPage() {
             )}
           </div>
 
-          {/* Bottom bar: delete */}
+          {/* Bottom bar: delete -- safe-area-inset-bottom keeps it
+              clear of the iPhone home indicator. */}
           <div
             className="flex items-center justify-center px-4 py-4"
+            style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
