@@ -98,15 +98,6 @@ export function notifyWaterGoalHit() {
   );
 }
 
-export function notifyChallengeComplete(xp: number) {
-  showNotification(
-    "GAUNTLET CLEARED",
-    `Challenge completed. +${xp} XP. You proved yourself today.`,
-    "challenge-complete",
-    "/"
-  );
-}
-
 // Two-tier mission system notifications
 export function notifyContractComplete(xp: number, title: string) {
   showNotification(

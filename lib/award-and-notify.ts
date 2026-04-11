@@ -12,7 +12,6 @@ import {
   notifyRankUp,
   notifyWorkoutComplete,
   notifyRunComplete,
-  notifyChallengeComplete,
   notifyWaterGoalHit,
 } from "@/lib/notifications";
 
@@ -74,11 +73,6 @@ export async function completeWorkoutAndNotify(xp: number, durationSeconds: numb
 export async function completeRunAndNotify(xp: number, distanceKm: string) {
   notifyRunComplete(distanceKm, xp);
   return awardXPAndNotify(xp, "run_complete");
-}
-
-export async function completeChallengeAndNotify(xp: number) {
-  notifyChallengeComplete(xp);
-  return awardXPAndNotify(xp, "daily_challenge");
 }
 
 export async function hitWaterGoalAndNotify() {

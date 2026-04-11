@@ -301,27 +301,6 @@ export interface PersonalRecord {
   achieved_at: string;
 }
 
-// LEGACY -- kept only so historical daily_challenges rows can still be
-// decoded. No new writes to daily_challenges. The new Contracts system
-// (types/missions.ts) replaces this end-to-end.
-export interface DailyChallenge {
-  id: string;
-  user_id: string;
-  challenge_data: ChallengeData;
-  date: string;
-  accepted: boolean;
-  completed: boolean;
-  xp_value: number;
-}
-
-export interface ChallengeData {
-  title: string;
-  description: string;
-  target: number;
-  unit: string;
-  type: string;
-}
-
 // Two-tier mission system -- see types/missions.ts for the full set.
 export type {
   DailyContract,

@@ -33,7 +33,7 @@ const SOURCE_LABEL: Record<XpSource, string> = {
   run_complete: "Run",
   daily_contract: "Contract",
   classified_op: "Classified Op",
-  daily_challenge: "Daily Gauntlet (legacy)",
+  daily_challenge: "Daily Challenge (archive)",
   badge_earned: "Badge",
   personal_record: "Personal Record",
   water_goal_hit: "Water Goal",
