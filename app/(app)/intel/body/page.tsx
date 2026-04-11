@@ -17,7 +17,7 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { ArrowLeft, Plus, Scale, Camera, Trash2, ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, Plus, Scale, Camera, Trash2, ArrowLeftRight, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import type { WeightLog } from "@/types";
 
@@ -44,6 +44,9 @@ export default function BodyTrackingPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
   const [deletePhotoTarget, setDeletePhotoTarget] = useState<{ id: string; path: string } | null>(null);
+  // Fullscreen photo viewer -- null when closed, else the currently
+  // shown photo's index into the `photos` array so prev/next work.
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -90,6 +93,23 @@ export default function BodyTrackingPage() {
   }, [supabase]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Keyboard navigation for the fullscreen viewer.
+  useEffect(() => {
+    if (viewerIndex === null) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setViewerIndex(null);
+      else if (e.key === "ArrowLeft") {
+        setViewerIndex((i) => (i === null || i <= 0 ? i : i - 1));
+      } else if (e.key === "ArrowRight") {
+        setViewerIndex((i) =>
+          i === null || i >= photos.length - 1 ? i : i + 1,
+        );
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [viewerIndex, photos.length]);
 
   const { pullDistance, refreshing } = usePullToRefresh({ onRefresh: loadData });
 
@@ -177,6 +197,14 @@ export default function BodyTrackingPage() {
       const next = { ...prev };
       delete next[id];
       return next;
+    });
+    // Close the viewer if the deleted photo was the one being shown.
+    // If other photos remain, move the cursor to a sensible neighbour.
+    setViewerIndex((prevIndex) => {
+      if (prevIndex === null) return null;
+      const remaining = photos.length - 1;
+      if (remaining <= 0) return null;
+      return Math.min(prevIndex, remaining - 1);
     });
   }
 
@@ -340,24 +368,108 @@ export default function BodyTrackingPage() {
         </>
       )}
 
-      {/* Photo grid (normal mode) */}
+      {/* Photo grid (normal mode) -- tap a thumbnail to open the
+          fullscreen viewer where delete + prev/next live. */}
       {photos.length === 0 ? (
         <Card><p className="text-xs text-text-secondary text-center py-4">No photos yet. Tap ADD PHOTO to capture your first progress shot.</p></Card>
       ) : !compareMode && (
         <div className="grid grid-cols-3 gap-1">
-          {photos.map((photo) => (
-            <div key={photo.id} className="relative group">
+          {photos.map((photo, index) => (
+            <button
+              key={photo.id}
+              type="button"
+              onClick={() => setViewerIndex(index)}
+              className="relative group text-left"
+              aria-label={`View progress photo from ${new Date(photo.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photoUrls[photo.id] ?? ""} alt="Progress" className="w-full aspect-square object-cover border border-green-dark/30" />
-              <button onClick={() => setDeletePhotoTarget({ id: photo.id, path: photo.photo_url })}
-                className="absolute top-1 right-1 bg-black/60 p-1 text-text-secondary hover:text-danger min-w-[28px] min-h-[28px] flex items-center justify-center">
-                <Trash2 size={12} />
-              </button>
               <p className="absolute bottom-0 left-0 right-0 bg-black/60 text-[0.45rem] font-mono text-text-secondary text-center py-0.5">
                 {new Date(photo.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
               </p>
-            </div>
+            </button>
           ))}
+        </div>
+      )}
+
+      {/* Fullscreen photo viewer */}
+      {viewerIndex !== null && photos[viewerIndex] && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col"
+          onClick={() => setViewerIndex(null)}
+        >
+          {/* Top bar: date + close */}
+          <div
+            className="flex items-center justify-between px-4 py-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-xs font-mono uppercase tracking-wider text-text-secondary">
+              {new Date(photos[viewerIndex].taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+              {` · ${viewerIndex + 1} / ${photos.length}`}
+            </p>
+            <button
+              type="button"
+              onClick={() => setViewerIndex(null)}
+              aria-label="Close viewer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-sand hover:text-green-light"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Image area with prev/next arrows on either side */}
+          <div
+            className="flex-1 flex items-center justify-center px-2 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {viewerIndex > 0 && (
+              <button
+                type="button"
+                onClick={() => setViewerIndex(viewerIndex - 1)}
+                aria-label="Previous photo"
+                className="absolute left-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center bg-black/50 text-sand hover:text-green-light z-10"
+              >
+                <ChevronLeft size={28} />
+              </button>
+            )}
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photoUrls[photos[viewerIndex].id] ?? ""}
+              alt="Progress"
+              className="max-w-full max-h-full object-contain"
+            />
+
+            {viewerIndex < photos.length - 1 && (
+              <button
+                type="button"
+                onClick={() => setViewerIndex(viewerIndex + 1)}
+                aria-label="Next photo"
+                className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center bg-black/50 text-sand hover:text-green-light z-10"
+              >
+                <ChevronRight size={28} />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom bar: delete */}
+          <div
+            className="flex items-center justify-center px-4 py-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                const photo = photos[viewerIndex];
+                setDeletePhotoTarget({ id: photo.id, path: photo.photo_url });
+              }}
+              className="flex items-center gap-2 px-4 py-3 border border-danger text-danger hover:bg-danger/10 font-mono text-xs uppercase tracking-wider min-h-[44px]"
+            >
+              <Trash2 size={14} /> Delete Photo
+            </button>
+          </div>
         </div>
       )}
 
