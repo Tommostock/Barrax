@@ -21,6 +21,10 @@ import { ArrowLeft, Plus, Scale, Camera, Trash2, ArrowLeftRight } from "lucide-r
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import type { WeightLog } from "@/types";
 
+// NOTE: despite the column name, `photo_url` now stores the STORAGE
+// PATH (e.g. "user-uuid/1713100000000.jpg") rather than a full URL.
+// The bucket is private -- we generate short-lived signed URLs on
+// load and render those. Keeping the column name avoids a migration.
 interface ProgressPhoto { id: string; photo_url: string; note: string | null; taken_at: string; }
 
 export default function BodyTrackingPage() {
@@ -33,10 +37,13 @@ export default function BodyTrackingPage() {
   const [newWeight, setNewWeight] = useState("");
 
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
+  // Map of photo.id -> freshly signed URL. Regenerated on every
+  // loadData so expiries stay fresh while the page is open.
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
-  const [deletePhotoTarget, setDeletePhotoTarget] = useState<{ id: string; url: string } | null>(null);
+  const [deletePhotoTarget, setDeletePhotoTarget] = useState<{ id: string; path: string } | null>(null);
 
   const loadData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -51,13 +58,33 @@ export default function BodyTrackingPage() {
 
     if (data) setWeightLogs(data as WeightLog[]);
 
-    // Load progress photos
+    // Load progress photos (metadata only; actual images served via signed URL)
     const { data: photoData } = await supabase
       .from("progress_photos")
       .select("*")
       .eq("user_id", user.id)
       .order("taken_at", { ascending: false });
-    if (photoData) setPhotos(photoData as ProgressPhoto[]);
+
+    if (photoData) {
+      const rows = photoData as ProgressPhoto[];
+      setPhotos(rows);
+
+      // Generate short-lived signed URLs in parallel for rendering.
+      // Private bucket means the raw object is inaccessible without
+      // a token -- only the owner (authenticated via RLS SELECT
+      // policy) can mint a signed URL here.
+      const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 hour
+      const entries = await Promise.all(
+        rows.map(async (row) => {
+          if (!row.photo_url) return [row.id, ""] as const;
+          const { data: signed } = await supabase.storage
+            .from("progress-photos")
+            .createSignedUrl(row.photo_url, SIGNED_URL_TTL_SECONDS);
+          return [row.id, signed?.signedUrl ?? ""] as const;
+        }),
+      );
+      setPhotoUrls(Object.fromEntries(entries));
+    }
 
     setLoading(false);
   }, [supabase]);
@@ -101,26 +128,24 @@ export default function BodyTrackingPage() {
 
     setUploading(true);
     try {
-      // Upload to Supabase Storage
-      const fileName = `${user.id}/${Date.now()}.jpg`;
+      // Upload to the private Supabase Storage bucket. Path shape
+      // "{user_id}/{timestamp}.jpg" matches the storage RLS policy
+      // that checks (storage.foldername(name))[1] = auth.uid().
+      const filePath = `${user.id}/${Date.now()}.jpg`;
       const { error: uploadError } = await supabase.storage
         .from("progress-photos")
-        .upload(fileName, file, { contentType: file.type });
+        .upload(filePath, file, { contentType: file.type });
 
       if (uploadError) {
         alert(`Upload failed: ${uploadError.message}`);
         return;
       }
 
-      // Get the public URL
-      const { data: urlData } = supabase.storage
-        .from("progress-photos")
-        .getPublicUrl(fileName);
-
-      // Save metadata to the database
+      // Persist the STORAGE PATH (not a URL) so we can mint signed
+      // URLs on demand. Signed URLs expire, paths don't.
       const { error: dbError } = await supabase.from("progress_photos").insert({
         user_id: user.id,
-        photo_url: urlData.publicUrl,
+        photo_url: filePath,
       });
 
       if (dbError) {
@@ -136,12 +161,11 @@ export default function BodyTrackingPage() {
     }
   }
 
-  // Delete a progress photo from storage and database
-  async function deletePhoto(id: string, url: string) {
-    // Extract the file path from the URL (everything after /progress-photos/)
-    const pathMatch = url.match(/progress-photos\/(.+)$/);
-    if (pathMatch) {
-      await supabase.storage.from("progress-photos").remove([pathMatch[1]]);
+  // Delete a progress photo from storage and database. `path` is
+  // the raw storage path (stored in the photo_url column).
+  async function deletePhoto(id: string, path: string) {
+    if (path) {
+      await supabase.storage.from("progress-photos").remove([path]);
     }
     const { error } = await supabase.from("progress_photos").delete().eq("id", id);
     if (error) {
@@ -149,6 +173,11 @@ export default function BodyTrackingPage() {
       return;
     }
     setPhotos((prev) => prev.filter((p) => p.id !== id));
+    setPhotoUrls((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }
 
   const latestWeight = weightLogs[0]?.weight_kg;
@@ -263,9 +292,9 @@ export default function BodyTrackingPage() {
               </div>
               <div className="grid grid-cols-2 gap-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={comparePhotoA.photo_url} alt="Photo A" className="w-full aspect-[3/4] object-cover" />
+                <img src={photoUrls[comparePhotoA.id] ?? ""} alt="Photo A" className="w-full aspect-[3/4] object-cover" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={comparePhotoB.photo_url} alt="Photo B" className="w-full aspect-[3/4] object-cover" />
+                <img src={photoUrls[comparePhotoB.id] ?? ""} alt="Photo B" className="w-full aspect-[3/4] object-cover" />
               </div>
               <button
                 onClick={() => setSelectedForCompare([])}
@@ -295,7 +324,7 @@ export default function BodyTrackingPage() {
                   className={`relative text-left ${isDisabled ? "opacity-40" : ""}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.photo_url} alt="Progress" className={`w-full aspect-square object-cover border ${isSelected ? "border-green-primary" : "border-green-dark/30"}`} />
+                  <img src={photoUrls[photo.id] ?? ""} alt="Progress" className={`w-full aspect-square object-cover border ${isSelected ? "border-green-primary" : "border-green-dark/30"}`} />
                   {isSelected && (
                     <div className="absolute top-1 left-1 w-5 h-5 bg-green-primary flex items-center justify-center">
                       <span className="text-[0.6rem] font-mono font-bold text-black">{selIndex + 1}</span>
@@ -319,8 +348,8 @@ export default function BodyTrackingPage() {
           {photos.map((photo) => (
             <div key={photo.id} className="relative group">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.photo_url} alt="Progress" className="w-full aspect-square object-cover border border-green-dark/30" />
-              <button onClick={() => setDeletePhotoTarget({ id: photo.id, url: photo.photo_url })}
+              <img src={photoUrls[photo.id] ?? ""} alt="Progress" className="w-full aspect-square object-cover border border-green-dark/30" />
+              <button onClick={() => setDeletePhotoTarget({ id: photo.id, path: photo.photo_url })}
                 className="absolute top-1 right-1 bg-black/60 p-1 text-text-secondary hover:text-danger min-w-[28px] min-h-[28px] flex items-center justify-center">
                 <Trash2 size={12} />
               </button>
@@ -338,7 +367,7 @@ export default function BodyTrackingPage() {
         message="Remove this progress photo?"
         confirmLabel="DELETE"
         onConfirm={() => {
-          if (deletePhotoTarget) deletePhoto(deletePhotoTarget.id, deletePhotoTarget.url);
+          if (deletePhotoTarget) deletePhoto(deletePhotoTarget.id, deletePhotoTarget.path);
           setDeletePhotoTarget(null);
         }}
         onCancel={() => setDeletePhotoTarget(null)}
