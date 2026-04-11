@@ -118,9 +118,9 @@ export default function ClassifiedOpCard() {
 
   if (!op) {
     return (
-      <Card tag="CLASSIFIED" tagVariant="danger">
+      <Card tag="CLASSIFIED" tagVariant="danger" scanLines>
         <div className="flex items-start gap-3">
-          <Lock size={20} className="text-text-secondary mt-1" />
+          <Lock size={18} className="text-text-secondary mt-1" />
           <div className="flex-1">
             <h3 className="text-sm font-heading uppercase tracking-wider text-sand">
               No operation available
@@ -142,7 +142,7 @@ export default function ClassifiedOpCard() {
 
   return (
     <>
-      <Card tag={tagText} tagVariant={tagVariant} onClick={openBriefing}>
+      <Card tag={tagText} tagVariant={tagVariant} onClick={openBriefing} scanLines>
         {/* Background COMPLETE watermark */}
         {completed && (
           <span
@@ -155,9 +155,9 @@ export default function ClassifiedOpCard() {
 
         <div className="flex items-start gap-3 relative">
           {completed ? (
-            <Check size={20} className="text-green-light mt-1" />
+            <Check size={18} className="text-green-light mt-1" />
           ) : (
-            <Shield size={20} className="text-danger mt-1" />
+            <Shield size={18} className="text-danger mt-1" />
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -211,7 +211,7 @@ export default function ClassifiedOpCard() {
                 }}
                 className="mt-3 w-full flex items-center justify-center gap-1 py-2 border border-xp-gold text-xp-gold hover:bg-xp-gold/10 transition-colors font-mono text-[0.65rem] uppercase tracking-wider min-h-[36px]"
               >
-                <Plus size={12} /> LOG PROGRESS
+                <Plus size={14} /> LOG PROGRESS
               </button>
             )}
           </div>

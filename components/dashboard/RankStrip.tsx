@@ -53,17 +53,50 @@ export default function RankStrip({ currentRank, totalXp }: RankStripProps) {
     : "bg-green-primary";
 
   return (
-    <div className={`bg-gradient-to-r ${style.bg} border ${style.border} p-4 relative overflow-hidden`}>
+    <div
+      className={`bg-gradient-to-r ${style.bg} border ${style.border} p-4 relative overflow-hidden scan-lines`}
+    >
       {/* Subtle diagonal stripe pattern for texture (not camo) */}
-      <div className="absolute inset-0 opacity-[0.04]"
+      <div
+        className="absolute inset-0 opacity-[0.04]"
         style={{
-          backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 11px)",
+          backgroundImage:
+            "repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 11px)",
         }}
       />
 
-      {/* Rank insignia — top right corner */}
+      {/* Crosshair corner marks -- 4 little L-brackets in each corner
+          for a HUD readout vibe. Subtle sand colour, 60% opacity. */}
+      {[
+        { pos: "top-1 left-1", rot: "rotate-0" },
+        { pos: "top-1 right-1", rot: "rotate-90" },
+        { pos: "bottom-1 left-1", rot: "-rotate-90" },
+        { pos: "bottom-1 right-1", rot: "rotate-180" },
+      ].map((c, i) => (
+        <svg
+          key={i}
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          className={`absolute ${c.pos} ${c.rot} text-sand opacity-60 z-10`}
+          aria-hidden
+        >
+          <path
+            d="M 0 0 L 10 0 M 0 0 L 0 10"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            fill="none"
+          />
+        </svg>
+      ))}
+
+      {/* Rank insignia — top right corner, with subtle rotating
+          radar-sweep wedge behind it for ambient HUD motion */}
       <div className="absolute top-2 right-3 opacity-80 z-10">
-        <RankInsignia rank={currentRank} />
+        <div className="relative">
+          <span className="radar-sweep" aria-hidden />
+          <RankInsignia rank={currentRank} />
+        </div>
       </div>
 
       <div className="relative z-10">

@@ -46,12 +46,24 @@ export default function BottomNav() {
               key={tab.href}
               href={tab.href}
               className={`
-                flex flex-col items-center justify-center gap-1
+                relative flex flex-col items-center justify-center gap-1
                 min-w-[44px] min-h-[44px] px-2 py-1
-                transition-colors
-                ${active ? "text-green-primary" : "text-text-secondary"}
+                transition-colors flex-1 h-full
+                ${active
+                  ? "text-green-primary bg-bg-panel-alt"
+                  : "text-text-secondary"}
               `}
             >
+              {/* Top accent bar -- only on the active tab. 2px solid
+                  green-primary so the active section is obvious at
+                  a glance, without needing rounded corners (which
+                  are disabled globally). */}
+              {active && (
+                <span
+                  aria-hidden
+                  className="absolute top-0 left-0 right-0 h-[2px] bg-green-primary"
+                />
+              )}
               <Icon size={20} strokeWidth={active ? 2.5 : 1.5} />
               <span
                 className={`

@@ -51,10 +51,10 @@ export default function TodayMission() {
   // No workout today — show placeholder
   if (!todayWorkout) {
     return (
-      <Card tag="NO ORDERS" tagVariant="default">
+      <Card tag="NO ORDERS" tagVariant="default" scanLines>
         <div className="flex items-start gap-3">
           <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
-            <Swords size={20} className="text-text-secondary" />
+            <Swords size={18} className="text-text-secondary" />
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Today&apos;s Mission</h3>
@@ -76,12 +76,13 @@ export default function TodayMission() {
       tagVariant={isComplete ? "complete" : "active"}
       onClick={() => router.push(isComplete ? `/missions/${todayWorkout.id}` : `/missions/player/${todayWorkout.id}`)}
       className="press-scale"
+      scanLines
     >
       <div className="flex items-start gap-3">
         <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
           {isComplete
-            ? <Check size={20} className="text-green-light" />
-            : <Swords size={20} className="text-green-primary" />
+            ? <Check size={18} className="text-green-light" />
+            : <Swords size={18} className="text-green-primary" />
           }
         </div>
         <div className="flex-1">

@@ -1,12 +1,23 @@
 /* ============================================
    Tag Component
-   Uppercase monospace status label.
-   Wraps text in [BRACKETS] for military aesthetic.
+   Uppercase monospace bordered chip.
+   Used for inline status labels (e.g. "+50 XP",
+   tier badges). Big classification labels at the
+   top of cards are rendered via Card's `tag` prop
+   which keeps the [BRACKETS] for emphasis.
    ============================================ */
 
 interface TagProps {
   children: string;
-  variant?: "active" | "complete" | "locked" | "danger" | "default" | "gold";
+  variant?:
+    | "active"
+    | "complete"
+    | "locked"
+    | "danger"
+    | "default"
+    | "gold"
+    | "scavenger"
+    | "recon";
   className?: string;
 }
 
@@ -21,6 +32,8 @@ export default function Tag({
     locked: "text-text-secondary border-text-secondary opacity-50",
     danger: "text-danger border-danger",
     gold: "text-xp-gold border-xp-gold",
+    scavenger: "tag-scavenger",
+    recon: "tag-recon",
     default: "text-text-secondary border-green-dark",
   };
 
@@ -32,7 +45,7 @@ export default function Tag({
         ${variants[variant]} ${className}
       `}
     >
-      [{children}]
+      {children}
     </span>
   );
 }

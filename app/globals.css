@@ -26,6 +26,9 @@
   --danger: #8B3232;
   --success: #4A6B3A;
   --xp-gold: #B8A04A;
+  /* Contract type accents */
+  --scavenger: #C4B090;   /* sand -- Scavenger contracts */
+  --recon: #5AA89B;       /* teal -- Recon contracts */
 }
 
 /* --- Tailwind v4 Theme Integration --- */
@@ -49,6 +52,8 @@
   --color-danger: var(--danger);
   --color-success: var(--success);
   --color-xp-gold: var(--xp-gold);
+  --color-scavenger: var(--scavenger);
+  --color-recon: var(--recon);
 
   /* Font families — mapped to next/font CSS variables */
   --font-heading: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
@@ -166,6 +171,16 @@ h1, h2, h3, h4, h5, h6 {
 .tag-danger {
   color: var(--danger);
   border-color: var(--danger);
+}
+
+.tag-scavenger {
+  color: var(--scavenger);
+  border-color: var(--scavenger);
+}
+
+.tag-recon {
+  color: var(--recon);
+  border-color: var(--recon);
 }
 
 /* Micro-interaction: subtle press effect */
@@ -319,4 +334,27 @@ h1, h2, h3, h4, h5, h6 {
 #barrax-barcode-reader img[alt="Info icon"],
 #barrax-barcode-reader br {
   display: none !important;
+}
+
+/* --- Tactical HUD: radar sweep behind rank insignia ---
+   Subtle rotating conic-gradient wedge. 8s per revolution,
+   25% opacity so it reads as ambient HUD motion rather than
+   flashy noise. GPU-accelerated via transform: rotate. */
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.radar-sweep {
+  position: absolute;
+  inset: -4px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(107, 143, 90, 0.25) 45deg,
+    transparent 90deg,
+    transparent 360deg
+  );
+  animation: radar-sweep 8s linear infinite;
+  pointer-events: none;
 }

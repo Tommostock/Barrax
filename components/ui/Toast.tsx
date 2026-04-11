@@ -2,6 +2,11 @@
    Toast Component
    Bottom-positioned notification that auto-dismisses.
    Used for XP awards, badges, errors, etc.
+
+   ToastContainer now renders up to 3 toasts stacked
+   vertically (newest at the bottom). Older toasts
+   fade as they climb so the focus stays on the most
+   recent event.
    ============================================ */
 
 "use client";
@@ -19,9 +24,21 @@ export interface ToastData {
 interface ToastProps {
   toast: ToastData;
   onDismiss: (id: string) => void;
+  /** 0 = newest (bottom of stack), 1 = one up, 2 = top of stack */
+  stackOffset?: number;
 }
 
-export default function Toast({ toast, onDismiss }: ToastProps) {
+// Base bottom offset (matches the old `bottom-20` class = 5rem).
+// Each stacked toast rises by its own height + a small gap.
+const BASE_BOTTOM_REM = 5;
+const TOAST_HEIGHT_PX = 68;
+const GAP_PX = 8;
+
+export default function Toast({
+  toast,
+  onDismiss,
+  stackOffset = 0,
+}: ToastProps) {
   const [visible, setVisible] = useState(true);
 
   // Auto-dismiss after duration
@@ -48,13 +65,17 @@ export default function Toast({ toast, onDismiss }: ToastProps) {
   return (
     <div
       className={`
-        fixed bottom-20 left-4 right-4 z-[100]
+        fixed left-4 right-4 z-[100]
         bg-bg-panel border ${borderColor} p-3
         flex items-center justify-between gap-3
-        transition-opacity duration-200
-        ${visible ? "animate-slide-up opacity-100" : "opacity-0"}
+        transition-all duration-200
+        ${visible ? "animate-slide-up" : ""}
         safe-bottom
       `}
+      style={{
+        bottom: `calc(${BASE_BOTTOM_REM}rem + ${stackOffset * (TOAST_HEIGHT_PX + GAP_PX)}px)`,
+        opacity: visible ? Math.max(0.55, 1 - stackOffset * 0.2) : 0,
+      }}
     >
       <p className="text-sm text-text-primary font-body flex-1">
         {toast.message}
@@ -71,9 +92,12 @@ export default function Toast({ toast, onDismiss }: ToastProps) {
 }
 
 /* ============================================
-   Toast Container — renders all active toasts.
-   Use the useToast hook to add/remove toasts.
+   Toast Container — renders the 3 most recent
+   active toasts. Use the useToast hook to
+   add/remove toasts.
    ============================================ */
+
+const MAX_VISIBLE_TOASTS = 3;
 
 export function ToastContainer({
   toasts,
@@ -82,9 +106,22 @@ export function ToastContainer({
   toasts: ToastData[];
   onDismiss: (id: string) => void;
 }) {
-  // Only show the most recent toast to avoid stacking
-  const latestToast = toasts[toasts.length - 1];
-  if (!latestToast) return null;
+  // toasts is newest-last (useToast appends via [...prev, new]).
+  // We slice the last N and reverse so the newest ends up at index 0
+  // (bottom of the visual stack), with older ones climbing up.
+  const visible = toasts.slice(-MAX_VISIBLE_TOASTS).reverse();
+  if (visible.length === 0) return null;
 
-  return <Toast toast={latestToast} onDismiss={onDismiss} />;
+  return (
+    <>
+      {visible.map((toast, i) => (
+        <Toast
+          key={toast.id}
+          toast={toast}
+          onDismiss={onDismiss}
+          stackOffset={i}
+        />
+      ))}
+    </>
+  );
 }

@@ -245,7 +245,7 @@ export default function TodayRations() {
 
   if (!hasPlan) {
     return (
-      <Card tag="RATIONS" tagVariant="default" onClick={() => router.push("/rations")}>
+      <Card tag="RATIONS" tagVariant="default" onClick={() => router.push("/rations")} scanLines>
         <div className="flex items-center gap-2 mb-2">
           <Utensils size={16} className="text-text-secondary" />
           <h3 className="text-sm font-heading uppercase tracking-wider text-sand">Today&apos;s Rations</h3>
@@ -256,7 +256,7 @@ export default function TodayRations() {
   }
 
   return (
-    <Card tag="RATIONS" tagVariant="active" onClick={() => router.push("/rations")} className="press-scale">
+    <Card tag="RATIONS" tagVariant="active" onClick={() => router.push("/rations")} className="press-scale" scanLines>
       {/* Header row: title on the left, mini macro rings on the right */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

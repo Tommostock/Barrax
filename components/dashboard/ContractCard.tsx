@@ -18,11 +18,34 @@ import { todayLocalISO } from "@/lib/missions/date";
 import type { DailyContract, ContractType, ProgressKey } from "@/types/missions";
 import LogProgressModal from "@/components/mission/LogProgressModal";
 
+// Map a contract type to its tag variant. Controls tag colour, icon
+// tint, progress bar fill, and the LOG PROGRESS button accent. Bounty
+// stays gold (the original), Scavenger gets sand, Recon gets teal.
+const VARIANT_BY_TYPE: Record<ContractType, "gold" | "scavenger" | "recon"> = {
+  bounty: "gold",
+  scavenger: "scavenger",
+  recon: "recon",
+};
+
+// Accent colour classes matching each variant, used for the icon and
+// progress bar fill since those can't read the variant off Card alone.
+const TYPE_ACCENT_TEXT: Record<ContractType, string> = {
+  bounty: "text-xp-gold",
+  scavenger: "text-scavenger",
+  recon: "text-recon",
+};
+
+const TYPE_ACCENT_BG: Record<ContractType, string> = {
+  bounty: "bg-xp-gold",
+  scavenger: "bg-scavenger",
+  recon: "bg-recon",
+};
+
 function iconFor(type: ContractType, muted: boolean) {
-  const cls = muted ? "text-text-secondary mt-1" : "text-xp-gold mt-1";
-  if (type === "bounty") return <Crosshair size={20} className={cls} />;
-  if (type === "recon") return <Eye size={20} className={cls} />;
-  return <ListChecks size={20} className={cls} />;
+  const cls = muted ? "text-text-secondary mt-1" : `${TYPE_ACCENT_TEXT[type]} mt-1`;
+  if (type === "bounty") return <Crosshair size={18} className={cls} />;
+  if (type === "recon") return <Eye size={18} className={cls} />;
+  return <ListChecks size={18} className={cls} />;
 }
 
 function clampPct(current: number, target: number): number {
@@ -134,9 +157,9 @@ export default function ContractCard() {
   // Rank 2 gate
   if (rank < 2) {
     return (
-      <Card tag="CLASSIFIED" tagVariant="locked">
+      <Card tag="CLASSIFIED" tagVariant="locked" scanLines>
         <div className="flex items-start gap-3">
-          <Lock size={20} className="text-text-secondary mt-1" />
+          <Lock size={18} className="text-text-secondary mt-1" />
           <div>
             <h3 className="text-sm font-heading uppercase tracking-wider text-sand">
               Contracts Locked
@@ -153,9 +176,9 @@ export default function ContractCard() {
   // Generation failed and nothing cached
   if (!contract) {
     return (
-      <Card tag="CONTRACT" tagVariant="gold">
+      <Card tag="CONTRACT" tagVariant="gold" scanLines>
         <div className="flex items-start gap-3">
-          <Crosshair size={20} className="text-text-secondary mt-1" />
+          <Crosshair size={18} className="text-text-secondary mt-1" />
           <div className="flex-1">
             <h3 className="text-sm font-heading uppercase tracking-wider text-sand">
               No contract available
@@ -171,20 +194,39 @@ export default function ContractCard() {
 
   const pct = clampPct(contract.current_value, contract.target_value);
   const completed = contract.completed;
-  const tagText = completed
-    ? "COMPLETE"
-    : contract.contract_type.toUpperCase();
-  const tagVariant = completed ? "complete" : "gold";
+  const type = contract.contract_type;
+  const tagText = completed ? "COMPLETE" : type.toUpperCase();
+  const tagVariant: "complete" | "gold" | "scavenger" | "recon" = completed
+    ? "complete"
+    : VARIANT_BY_TYPE[type];
   const canLog = !completed && supportsManualLog(contract.progress_key);
+
+  // Accent colour classes derived from the type
+  const accentTextClass = TYPE_ACCENT_TEXT[type];
+  const accentBgClass = TYPE_ACCENT_BG[type];
+  // Border colour for the LOG button: map type → the right border util
+  const accentBorderClass =
+    type === "bounty"
+      ? "border-xp-gold"
+      : type === "scavenger"
+        ? "border-scavenger"
+        : "border-recon";
+  // Hover bg tint (10% opacity)
+  const accentHoverBgClass =
+    type === "bounty"
+      ? "hover:bg-xp-gold/10"
+      : type === "scavenger"
+        ? "hover:bg-scavenger/10"
+        : "hover:bg-recon/10";
 
   return (
     <>
-      <Card tag={tagText} tagVariant={tagVariant}>
+      <Card tag={tagText} tagVariant={tagVariant} scanLines>
         <div className="flex items-start gap-3">
           {completed ? (
-            <Check size={20} className="text-green-light mt-1" />
+            <Check size={18} className="text-green-light mt-1" />
           ) : (
-            iconFor(contract.contract_type, false)
+            iconFor(type, false)
           )}
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-heading uppercase tracking-wider text-sand">
@@ -199,7 +241,7 @@ export default function ContractCard() {
             </p>
 
             <div className="flex items-center gap-2 mt-2">
-              <Tag variant={completed ? "complete" : "gold"}>
+              <Tag variant={completed ? "complete" : VARIANT_BY_TYPE[type]}>
                 {`+${contract.xp_value} XP`}
               </Tag>
             </div>
@@ -208,7 +250,7 @@ export default function ContractCard() {
             <div className="mt-3 h-2 bg-green-darkest w-full overflow-hidden border border-green-dark">
               <div
                 className={`h-full transition-all duration-500 ${
-                  completed ? "bg-green-light" : "bg-xp-gold"
+                  completed ? "bg-green-light" : accentBgClass
                 }`}
                 style={{ width: `${pct}%` }}
               />
@@ -217,7 +259,9 @@ export default function ContractCard() {
               <p className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-wider">
                 {contract.current_value} / {contract.target_value} {contract.unit}
               </p>
-              <p className="text-[0.6rem] font-mono text-xp-gold uppercase tracking-wider">
+              <p
+                className={`text-[0.6rem] font-mono uppercase tracking-wider ${accentTextClass}`}
+              >
                 {pct}%
               </p>
             </div>
@@ -227,9 +271,9 @@ export default function ContractCard() {
               <button
                 type="button"
                 onClick={() => setLogModalOpen(true)}
-                className="mt-3 w-full flex items-center justify-center gap-1 py-2 border border-xp-gold text-xp-gold hover:bg-xp-gold/10 transition-colors font-mono text-[0.65rem] uppercase tracking-wider min-h-[36px]"
+                className={`mt-3 w-full flex items-center justify-center gap-1 py-2 border ${accentBorderClass} ${accentTextClass} ${accentHoverBgClass} transition-colors font-mono text-[0.65rem] uppercase tracking-wider min-h-[36px]`}
               >
-                <Plus size={12} /> LOG PROGRESS
+                <Plus size={14} /> LOG PROGRESS
               </button>
             )}
           </div>
