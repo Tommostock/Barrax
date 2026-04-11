@@ -25,7 +25,22 @@ import type { WeightLog } from "@/types";
 // PATH (e.g. "user-uuid/1713100000000.jpg") rather than a full URL.
 // The bucket is private -- we generate short-lived signed URLs on
 // load and render those. Keeping the column name avoids a migration.
+//
+// Legacy rows created before commit 2bdac32 may still contain a full
+// public URL in this column. extractStoragePath() below normalises
+// both formats so the viewer keeps working regardless.
 interface ProgressPhoto { id: string; photo_url: string; note: string | null; taken_at: string; }
+
+/** Return a storage object path from either a raw path or a legacy full URL. */
+function extractStoragePath(value: string): string {
+  if (!value) return "";
+  // New format: stored as path e.g. "user-uuid/123.jpg"
+  if (!value.startsWith("http")) return value;
+  // Legacy format: full URL, may be public or signed, with optional
+  // query string. Match everything after "/progress-photos/" up to "?".
+  const match = value.match(/\/progress-photos\/([^?]+)/);
+  return match ? match[1] : value;
+}
 
 export default function BodyTrackingPage() {
   const router = useRouter();
@@ -80,9 +95,13 @@ export default function BodyTrackingPage() {
       const entries = await Promise.all(
         rows.map(async (row) => {
           if (!row.photo_url) return [row.id, ""] as const;
-          const { data: signed } = await supabase.storage
+          const path = extractStoragePath(row.photo_url);
+          const { data: signed, error } = await supabase.storage
             .from("progress-photos")
-            .createSignedUrl(row.photo_url, SIGNED_URL_TTL_SECONDS);
+            .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+          if (error) {
+            console.error("[body] createSignedUrl failed", { path, error });
+          }
           return [row.id, signed?.signedUrl ?? ""] as const;
         }),
       );
@@ -181,11 +200,13 @@ export default function BodyTrackingPage() {
     }
   }
 
-  // Delete a progress photo from storage and database. `path` is
-  // the raw storage path (stored in the photo_url column).
+  // Delete a progress photo from storage and database. `path` is the
+  // stored photo_url column value -- we normalise it through
+  // extractStoragePath in case it's a legacy full-URL row.
   async function deletePhoto(id: string, path: string) {
-    if (path) {
-      await supabase.storage.from("progress-photos").remove([path]);
+    const storagePath = extractStoragePath(path);
+    if (storagePath) {
+      await supabase.storage.from("progress-photos").remove([storagePath]);
     }
     const { error } = await supabase.from("progress_photos").delete().eq("id", id);
     if (error) {
