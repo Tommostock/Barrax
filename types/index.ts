@@ -339,6 +339,16 @@ export type {
   XpSource,
 } from "@/types/missions";
 
+// Physical Fitness Test types
+export type {
+  FitnessTestType,
+  FitnessTestUnit,
+  FitnessTestResult,
+  FitnessTestSummary,
+  FitnessTestMeta,
+} from "@/types/fitness";
+export { FITNESS_TEST_META } from "@/types/fitness";
+
 // --- Onboarding State ---
 export interface OnboardingData {
   name: string;

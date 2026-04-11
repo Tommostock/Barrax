@@ -163,6 +163,16 @@ export function notifyWeeklySummary(workouts: number, xp: number, distance: stri
   );
 }
 
+// Sunday evening weekly briefing — forward-looking preview of the coming week
+export function notifyWeeklyBriefing(workoutCount: number) {
+  showNotification(
+    "WEEKLY BRIEFING",
+    `Mission plan for the week ahead. ${workoutCount} workouts scheduled. Stand by for details.`,
+    "weekly-briefing",
+    "/"
+  );
+}
+
 // Sunday weigh-in reminder — fired every Sunday at 0700
 export function notifyWeighIn() {
   showNotification(
