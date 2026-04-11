@@ -63,9 +63,9 @@ export default function DashboardPage() {
 
       <QuickActions />
       <TodayMission />
-      <TodayRations />
       <ContractCard />
       <ClassifiedOpCard />
+      <TodayRations />
     </div>
   );
 }

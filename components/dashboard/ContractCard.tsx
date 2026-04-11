@@ -13,9 +13,10 @@ import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
-import { Crosshair, Eye, ListChecks, Lock, Check } from "lucide-react";
+import { Crosshair, Eye, ListChecks, Lock, Check, Plus } from "lucide-react";
 import { todayLocalISO } from "@/lib/missions/date";
-import type { DailyContract, ContractType } from "@/types/missions";
+import type { DailyContract, ContractType, ProgressKey } from "@/types/missions";
+import LogProgressModal from "@/components/mission/LogProgressModal";
 
 function iconFor(type: ContractType, muted: boolean) {
   const cls = muted ? "text-text-secondary mt-1" : "text-xp-gold mt-1";
@@ -29,11 +30,30 @@ function clampPct(current: number, target: number): number {
   return Math.max(0, Math.min(100, Math.round((current / target) * 100)));
 }
 
+/** Can the user manually log progress against this key? */
+function supportsManualLog(key: ProgressKey): boolean {
+  return key.startsWith("reps_exercise:") || key === "reps_any";
+}
+
+/** Human label for the log-progress modal header. */
+function labelForKey(key: ProgressKey): string {
+  if (key.startsWith("reps_exercise:")) {
+    const name = key.split(":")[1] ?? "";
+    return name
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join("-") + "s";
+  }
+  if (key === "reps_any") return "Total Reps";
+  return "Progress";
+}
+
 export default function ContractCard() {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [rank, setRank] = useState(1);
   const [contract, setContract] = useState<DailyContract | null>(null);
+  const [logModalOpen, setLogModalOpen] = useState(false);
 
   const reload = useCallback(async () => {
     const {
@@ -155,47 +175,79 @@ export default function ContractCard() {
     ? "COMPLETE"
     : contract.contract_type.toUpperCase();
   const tagVariant = completed ? "complete" : "gold";
+  const canLog = !completed && supportsManualLog(contract.progress_key);
 
   return (
-    <Card tag={tagText} tagVariant={tagVariant}>
-      <div className="flex items-start gap-3">
-        {completed ? (
-          <Check size={20} className="text-green-light mt-1" />
-        ) : (
-          iconFor(contract.contract_type, false)
-        )}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-heading uppercase tracking-wider text-sand">
-            {contract.title}
-          </h3>
-          <p
-            className={`text-xs mt-1 ${
-              completed ? "text-text-secondary" : "text-text-primary"
-            }`}
-          >
-            {contract.description}
-          </p>
-
-          <div className="flex items-center gap-2 mt-2">
-            <Tag variant={completed ? "complete" : "gold"}>
-              {`+${contract.xp_value} XP`}
-            </Tag>
-          </div>
-
-          {/* Progress bar */}
-          <div className="mt-3 h-1 bg-green-darkest w-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-500 ${
-                completed ? "bg-green-light" : "bg-xp-gold"
+    <>
+      <Card tag={tagText} tagVariant={tagVariant}>
+        <div className="flex items-start gap-3">
+          {completed ? (
+            <Check size={20} className="text-green-light mt-1" />
+          ) : (
+            iconFor(contract.contract_type, false)
+          )}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-heading uppercase tracking-wider text-sand">
+              {contract.title}
+            </h3>
+            <p
+              className={`text-xs mt-1 ${
+                completed ? "text-text-secondary" : "text-text-primary"
               }`}
-              style={{ width: `${pct}%` }}
-            />
+            >
+              {contract.description}
+            </p>
+
+            <div className="flex items-center gap-2 mt-2">
+              <Tag variant={completed ? "complete" : "gold"}>
+                {`+${contract.xp_value} XP`}
+              </Tag>
+            </div>
+
+            {/* Progress bar -- chunkier so it reads at a glance */}
+            <div className="mt-3 h-2 bg-green-darkest w-full overflow-hidden border border-green-dark">
+              <div
+                className={`h-full transition-all duration-500 ${
+                  completed ? "bg-green-light" : "bg-xp-gold"
+                }`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <p className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-wider">
+                {contract.current_value} / {contract.target_value} {contract.unit}
+              </p>
+              <p className="text-[0.6rem] font-mono text-xp-gold uppercase tracking-wider">
+                {pct}%
+              </p>
+            </div>
+
+            {/* Manual log button (rep-based contracts only) */}
+            {canLog && (
+              <button
+                type="button"
+                onClick={() => setLogModalOpen(true)}
+                className="mt-3 w-full flex items-center justify-center gap-1 py-2 border border-xp-gold text-xp-gold hover:bg-xp-gold/10 transition-colors font-mono text-[0.65rem] uppercase tracking-wider min-h-[36px]"
+              >
+                <Plus size={12} /> LOG PROGRESS
+              </button>
+            )}
           </div>
-          <p className="text-[0.6rem] font-mono text-text-secondary mt-1 uppercase tracking-wider">
-            {contract.current_value} / {contract.target_value} {contract.unit}
-          </p>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      {canLog && (
+        <LogProgressModal
+          isOpen={logModalOpen}
+          onClose={() => setLogModalOpen(false)}
+          onLogged={reload}
+          progressKey={contract.progress_key}
+          label={labelForKey(contract.progress_key)}
+          unit={contract.unit}
+          current={contract.current_value}
+          target={contract.target_value}
+        />
+      )}
+    </>
   );
 }

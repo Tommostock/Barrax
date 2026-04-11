@@ -37,6 +37,12 @@ export async function computeProgress(
 ): Promise<number> {
   const { startTs, endTs } = dayBoundsISO(startISO, endISO);
 
+  // Pull the manual-log bump for this key up front. The user hits
+  // "LOG PROGRESS" on a card and writes a row into mission_manual_log
+  // instead of having to start a full workout. We ADD this onto the
+  // real source-table sum so both paths count.
+  const manualBump = await sumManualLog(supabase, userId, key, startTs, endTs);
+
   // ---- reps for a specific exercise (case-insensitive substring) ----
   if (key.startsWith("reps_exercise:")) {
     const name = key.split(":")[1] ?? "";
@@ -50,7 +56,7 @@ export async function computeProgress(
       .eq("workouts.status", "complete")
       .gte("workouts.completed_at", startTs)
       .lte("workouts.completed_at", endTs);
-    return sumInt(data ?? [], (r) => r.reps_completed ?? 0);
+    return sumInt(data ?? [], (r) => r.reps_completed ?? 0) + manualBump;
   }
 
   switch (key) {
@@ -62,7 +68,7 @@ export async function computeProgress(
         .eq("workouts.status", "complete")
         .gte("workouts.completed_at", startTs)
         .lte("workouts.completed_at", endTs);
-      return sumInt(data ?? [], (r) => r.reps_completed ?? 0);
+      return sumInt(data ?? [], (r) => r.reps_completed ?? 0) + manualBump;
     }
 
     case "workout_complete_count": {
@@ -73,7 +79,7 @@ export async function computeProgress(
         .eq("status", "complete")
         .gte("completed_at", startTs)
         .lte("completed_at", endTs);
-      return count ?? 0;
+      return (count ?? 0) + manualBump;
     }
 
     case "run_distance_m": {
@@ -83,7 +89,7 @@ export async function computeProgress(
         .eq("user_id", userId)
         .gte("completed_at", startTs)
         .lte("completed_at", endTs);
-      return Math.round(sumInt(data ?? [], (r) => r.distance_metres ?? 0));
+      return Math.round(sumInt(data ?? [], (r) => r.distance_metres ?? 0)) + manualBump;
     }
 
     case "meals_logged": {
@@ -93,7 +99,7 @@ export async function computeProgress(
         .eq("user_id", userId)
         .gte("logged_at", startTs)
         .lte("logged_at", endTs);
-      return count ?? 0;
+      return (count ?? 0) + manualBump;
     }
 
     case "protein_g": {
@@ -105,7 +111,7 @@ export async function computeProgress(
         .lte("logged_at", endTs);
       return Math.round(
         (data ?? []).reduce((s, r) => s + (r.protein_g ?? 0) * (r.quantity ?? 1), 0),
-      );
+      ) + manualBump;
     }
 
     case "water_ml": {
@@ -115,7 +121,7 @@ export async function computeProgress(
         .eq("user_id", userId)
         .gte("logged_at", startTs)
         .lte("logged_at", endTs);
-      return sumInt(data ?? [], (r) => r.amount_ml ?? 0);
+      return sumInt(data ?? [], (r) => r.amount_ml ?? 0) + manualBump;
     }
 
     case "calories_hit_target_day": {
@@ -142,7 +148,7 @@ export async function computeProgress(
       for (const cals of byDay.values()) {
         if (Math.abs(cals - target) <= 200) hits++;
       }
-      return hits;
+      return hits + manualBump;
     }
 
     case "new_exercise_logged": {
@@ -167,7 +173,8 @@ export async function computeProgress(
       const foundNew = (inPeriod ?? []).some(
         (r) => !priorSet.has((r.exercise_name as string).toLowerCase()),
       );
-      return foundNew ? 1 : 0;
+      // Manual log contributes 1 if any manual rows exist for this key
+      return (foundNew ? 1 : 0) + (manualBump > 0 ? 1 : 0);
     }
 
     case "unique_exercises_logged": {
@@ -178,7 +185,7 @@ export async function computeProgress(
         .eq("workouts.status", "complete")
         .gte("workouts.completed_at", startTs)
         .lte("workouts.completed_at", endTs);
-      return new Set((data ?? []).map((r) => (r.exercise_name as string).toLowerCase())).size;
+      return new Set((data ?? []).map((r) => (r.exercise_name as string).toLowerCase())).size + manualBump;
     }
   }
 
@@ -189,6 +196,45 @@ function sumInt<T>(rows: T[], getter: (row: T) => number): number {
   let total = 0;
   for (const r of rows) total += getter(r);
   return total;
+}
+
+/**
+ * Sum user-entered bumps from the mission_manual_log table for a
+ * specific progress_key over [startTs, endTs]. Returns 0 on any error
+ * so the main computeProgress flow can't be broken by this.
+ *
+ * Special case: for the `reps_any` key, we sum ALL rows whose key
+ * starts with "reps_" (including every `reps_exercise:*`) so that
+ * logging push-ups manually also counts toward a "5000 reps" op.
+ */
+async function sumManualLog(
+  supabase: SupabaseClient,
+  userId: string,
+  key: ProgressKey,
+  startTs: string,
+  endTs: string,
+): Promise<number> {
+  try {
+    let query = supabase
+      .from("mission_manual_log")
+      .select("amount, progress_key")
+      .eq("user_id", userId)
+      .gte("logged_at", startTs)
+      .lte("logged_at", endTs);
+
+    if (key === "reps_any") {
+      query = query.like("progress_key", "reps_%");
+    } else {
+      query = query.eq("progress_key", key);
+    }
+
+    const { data } = await query;
+    if (!data) return 0;
+    return data.reduce((s, r) => s + (r.amount ?? 0), 0);
+  } catch (err) {
+    console.warn("[missions] sumManualLog failed:", err);
+    return 0;
+  }
 }
 
 // ---------------------------------------------------------------------------

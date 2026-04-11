@@ -421,11 +421,12 @@ export default function BodyTrackingPage() {
           className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col"
           onClick={() => setViewerIndex(null)}
         >
-          {/* Top bar: date + close -- safe-area-inset-top keeps it
-              clear of the iPhone notch / dynamic island. */}
+          {/* Top bar: date + close -- add the safe-area inset ON TOP
+              of the baseline padding so the notch/dynamic island
+              can't overlap the close button on iPhone. */}
           <div
-            className="flex items-center justify-between px-4 py-4"
-            style={{ paddingTop: "max(16px, env(safe-area-inset-top))" }}
+            className="flex items-center justify-between px-4"
+            style={{ paddingTop: "calc(env(safe-area-inset-top) + 20px)", paddingBottom: "16px" }}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-xs font-mono uppercase tracking-wider text-text-secondary">
@@ -477,11 +478,12 @@ export default function BodyTrackingPage() {
             )}
           </div>
 
-          {/* Bottom bar: delete -- safe-area-inset-bottom keeps it
-              clear of the iPhone home indicator. */}
+          {/* Bottom bar: delete -- add the safe-area inset ON TOP of
+              the baseline padding so the home indicator can't sit
+              underneath the delete button on iPhone. */}
           <div
-            className="flex items-center justify-center px-4 py-4"
-            style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}
+            className="flex items-center justify-center px-4"
+            style={{ paddingTop: "16px", paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
