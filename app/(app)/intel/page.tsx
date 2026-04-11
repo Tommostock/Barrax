@@ -58,6 +58,7 @@ export default function IntelPage() {
     { href: "/intel/nutrition", icon: PieChart, title: "Fuel Analysis", description: "Calories and macros. No excuses." },
     { href: "/intel/runs", icon: TrendingUp, title: "Combat Running", description: "Distance, pace, territory covered" },
     { href: "/intel/records", icon: Trophy, title: "Elite Achievements", description: "Your maximum performance records" },
+    { href: "/intel/fitness-test", icon: Target, title: "Physical Assessment", description: "Quarterly fitness benchmarks (PFT)" },
     { href: "/intel/challenges", icon: Target, title: "Challenge Events", description: "Multi-day missions. Prove yourself." },
     { href: "/intel/xp-log", icon: ListChecks, title: "XP Audit Log", description: "Every point earned, with source" },
     { href: "/intel/report", icon: FileText, title: "Mission Debrief", description: "Weekly performance evaluation" },

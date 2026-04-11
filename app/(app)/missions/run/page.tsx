@@ -15,7 +15,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import nextDynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -58,6 +58,25 @@ type RunState = "ready" | "countdown" | "running" | "complete";
 /** Duration of the GO → GPS-watch-start prep countdown, in seconds. */
 const RUN_PREP_COUNTDOWN_SECONDS = 5;
 
+// ---------- Challenge-run presets ----------
+// Pre-set benchmark distances with per-distance PR tracking.
+// Selecting one on the ready screen auto-stops the run when the
+// target is reached. Distances are in metres; FREE RUN has null.
+interface RunChallenge {
+  id: string;
+  label: string;
+  distanceM: number | null;
+}
+
+const RUN_CHALLENGES: RunChallenge[] = [
+  { id: "free", label: "FREE RUN", distanceM: null },
+  { id: "1mi", label: "1 MI", distanceM: 1609 },
+  { id: "2p4km", label: "2.4 KM", distanceM: 2400 },
+  { id: "1500m", label: "1.5 MI", distanceM: 2414 },
+  { id: "5km", label: "5 KM", distanceM: 5000 },
+  { id: "10km", label: "10 KM", distanceM: 10000 },
+];
+
 // ---------- Post-run stats computed once when stopping ----------
 interface RunStats {
   distanceMetres: number;
@@ -71,12 +90,22 @@ interface RunStats {
 
 export default function RunTrackerPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   // ===================== STATE =====================
 
   // Which screen the user sees (ready / countdown / running / complete)
   const [runState, setRunState] = useState<RunState>("ready");
+
+  // Selected challenge (null = FREE RUN)
+  const [selectedChallenge, setSelectedChallenge] = useState<RunChallenge>(
+    RUN_CHALLENGES[0],
+  );
+
+  // Was this run started from the Physical Fitness Test hub?
+  // If so, on complete we also write a fitness_test_results row.
+  const pftSourceRef = useRef(false);
 
   // Prep-countdown seconds remaining. Only relevant when runState="countdown".
   // Set to 5 when the user taps GO and ticks down to 0, at which point the
@@ -137,6 +166,29 @@ export default function RunTrackerPage() {
       setGpsAvailable(false);
       setGpsError("Your browser does not support GPS.");
     }
+  }, []);
+
+  // ===================== URL CHALLENGE PRE-SELECTION =====================
+  //
+  // ?challenge=2414 selects the matching preset; ?source=pft sets the
+  // flag so saveRun also writes a fitness_test_results row.
+  useEffect(() => {
+    const challengeParam = searchParams.get("challenge");
+    const sourceParam = searchParams.get("source");
+
+    if (challengeParam) {
+      const distanceM = parseInt(challengeParam, 10);
+      if (Number.isFinite(distanceM)) {
+        const match = RUN_CHALLENGES.find((c) => c.distanceM === distanceM);
+        if (match) setSelectedChallenge(match);
+      }
+    }
+
+    if (sourceParam === "pft") {
+      pftSourceRef.current = true;
+    }
+    // Only read on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ===================== TIMER LOGIC =====================
@@ -361,23 +413,55 @@ export default function RunTrackerPage() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Insert the run record into the "runs" table
-      const { error: insertError } = await supabase.from("runs").insert({
-        user_id: user.id,
-        route_data: points,
-        distance_metres: Math.round(computed.distanceMetres),
-        duration_seconds: computed.durationSeconds,
-        avg_pace_seconds_per_km: computed.avgPace,
-        best_pace_seconds_per_km: computed.bestPaceSplit,
-        elevation_gain_metres: computed.elevationGain,
-        splits: computed.splits,
-        started_at: new Date(startTimeRef.current).toISOString(),
-        completed_at: new Date().toISOString(),
-        xp_earned: computed.xpEarned,
-      });
+      // Insert the run record into the "runs" table with the optional
+      // challenge_distance_m column so per-benchmark PRs can be queried
+      // later. We capture the inserted row so fitness_test_results can
+      // reference it via source_run_id.
+      const challengeDistanceM = selectedChallenge.distanceM;
+      const { data: insertedRun, error: insertError } = await supabase
+        .from("runs")
+        .insert({
+          user_id: user.id,
+          route_data: points,
+          distance_metres: Math.round(computed.distanceMetres),
+          duration_seconds: computed.durationSeconds,
+          avg_pace_seconds_per_km: computed.avgPace,
+          best_pace_seconds_per_km: computed.bestPaceSplit,
+          elevation_gain_metres: computed.elevationGain,
+          splits: computed.splits,
+          started_at: new Date(startTimeRef.current).toISOString(),
+          completed_at: new Date().toISOString(),
+          xp_earned: computed.xpEarned,
+          challenge_distance_m: challengeDistanceM,
+        })
+        .select()
+        .single();
 
       if (insertError) {
         console.error("Failed to save run:", insertError);
+      }
+
+      // If this run was started from the PFT hub (?source=pft) and the
+      // selected challenge was the 1.5-mile preset, also write a
+      // fitness_test_results row so the PFT hub sees the result on
+      // the trajectory sparkline. Only counts for the 1500m preset.
+      if (
+        pftSourceRef.current &&
+        challengeDistanceM === 2414 &&
+        insertedRun
+      ) {
+        try {
+          const { recordTestResult } = await import("@/lib/fitness/tests");
+          await recordTestResult({
+            userId: user.id,
+            testType: "run_1500m",
+            value: computed.durationSeconds,
+            unit: "seconds",
+            sourceRunId: (insertedRun as { id: string }).id,
+          });
+        } catch (err) {
+          console.warn("[pft] run_1500m record failed:", err);
+        }
       }
 
       const { awardXPAndNotify } = await import("@/lib/award-and-notify");
@@ -398,12 +482,19 @@ export default function RunTrackerPage() {
         notifyBadgeEarned(badge);
       }
 
-      // Check personal records
+      // Check personal records (pass challenge distance so per-benchmark
+      // total-time PRs like fastest_5km_total / fastest_1mi also fire)
       const { checkRunRecords } = await import("@/lib/records");
       const { notifyPersonalRecord } = await import("@/lib/notifications");
       const elapsedSeconds = computed.durationSeconds;
       const avgP = computed.avgPace;
-      const runPRs = await checkRunRecords(user.id, dist, elapsedSeconds, avgP);
+      const runPRs = await checkRunRecords(
+        user.id,
+        dist,
+        elapsedSeconds,
+        avgP,
+        challengeDistanceM,
+      );
       for (const pr of runPRs) {
         notifyPersonalRecord(pr, "");
       }
@@ -453,6 +544,24 @@ export default function RunTrackerPage() {
   // Average pace for the entire run so far
   const avgPaceLive = calculatePace(currentDistance, elapsed);
 
+  // ===================== CHALLENGE AUTO-STOP =====================
+  //
+  // When a challenge distance is selected and the run is live, stop the
+  // run automatically the moment currentDistance hits the target. The
+  // haptic pulse + complete beep give the runner an unmistakable "done"
+  // signal even through a pocket.
+  useEffect(() => {
+    if (runState !== "running") return;
+    if (!selectedChallenge.distanceM) return;
+    if (currentDistance < selectedChallenge.distanceM) return;
+    // Fire once -- stopRun flips runState away from "running" so the
+    // effect won't re-enter.
+    navigator.vibrate?.([100, 50, 100, 50, 200]);
+    completeBeep();
+    stopRun();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runState, currentDistance, selectedChallenge.distanceM]);
+
   // ===================== RENDER =====================
 
   return (
@@ -501,6 +610,42 @@ export default function RunTrackerPage() {
               </div>
             </Card>
           )}
+
+          {/* Challenge picker -- preset benchmark distances with PR
+              tracking. FREE RUN is the default. Selecting a preset
+              arms auto-stop when the target distance is reached. */}
+          <div>
+            <p className="text-[0.6rem] font-mono uppercase tracking-[0.15em] text-text-secondary mb-2">
+              Challenge
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {RUN_CHALLENGES.map((challenge) => {
+                const active = challenge.id === selectedChallenge.id;
+                return (
+                  <button
+                    key={challenge.id}
+                    type="button"
+                    onClick={() => setSelectedChallenge(challenge)}
+                    className={`
+                      min-h-[44px] px-2 py-2 font-mono text-xs uppercase tracking-wider
+                      transition-colors border
+                      ${active
+                        ? "bg-xp-gold/10 border-xp-gold text-xp-gold"
+                        : "bg-bg-panel border-green-dark text-text-secondary hover:text-sand"}
+                    `}
+                  >
+                    {challenge.label}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedChallenge.distanceM && (
+              <p className="text-[0.6rem] font-mono text-text-secondary mt-2 uppercase tracking-wider">
+                Auto-stop at {selectedChallenge.distanceM} m
+                {pftSourceRef.current ? " · PFT LOG" : ""}
+              </p>
+            )}
+          </div>
 
           {/* Start run button */}
           <Button

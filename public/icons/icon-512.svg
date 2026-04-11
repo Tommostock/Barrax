@@ -1,86 +1,78 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512">
+  <!-- Generator: Adobe Illustrator 30.3.0, SVG Export Plug-In . SVG Version: 2.1.3 Build 182)  -->
   <defs>
-    <!--
-      Metallic gold vertical gradient.
-      Runs from a near-white highlight at the top of each chevron,
-      through bright gold, mid gold, and into a dark gold shadow at
-      the bottom to give the bar a beveled 3D appearance.
-    -->
-    <linearGradient id='goldMetal' x1='0' y1='0' x2='0' y2='1'>
-      <stop offset='0%'  stop-color='#FFF6C4'/>
-      <stop offset='14%' stop-color='#FFE27A'/>
-      <stop offset='38%' stop-color='#FFC733'/>
-      <stop offset='62%' stop-color='#D89B1F'/>
-      <stop offset='85%' stop-color='#9A6B10'/>
-      <stop offset='100%' stop-color='#5C3E06'/>
-    </linearGradient>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient2);
+      }
 
-    <!--
-      Thin diagonal highlight stripe overlay gradient so the top
-      edge of each chevron reads as a specular reflection catching
-      light. Near-transparent at both ends, bright in the middle.
-    -->
-    <linearGradient id='goldSheen' x1='0' y1='0' x2='1' y2='0'>
-      <stop offset='0%'  stop-color='#FFFFFF' stop-opacity='0'/>
-      <stop offset='50%' stop-color='#FFFFFF' stop-opacity='0.9'/>
-      <stop offset='100%' stop-color='#FFFFFF' stop-opacity='0'/>
+      .st1 {
+        fill: #ffe27a;
+        opacity: .4;
+      }
+
+      .st1, .st2 {
+        isolation: isolate;
+      }
+
+      .st3 {
+        fill: url(#linear-gradient1);
+      }
+
+      .st2 {
+        fill: #4a330a;
+        opacity: .8;
+      }
+
+      .st4 {
+        fill: url(#linear-gradient3);
+      }
+
+      .st5 {
+        fill: #0f1b0a;
+      }
+
+      .st6 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="-253.6" y1="767.2" x2="-253.6" y2="766.2" gradientTransform="translate(76351 107551) scale(300 -140)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff6c4"/>
+      <stop offset=".1" stop-color="#ffe27a"/>
+      <stop offset=".4" stop-color="#ffc733"/>
+      <stop offset=".6" stop-color="#d89b1f"/>
+      <stop offset=".8" stop-color="#9a6b10"/>
+      <stop offset="1" stop-color="#5c3e06"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="-254.1" y1="765.9" x2="-253.1" y2="765.9" gradientTransform="translate(76351 73715) scale(300 -96)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="-253.6" y1="767.2" x2="-253.6" y2="766.2" gradientTransform="translate(76351 107641) scale(300 -140)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff6c4"/>
+      <stop offset=".1" stop-color="#ffe27a"/>
+      <stop offset=".4" stop-color="#ffc733"/>
+      <stop offset=".6" stop-color="#d89b1f"/>
+      <stop offset=".8" stop-color="#9a6b10"/>
+      <stop offset="1" stop-color="#5c3e06"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient3" x1="-254.1" y1="765.9" x2="-253.1" y2="765.9" gradientTransform="translate(76351 73805) scale(300 -96)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
     </linearGradient>
   </defs>
-
-  <!-- Dark military green background (matches existing theme) -->
-  <rect width='512' height='512' fill='#0F1B0A'/>
-
-  <g transform='translate(256, 256)'>
-    <!-- TOP CHEVRON STRIPE: metallic gradient fill -->
-    <polygon
-      points='-150,-20 0,-110 150,-20 150,30 0,-60 -150,30'
-      fill='url(#goldMetal)'
-    />
-
-    <!-- Dark bevel along the bottom edge for depth -->
-    <polygon
-      points='-150,30 0,-60 150,30 150,20 0,-70 -150,20'
-      fill='#4A330A'
-      opacity='0.75'
-    />
-
-    <!-- Bright specular highlight stripe along the top edge -->
-    <polygon
-      points='-150,-20 0,-110 150,-20 132,-14 0,-94 -132,-14'
-      fill='url(#goldSheen)'
-    />
-
-    <!-- Fine inner edge on the inside V (inner rim highlight) -->
-    <polygon
-      points='-150,30 0,-60 150,30 144,32 0,-52 -144,32'
-      fill='#FFE27A'
-      opacity='0.4'
-    />
-
-    <!-- BOTTOM CHEVRON STRIPE: same treatment, shifted down -->
-    <polygon
-      points='-150,70 0,-20 150,70 150,120 0,30 -150,120'
-      fill='url(#goldMetal)'
-    />
-
-    <!-- Dark bevel along the bottom edge -->
-    <polygon
-      points='-150,120 0,30 150,120 150,110 0,20 -150,110'
-      fill='#4A330A'
-      opacity='0.75'
-    />
-
-    <!-- Bright specular highlight stripe along the top edge -->
-    <polygon
-      points='-150,70 0,-20 150,70 132,76 0,-4 -132,76'
-      fill='url(#goldSheen)'
-    />
-
-    <!-- Inner rim highlight -->
-    <polygon
-      points='-150,120 0,30 150,120 144,122 0,38 -144,122'
-      fill='#FFE27A'
-      opacity='0.4'
-    />
+  <rect class="st5" width="512" height="512"/>
+  <g>
+    <polygon class="st6" points="106 230 256 140 406 230 406 280 256 190 106 280 106 230"/>
+    <polygon class="st2" points="106 280 256 190 406 280 406 270 256 180 106 270 106 280"/>
+    <polygon class="st3" points="106 230 256 140 406 230 388 236 256 156 124 236 106 230"/>
+    <polygon class="st1" points="106 280 256 190 406 280 400 282 256 198 112 282 106 280"/>
+    <polygon class="st0" points="106 320 256 230 406 320 406 370 256 280 106 370 106 320"/>
+    <polygon class="st2" points="106 370 256 280 406 370 406 360 256 270 106 360 106 370"/>
+    <polygon class="st4" points="106 320 256 230 406 320 388 326 256 246 124 326 106 320"/>
+    <polygon class="st1" points="106 370 256 280 406 370 400 372 256 288 112 372 106 370"/>
   </g>
 </svg>

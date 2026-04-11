@@ -11,6 +11,7 @@ import InstallPrompt from "@/components/layout/InstallPrompt";
 import NotificationPermission from "@/components/layout/NotificationPermission";
 import WeighInReminder from "@/components/layout/WeighInReminder";
 import WeeklySummary from "@/components/layout/WeeklySummary";
+import WeeklyBriefing from "@/components/layout/WeeklyBriefing";
 import AuthGuard from "@/components/layout/AuthGuard";
 import RankUpOverlay from "@/components/ui/RankUpOverlay";
 import ClassifiedOpBriefingOverlay from "@/components/mission/ClassifiedOpBriefingOverlay";
@@ -29,6 +30,7 @@ export default function AppLayout({
       <NotificationPermission />
       <WeighInReminder />
       <WeeklySummary />
+      <WeeklyBriefing />
       <RankUpOverlay />
       <ClassifiedOpBriefingOverlay />
     </AuthGuard>

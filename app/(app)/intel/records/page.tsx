@@ -43,9 +43,15 @@ export default function PersonalRecordsPage() {
   // All possible record categories
   const categories = [
     { key: "most_xp_week", label: "Most XP in a Week", icon: "XP" },
-    { key: "fastest_1km", label: "Fastest 1km", icon: "min/km" },
-    { key: "fastest_5km", label: "Fastest 5km", icon: "min" },
+    { key: "fastest_1km", label: "Fastest 1km", icon: "sec/km" },
+    { key: "fastest_5km", label: "Fastest 5km (Pace)", icon: "sec/km" },
     { key: "longest_run", label: "Longest Run", icon: "km" },
+    // Challenge Run total-time PRs (new, populated by challenge runs)
+    { key: "fastest_1mi", label: "Fastest 1 Mile", icon: "sec" },
+    { key: "fastest_2p4km", label: "Fastest 2.4 km", icon: "sec" },
+    { key: "fastest_1500m", label: "Fastest 1.5 Mile (PFT)", icon: "sec" },
+    { key: "fastest_5km_total", label: "Fastest 5 km (Total)", icon: "sec" },
+    { key: "fastest_10km", label: "Fastest 10 km", icon: "sec" },
     { key: "most_pushups", label: "Most Push-Ups", icon: "reps" },
     { key: "longest_plank", label: "Longest Plank", icon: "sec" },
     { key: "longest_workout", label: "Longest Workout", icon: "min" },
