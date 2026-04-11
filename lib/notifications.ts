@@ -182,3 +182,19 @@ export function notifyWeighIn() {
     "/intel/body"
   );
 }
+
+// Quarterly PFT reminder — fired when any of the three benchmark tests
+// (push-up max, plank hold, 1.5-mile run) is overdue (>=90 days old or
+// never taken). Deduped to once per week client-side.
+export function notifyPFTDue(overdueTestCount: number) {
+  const bodyCopy =
+    overdueTestCount === 1
+      ? "1 benchmark test is overdue. Retest to update your fitness trajectory."
+      : `${overdueTestCount} benchmark tests are overdue. Retest to update your fitness trajectory.`;
+  showNotification(
+    "PHYSICAL ASSESSMENT DUE",
+    bodyCopy,
+    "pft-due",
+    "/intel/fitness-test"
+  );
+}
