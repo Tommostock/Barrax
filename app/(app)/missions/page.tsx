@@ -17,7 +17,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon, Route, Trophy, ArrowLeftRight } from "lucide-react";
+import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon, Route, Trophy, ArrowLeftRight, Target } from "lucide-react";
 import { estimateCaloriesBurned } from "@/lib/calories";
 import type { Workout, WorkoutData, TrainingSchedule } from "@/types";
 
@@ -664,6 +664,21 @@ export default function MissionsPage() {
               <p className="text-xs text-text-secondary">GPS-tracked assault routes. Crush &apos;em.</p>
             </div>
             <Play size={16} className="text-green-primary" />
+          </div>
+        </Card>
+
+        {/* Physical Assessment — moved here from the Debrief (Intel) page
+            so the user's quarterly PFT benchmarks sit alongside their
+            other active mission shortcuts. */}
+        <Card onClick={() => router.push("/intel/fitness-test")} className="press-scale">
+          <div className="flex items-center gap-3">
+            <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
+              <Target size={18} className="text-green-primary" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Physical Assessment</h4>
+              <p className="text-xs text-text-secondary">Quarterly fitness benchmarks (PFT)</p>
+            </div>
           </div>
         </Card>
 
