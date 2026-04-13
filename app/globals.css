@@ -302,6 +302,24 @@ h1, h2, h3, h4, h5, h6 {
   animation: pulse-subtle 3s ease-in-out infinite;
 }
 
+/* --- HQ Supps button attention pulse ---
+   Breathing gold glow around the Supps button when the user hasn't
+   logged their daily stack yet. Pulses the box-shadow only so the
+   icon and label stay at full opacity — "pending objective" vibe,
+   not "broken element" vibe. */
+@keyframes pulse-gold {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(184, 160, 74, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(184, 160, 74, 0);
+  }
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2.2s ease-in-out infinite;
+}
+
 /* --- Barcode scan line animation --- */
 @keyframes scan-line-move {
   0% { top: 0; }

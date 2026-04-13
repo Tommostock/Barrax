@@ -159,21 +159,23 @@ export default function QuickActions() {
           </span>
         </button>
 
-        {/* Daily Supps Stack — red until logged, green with tick once done.
-            State is queried from food_diary on mount so it hydrates
-            correctly after an app reload or a new day rollover. */}
+        {/* Daily Supps Stack — amber/gold with a slow breathing pulse
+            until logged (tactical-display "pending objective" look),
+            green with tick once done. State is hydrated from
+            food_diary on mount so it's correct after reloads and
+            midnight rollovers. */}
         <button
           onClick={handleLogSupps}
           disabled={loggingSupps || suppsLogged === true}
           className={`flex flex-col items-center justify-center gap-1 py-3 min-h-[64px]
                       border transition-all active:scale-[0.97]
-                      disabled:cursor-default
+                      disabled:cursor-default bg-bg-panel
                       ${
                         suppsLogged === true
-                          ? "bg-green-primary/20 border-green-primary"
+                          ? "border-green-primary bg-green-primary/20"
                           : suppsLogged === false
-                          ? "bg-danger/15 border-danger hover:bg-danger/25"
-                          : "bg-bg-panel border-green-dark"
+                          ? "border-xp-gold hover:bg-bg-panel-alt animate-pulse-gold"
+                          : "border-green-dark"
                       }`}
           aria-label={suppsLogged ? "Supps logged" : "Log supps"}
         >
@@ -182,7 +184,7 @@ export default function QuickActions() {
           ) : (
             <FlaskConical
               size={18}
-              className={suppsLogged === false ? "text-danger" : "text-green-primary"}
+              className={suppsLogged === false ? "text-xp-gold" : "text-green-primary"}
             />
           )}
           <span
@@ -190,7 +192,7 @@ export default function QuickActions() {
               suppsLogged === true
                 ? "text-green-light"
                 : suppsLogged === false
-                ? "text-danger"
+                ? "text-xp-gold"
                 : "text-text-secondary"
             }`}
           >
