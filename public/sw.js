@@ -14,8 +14,8 @@
      the network for fresh session state.
    ============================================ */
 
-const STATIC_CACHE = "barrax-static-v5";
-const NAV_CACHE = "barrax-nav-v1";
+const STATIC_CACHE = "barrax-static-v6";
+const NAV_CACHE = "barrax-nav-v2";
 const AUDIO_CACHE = "barrax-audio-v1";
 
 // Install — skip waiting so new SW activates immediately
