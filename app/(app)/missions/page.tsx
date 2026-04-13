@@ -28,6 +28,11 @@ interface ProgrammeDay {
   day: string;
   is_rest_day: boolean;
   workout: { type: string; focus: string; name: string } | null;
+  // Per-programme day-type override. When present, this wins over the
+  // user's recurring training_schedule for THIS week only. Set by the
+  // day-swap API so users can temporarily reshuffle the week without
+  // touching their long-term schedule.
+  schedule_type?: "workout" | "rest" | "run" | "activity";
 }
 
 // Derive a short label and colour from a workout's focus/type field
@@ -255,12 +260,43 @@ export default function MissionsPage() {
     }
   }
 
-  // Which days in the current week are valid swap targets for the
-  // currently-selected workout? Rules:
-  //  - must be a rest day in programme_data
-  //  - must not be a run day or activity day (those aren't "free")
-  //  - must not be in the past — can't bump work into yesterday
+  // Resolve the effective "type" of a given day for THIS week.
+  // The per-programme override takes precedence so that day swaps
+  // stick for the current week without modifying the user's
+  // recurring training_schedule. Falls back to the recurring rule.
+  function getEffectiveDayType(dayName: string): string | undefined {
+    const dayData = programme?.programme_data?.find((d) => d.day === dayName);
+    if (dayData?.schedule_type) return dayData.schedule_type;
+    return trainingSchedule[dayName as keyof TrainingSchedule]?.type;
+  }
+
+  // Summarise what's on a day in one short word for the swap picker
+  // (so the user can tell at a glance what they're swapping into).
+  function describeDay(dayName: string): { label: string; icon: typeof Swords } {
+    const dayData = programme?.programme_data?.find((d) => d.day === dayName);
+    const type = getEffectiveDayType(dayName);
+    const workout = workouts.find((w) => {
+      const wd = new Date(w.scheduled_date);
+      return DAY_NAMES[wd.getDay() === 0 ? 6 : wd.getDay() - 1] === dayName;
+    });
+
+    if (workout?.status === "complete") return { label: "COMPLETE", icon: Check };
+    if (type === "run") return { label: "RUN", icon: Route };
+    if (type === "activity") {
+      const wd = workout?.workout_data as WorkoutData | undefined;
+      return { label: (wd?.name ?? "ACTIVITY").toUpperCase(), icon: Trophy };
+    }
+    if (dayData?.workout && !dayData.is_rest_day) {
+      return { label: getWorkoutLabel(dayData.workout.focus).label, icon: Swords };
+    }
+    return { label: "REST", icon: Moon };
+  }
+
+  // Which days in the current week are valid swap targets? Rules:
   //  - can't target the day you're already on
+  //  - must not be in the past (can't bump work into yesterday)
+  //  - must not have a completed workout (already locked in)
+  // Any day type is fair game — workout, rest, run, or activity.
   function getEligibleSwapDays(): { day: string; label: string; date: Date }[] {
     if (!programme) return [];
     const eligible: { day: string; label: string; date: Date }[] = [];
@@ -269,21 +305,35 @@ export default function MissionsPage() {
       const dayName = DAY_NAMES[i];
       if (dayName === selectedDay) continue;
 
-      const dayData = programme.programme_data?.find((d) => d.day === dayName);
-      if (!dayData || !dayData.is_rest_day) continue;
-
-      // Rule out run/activity days disguised as rest days in programme_data
-      const rule = trainingSchedule[dayName as keyof TrainingSchedule];
-      if (rule && rule.type !== "rest") continue;
-
       const dayDate = new Date(weekStart);
       dayDate.setDate(weekStart.getDate() + i);
       if (dayDate < todayDate) continue;
+
+      // Skip days whose workout is already ticked off — moving a
+      // completed mission would be confusing.
+      const workout = workouts.find((w) => {
+        const wd = new Date(w.scheduled_date);
+        return DAY_NAMES[wd.getDay() === 0 ? 6 : wd.getDay() - 1] === dayName;
+      });
+      if (workout?.status === "complete") continue;
 
       eligible.push({ day: dayName, label: DAY_LABELS[i], date: dayDate });
     }
 
     return eligible;
+  }
+
+  // Is the currently-selected day swappable at all?
+  //  - must not be in the past
+  //  - must not already be complete
+  //  - there must be at least one valid target day
+  function canSwapSelectedDay(): boolean {
+    const selectedIdx = DAY_NAMES.indexOf(selectedDay);
+    const selectedDate = new Date(weekStart);
+    selectedDate.setDate(weekStart.getDate() + selectedIdx);
+    if (selectedDate < todayDate) return false;
+    if (selectedWorkout?.status === "complete") return false;
+    return getEligibleSwapDays().length > 0;
   }
 
   // Get the programme data and workout for the selected day
@@ -351,13 +401,14 @@ export default function MissionsPage() {
                   </p>
                   <div className="w-6 h-6 mx-auto mt-1 flex items-center justify-center">
                     {(() => {
-                      // Use the training schedule to pick the right icon
-                      const scheduleRule = trainingSchedule[dayName as keyof TrainingSchedule];
+                      // Effective type honours per-week swap overrides
+                      // before falling back to the recurring schedule.
+                      const effectiveType = getEffectiveDayType(dayName);
                       const activeColor = isSelected || isToday ? "text-green-primary" : "text-text-secondary";
 
                       if (isComplete) return <Check size={14} className="text-xp-gold" />;
-                      if (scheduleRule?.type === "run") return <Route size={12} className={activeColor} />;
-                      if (scheduleRule?.type === "activity") return <Trophy size={12} className={isSelected || isToday ? "text-khaki" : "text-text-secondary"} />;
+                      if (effectiveType === "run") return <Route size={12} className={activeColor} />;
+                      if (effectiveType === "activity") return <Trophy size={12} className={isSelected || isToday ? "text-khaki" : "text-text-secondary"} />;
                       if (isRest) return <Moon size={11} className="text-text-secondary" />;
                       return <Swords size={12} className={activeColor} />;
                     })()}
@@ -435,10 +486,11 @@ export default function MissionsPage() {
           {selectedDayData.is_rest_day && !selectedWorkout ? (
             /* Rest day or run day (no workout row) */
             (() => {
-              const scheduleRule = trainingSchedule[selectedDay as keyof TrainingSchedule];
+              // Use the effective type so per-week swap overrides win
+              const effectiveType = getEffectiveDayType(selectedDay);
 
               // Run day — prompt to go to the run tracker
-              if (scheduleRule?.type === "run") {
+              if (effectiveType === "run") {
                 return (
                   <Card tag="COMBAT RUN" tagVariant="active">
                     <div className="text-center py-6">
@@ -565,26 +617,6 @@ export default function MissionsPage() {
                         </span>
                       </button>
                     )}
-
-                    {/* SWAP DAY — only shown when the user can realistically
-                        bump this workout: it's not complete, not an activity,
-                        and there's at least one free rest day to move it to. */}
-                    {!isComplete && !wd.is_activity && getEligibleSwapDays().length > 0 && (
-                      <button
-                        className="mt-2 w-full py-2 border border-green-dark bg-bg-panel-alt
-                                   text-green-light font-heading text-[0.7rem] uppercase
-                                   tracking-widest hover:bg-bg-panel active:scale-[0.98]
-                                   transition-all min-h-[44px]"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSwapSheetOpen(true);
-                        }}
-                      >
-                        <span className="flex items-center justify-center gap-2">
-                          <ArrowLeftRight size={12} /> SWAP DAY
-                        </span>
-                      </button>
-                    )}
                   </div>
                 );
               })()}
@@ -599,6 +631,23 @@ export default function MissionsPage() {
                 </p>
               </div>
             </Card>
+          )}
+
+          {/* SWAP DAY — one unified button that works for any day type
+              (workout, rest, run, or activity). Hidden on past and
+              completed days, or when there's nowhere to swap to. */}
+          {canSwapSelectedDay() && (
+            <button
+              className="w-full py-2 border border-green-dark bg-bg-panel-alt
+                         text-green-light font-heading text-[0.7rem] uppercase
+                         tracking-widest hover:bg-bg-panel active:scale-[0.98]
+                         transition-all min-h-[44px]"
+              onClick={() => setSwapSheetOpen(true)}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <ArrowLeftRight size={12} /> SWAP DAY
+              </span>
+            </button>
           )}
         </div>
       )}
@@ -638,18 +687,19 @@ export default function MissionsPage() {
         </button>
       </div>
 
-      {/* Swap-day picker — appears when the user taps SWAP DAY on a
-          pending workout card. Lists the week's free rest days as a
-          list of buttons; tapping one bumps the workout across. */}
+      {/* Swap-day picker — lists every non-past, non-completed day in
+          the week so the user can swap the currently selected day with
+          any other. Workout, rest, run and activity days are all fair
+          game; contents (and any matching workout rows) swap both ways. */}
       <BottomSheet
         isOpen={swapSheetOpen}
         onClose={() => !swapping && setSwapSheetOpen(false)}
-        title="SWAP TO REST DAY"
+        title="SWAP DAY"
       >
         <p className="text-xs text-text-secondary mb-4">
-          Can&apos;t train on {DAY_LABELS[DAY_NAMES.indexOf(selectedDay)]}? Pick a free rest day
-          to move this mission to. Your recurring schedule stays the same — only this week
-          is affected.
+          Pick a day to swap with {DAY_LABELS[DAY_NAMES.indexOf(selectedDay)]}. Whatever&apos;s
+          on each day will swap places — your recurring schedule stays the same, only
+          this week is affected.
         </p>
 
         <div className="space-y-2">
@@ -658,6 +708,7 @@ export default function MissionsPage() {
               day: "numeric",
               month: "short",
             });
+            const { label: contentLabel, icon: DayIcon } = describeDay(day);
             return (
               <button
                 key={day}
@@ -669,17 +720,20 @@ export default function MissionsPage() {
                            active:scale-[0.98] transition-all
                            min-h-[56px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span className="flex items-center gap-3">
-                  <Moon size={14} className="text-text-secondary" />
+                <span className="flex items-center gap-3 min-w-0">
+                  <DayIcon size={14} className="text-green-light shrink-0" />
                   <span className="text-sm font-heading uppercase tracking-wider text-sand">
                     {label}
                   </span>
-                  <span className="text-[0.65rem] font-mono text-text-secondary">
+                  <span className="text-[0.6rem] font-mono text-text-secondary shrink-0">
                     {dateLabel}
                   </span>
+                  <span className="text-[0.65rem] font-mono text-text-secondary truncate">
+                    — {contentLabel}
+                  </span>
                 </span>
-                <span className="text-[0.65rem] font-mono text-green-light uppercase tracking-wider">
-                  {swapping ? "MOVING..." : "BUMP HERE"}
+                <span className="text-[0.65rem] font-mono text-green-light uppercase tracking-wider shrink-0 ml-2">
+                  {swapping ? "SWAPPING..." : "SWAP"}
                 </span>
               </button>
             );
@@ -687,7 +741,7 @@ export default function MissionsPage() {
 
           {getEligibleSwapDays().length === 0 && (
             <p className="text-xs text-text-secondary text-center py-4">
-              No free rest days left this week. Keep pushing, soldier.
+              No other days available to swap with this week.
             </p>
           )}
         </div>
