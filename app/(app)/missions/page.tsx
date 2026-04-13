@@ -15,8 +15,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import BottomSheet from "@/components/ui/BottomSheet";
 import { SkeletonCard } from "@/components/ui/Skeleton";
-import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon, Route, Trophy } from "lucide-react";
+import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon, Route, Trophy, ArrowLeftRight } from "lucide-react";
 import { estimateCaloriesBurned } from "@/lib/calories";
 import type { Workout, WorkoutData, TrainingSchedule } from "@/types";
 
@@ -61,6 +62,14 @@ export default function MissionsPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completingActivity, setCompletingActivity] = useState(false);
+
+  // --- Swap-day state ---
+  // When the user can't do a workout on its scheduled day (e.g. work),
+  // they can bump it to another rest day later in the week. The bottom
+  // sheet lists the eligible target days, and `swapping` disables the
+  // UI while the API call is in flight.
+  const [swapSheetOpen, setSwapSheetOpen] = useState(false);
+  const [swapping, setSwapping] = useState(false);
 
   // --- Swipe detection for day navigation ---
   const touchStartX = useRef<number>(0);
@@ -212,6 +221,70 @@ export default function MissionsPage() {
   const daysFromMonday = todayDOW === 0 ? 6 : todayDOW - 1;
   const weekStart = new Date(todayDate);
   weekStart.setDate(todayDate.getDate() - daysFromMonday);
+
+  // Move the currently selected workout from its day onto a rest day.
+  // The API handles the actual swap on programme_data + workouts table.
+  async function swapWorkoutDay(targetDay: string) {
+    if (!programme) return;
+    setSwapping(true);
+    try {
+      const response = await fetch("/api/swap-workout-day", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          programmeId: programme.id,
+          fromDay: selectedDay,
+          toDay: targetDay,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "Failed to swap day");
+      }
+
+      // Close the sheet, follow the workout to its new day,
+      // and refresh so the calendar reflects the change.
+      setSwapSheetOpen(false);
+      setSelectedDay(targetDay);
+      await loadProgramme();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to swap day");
+    } finally {
+      setSwapping(false);
+    }
+  }
+
+  // Which days in the current week are valid swap targets for the
+  // currently-selected workout? Rules:
+  //  - must be a rest day in programme_data
+  //  - must not be a run day or activity day (those aren't "free")
+  //  - must not be in the past — can't bump work into yesterday
+  //  - can't target the day you're already on
+  function getEligibleSwapDays(): { day: string; label: string; date: Date }[] {
+    if (!programme) return [];
+    const eligible: { day: string; label: string; date: Date }[] = [];
+
+    for (let i = 0; i < DAY_NAMES.length; i++) {
+      const dayName = DAY_NAMES[i];
+      if (dayName === selectedDay) continue;
+
+      const dayData = programme.programme_data?.find((d) => d.day === dayName);
+      if (!dayData || !dayData.is_rest_day) continue;
+
+      // Rule out run/activity days disguised as rest days in programme_data
+      const rule = trainingSchedule[dayName as keyof TrainingSchedule];
+      if (rule && rule.type !== "rest") continue;
+
+      const dayDate = new Date(weekStart);
+      dayDate.setDate(weekStart.getDate() + i);
+      if (dayDate < todayDate) continue;
+
+      eligible.push({ day: dayName, label: DAY_LABELS[i], date: dayDate });
+    }
+
+    return eligible;
+  }
 
   // Get the programme data and workout for the selected day
   const selectedDayData = programme?.programme_data?.find((d) => d.day === selectedDay);
@@ -492,6 +565,26 @@ export default function MissionsPage() {
                         </span>
                       </button>
                     )}
+
+                    {/* SWAP DAY — only shown when the user can realistically
+                        bump this workout: it's not complete, not an activity,
+                        and there's at least one free rest day to move it to. */}
+                    {!isComplete && !wd.is_activity && getEligibleSwapDays().length > 0 && (
+                      <button
+                        className="mt-2 w-full py-2 border border-green-dark bg-bg-panel-alt
+                                   text-green-light font-heading text-[0.7rem] uppercase
+                                   tracking-widest hover:bg-bg-panel active:scale-[0.98]
+                                   transition-all min-h-[44px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSwapSheetOpen(true);
+                        }}
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <ArrowLeftRight size={12} /> SWAP DAY
+                        </span>
+                      </button>
+                    )}
                   </div>
                 );
               })()}
@@ -544,6 +637,61 @@ export default function MissionsPage() {
           BROWSE EXERCISE LIBRARY →
         </button>
       </div>
+
+      {/* Swap-day picker — appears when the user taps SWAP DAY on a
+          pending workout card. Lists the week's free rest days as a
+          list of buttons; tapping one bumps the workout across. */}
+      <BottomSheet
+        isOpen={swapSheetOpen}
+        onClose={() => !swapping && setSwapSheetOpen(false)}
+        title="SWAP TO REST DAY"
+      >
+        <p className="text-xs text-text-secondary mb-4">
+          Can&apos;t train on {DAY_LABELS[DAY_NAMES.indexOf(selectedDay)]}? Pick a free rest day
+          to move this mission to. Your recurring schedule stays the same — only this week
+          is affected.
+        </p>
+
+        <div className="space-y-2">
+          {getEligibleSwapDays().map(({ day, label, date }) => {
+            const dateLabel = date.toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+            });
+            return (
+              <button
+                key={day}
+                disabled={swapping}
+                onClick={() => swapWorkoutDay(day)}
+                className="w-full flex items-center justify-between p-3
+                           border border-green-dark bg-bg-panel-alt
+                           hover:bg-bg-panel hover:border-green-primary
+                           active:scale-[0.98] transition-all
+                           min-h-[56px] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="flex items-center gap-3">
+                  <Moon size={14} className="text-text-secondary" />
+                  <span className="text-sm font-heading uppercase tracking-wider text-sand">
+                    {label}
+                  </span>
+                  <span className="text-[0.65rem] font-mono text-text-secondary">
+                    {dateLabel}
+                  </span>
+                </span>
+                <span className="text-[0.65rem] font-mono text-green-light uppercase tracking-wider">
+                  {swapping ? "MOVING..." : "BUMP HERE"}
+                </span>
+              </button>
+            );
+          })}
+
+          {getEligibleSwapDays().length === 0 && (
+            <p className="text-xs text-text-secondary text-center py-4">
+              No free rest days left this week. Keep pushing, soldier.
+            </p>
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 }
