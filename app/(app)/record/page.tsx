@@ -13,7 +13,59 @@ import ProgressBar from "@/components/ui/ProgressBar";
 import RankInsignia from "@/components/rank/RankInsignia";
 import { RANK_THRESHOLDS } from "@/types";
 import { BADGE_DEFINITIONS } from "@/lib/badges";
-import { Award, Calendar } from "lucide-react";
+import { Award, Calendar, Trophy } from "lucide-react";
+import type { PersonalRecord } from "@/types";
+
+// Elite Achievement categories — mirrors the former /intel/records
+// page. Each key matches a `category` value written into the
+// personal_records table by lib/records.ts, so adding a new PR
+// type means updating both sides.
+const PR_CATEGORIES: { key: string; label: string; unit: string }[] = [
+  { key: "most_xp_week",      label: "Most XP / Week",     unit: "XP" },
+  { key: "fastest_1km",       label: "Fastest 1 km",       unit: "sec/km" },
+  { key: "fastest_5km",       label: "Fastest 5 km (Pace)", unit: "sec/km" },
+  { key: "longest_run",       label: "Longest Run",        unit: "km" },
+  { key: "fastest_1mi",       label: "Fastest 1 Mile",     unit: "sec" },
+  { key: "fastest_2p4km",     label: "Fastest 2.4 km",     unit: "sec" },
+  { key: "fastest_1500m",     label: "Fastest 1.5 Mile (PFT)", unit: "sec" },
+  { key: "fastest_5km_total", label: "Fastest 5 km",       unit: "sec" },
+  { key: "fastest_10km",      label: "Fastest 10 km",      unit: "sec" },
+  { key: "most_pushups",      label: "Most Push-Ups",      unit: "reps" },
+  { key: "longest_plank",     label: "Longest Plank",      unit: "sec" },
+  { key: "longest_workout",   label: "Longest Workout",    unit: "min" },
+];
+
+// Format a PR value for the compact grid cell. We intentionally
+// keep this short — the badge-grid card is narrow, so "4:32" beats
+// "272 sec" for run times.
+function formatPRValue(category: string, value: number): string {
+  // Times stored in seconds render as m:ss (drop hours — nothing
+  // here should exceed an hour). Other units render as-is.
+  const isSeconds =
+    category === "fastest_1km" ||
+    category === "fastest_5km" ||
+    category === "fastest_1mi" ||
+    category === "fastest_2p4km" ||
+    category === "fastest_1500m" ||
+    category === "fastest_5km_total" ||
+    category === "fastest_10km" ||
+    category === "longest_plank";
+
+  if (isSeconds) {
+    const mins = Math.floor(value / 60);
+    const secs = Math.round(value % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  }
+
+  // Longest run is stored in km as a decimal — show one decimal
+  if (category === "longest_run") return `${value.toFixed(1)} km`;
+
+  // Workouts are stored in minutes — integer
+  if (category === "longest_workout") return `${Math.round(value)} min`;
+
+  // Reps / XP — integer with thousands separator
+  return Math.round(value).toLocaleString();
+}
 
 const RANK_STYLES: Record<number, { bg: string; border: string }> = {
   1:  { bg: "from-[#1A1A1A] to-[#252525]", border: "border-[#3A3A3A]" },
@@ -35,6 +87,7 @@ export default function RecordPage() {
   const [profile, setProfile] = useState<{ name?: string; created_at?: string } | null>(null);
   const [rank, setRank] = useState<{ current_rank: number; total_xp: number; rank_history: { rank: number; title: string; achieved_at: string }[] } | null>(null);
   const [earnedBadges, setEarnedBadges] = useState<{ badge_key: string; earned_at: string }[]>([]);
+  const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([]);
   const [workoutCount, setWorkoutCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -43,16 +96,18 @@ export default function RecordPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const [pResult, rResult, bResult, wResult] = await Promise.all([
+      const [pResult, rResult, bResult, wResult, prResult] = await Promise.all([
         supabase.from("profiles").select("name, created_at").eq("id", user.id).single(),
         supabase.from("ranks").select("current_rank, total_xp, rank_history").eq("user_id", user.id).single(),
         supabase.from("badges").select("badge_key, earned_at").eq("user_id", user.id),
         supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "complete"),
+        supabase.from("personal_records").select("*").eq("user_id", user.id).order("achieved_at", { ascending: false }),
       ]);
 
       if (pResult.data) setProfile(pResult.data);
       if (rResult.data) setRank(rResult.data as typeof rank);
       if (bResult.data) setEarnedBadges(bResult.data);
+      if (prResult.data) setPersonalRecords(prResult.data as PersonalRecord[]);
       setWorkoutCount(wResult.count ?? 0);
       setLoading(false);
     }
@@ -167,6 +222,43 @@ export default function RecordPage() {
                 {earned && earnedData && (
                   <p className="text-[0.45rem] font-mono text-xp-gold mt-1">
                     {new Date(earnedData.earned_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Elite Achievements — personal records grid. Moved here from
+          the Intel (Debrief) page so service record, badges and PRs
+          all live in one place. Card styling deliberately mirrors
+          the Badges grid above for visual consistency: same border
+          colour rules, same opacity for unearned slots, same font
+          sizing for name / detail / date. */}
+      <div>
+        <h3 className="text-sm font-heading uppercase tracking-wider text-text-secondary mb-2">
+          Elite Achievements ({personalRecords.filter(r => PR_CATEGORIES.some(c => c.key === r.category)).length}/{PR_CATEGORIES.length})
+        </h3>
+        <div className="grid grid-cols-3 gap-2">
+          {PR_CATEGORIES.map((cat) => {
+            const record = personalRecords.find((r) => r.category === cat.key);
+            const earned = !!record;
+            return (
+              <div
+                key={cat.key}
+                className={`bg-bg-panel border p-3 text-center ${earned ? "border-xp-gold" : "border-green-dark opacity-40"}`}
+              >
+                <Trophy size={20} className={`mx-auto mb-1 ${earned ? "text-xp-gold" : "text-text-secondary"}`} />
+                <p className={`text-[0.6rem] font-heading uppercase tracking-wider ${earned ? "text-sand" : "text-text-secondary"}`}>
+                  {cat.label}
+                </p>
+                <p className={`text-[0.55rem] font-mono mt-0.5 ${earned ? "text-xp-gold" : "text-text-secondary"}`}>
+                  {earned ? formatPRValue(cat.key, Number(record!.value)) : "No record"}
+                </p>
+                {earned && record && (
+                  <p className="text-[0.45rem] font-mono text-xp-gold mt-1">
+                    {new Date(record.achieved_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                   </p>
                 )}
               </div>

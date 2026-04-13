@@ -122,7 +122,9 @@ export function notifyPersonalRecord(category: string, value: string) {
     "NEW PERSONAL RECORD",
     `${category}: ${value}. Your best just got better.`,
     "personal-record",
-    "/intel/records"
+    // Deep-link to the Reports (Service Record) page where Elite
+    // Achievements now live, beneath Badges & Achievements.
+    "/record"
   );
 }
 
