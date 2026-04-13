@@ -57,8 +57,17 @@ export default function RationsPage() {
   const [expandedDay, setExpandedDay] = useState<string | null>(todayName);
   const [expandedMeal, setExpandedMeal] = useState<string | null>(null);
   const [savedMeals, setSavedMeals] = useState<Set<string>>(new Set());
+  // Consumed-meal state. Keyed by `${dayName}-${meal_type}` so each
+  // slot in the weekly plan has its own tick. Persisted to
+  // localStorage under the plan id so ticks survive tab switches and
+  // app restarts, and reset automatically when a new plan is built.
   const [eatenMeals, setEatenMeals] = useState<Set<string>>(new Set());
   const [swapping, setSwapping] = useState<string | null>(null);
+
+  // localStorage key for the current plan's consumed-meal set.
+  // Returns null until the plan has loaded — the persistence effect
+  // below is a no-op in that case.
+  const eatenStorageKey = plan ? `barrax-eaten-meals-${plan.id}` : null;
 
   // Food diary state (today's entries)
   const [diaryEntries, setDiaryEntries] = useState<FoodDiaryEntry[]>([]);
@@ -110,6 +119,41 @@ export default function RationsPage() {
   }, [supabase, todayName]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // --- Persisted consumed-meal state ---
+  // When a new plan loads (or on first mount), hydrate the tick set
+  // from localStorage. Keyed by plan id so generating a new plan
+  // starts with a clean slate and a full plan's worth of ticks don't
+  // leak across weeks.
+  useEffect(() => {
+    if (!eatenStorageKey) return;
+    try {
+      const raw = localStorage.getItem(eatenStorageKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setEatenMeals(new Set(parsed));
+        else setEatenMeals(new Set());
+      } else {
+        setEatenMeals(new Set());
+      }
+    } catch {
+      setEatenMeals(new Set());
+    }
+  }, [eatenStorageKey]);
+
+  // Mirror every change back into localStorage so ticks survive tab
+  // switches, hard reloads, and offline-kill-and-reopen.
+  useEffect(() => {
+    if (!eatenStorageKey) return;
+    try {
+      localStorage.setItem(
+        eatenStorageKey,
+        JSON.stringify(Array.from(eatenMeals)),
+      );
+    } catch {
+      // Storage quota or privacy mode — silently ignore
+    }
+  }, [eatenStorageKey, eatenMeals]);
 
   // Macro targets derived from the user's calorie target + their
   // chosen split. Defaults to balanced 30/40/30 until the profile loads.
@@ -513,6 +557,7 @@ export default function RationsPage() {
                   const mealKey = `${dayName}-${meal.meal_type}`;
                   const isMealExpanded = expandedMeal === mealKey;
                   const isSaved = savedMeals.has(meal.name);
+                  const isEaten = eatenMeals.has(mealKey);
 
                   return (
                     <div key={meal.meal_type} className="bg-bg-panel border border-green-dark/50">
@@ -521,10 +566,21 @@ export default function RationsPage() {
                           <div>
                             <span className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-wider">{meal.meal_type}</span>
                             {meal.is_maybe_food && <Tag variant="gold" className="ml-2">TRY SOMETHING NEW</Tag>}
-                            <p className="text-sm text-text-primary mt-0.5">{meal.name}</p>
+                            {/* Strike-through + dimmer colour once the meal
+                                has been marked as consumed, so the user gets
+                                an immediate "done" visual on the whole row. */}
+                            <p
+                              className={`text-sm mt-0.5 transition-colors ${
+                                isEaten
+                                  ? "text-text-secondary line-through decoration-green-light/70"
+                                  : "text-text-primary"
+                              }`}
+                            >
+                              {meal.name}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2 text-[0.6rem] font-mono text-text-secondary">
-                            {eatenMeals.has(mealKey) && <Check size={12} className="text-green-light" />}
+                            {isEaten && <Check size={12} className="text-green-light" />}
                             <span className="flex items-center gap-0.5"><Flame size={10} /> {meal.calories}</span>
                             <span className="flex items-center gap-0.5"><Clock size={10} /> {meal.prep_time_minutes}m</span>
                           </div>

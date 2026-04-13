@@ -96,6 +96,69 @@ interface GenerateMealsRequest {
 }
 
 const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const MEAL_TYPES_REQUIRED = ["breakfast", "lunch", "dinner", "snack"] as const;
+
+// Shape of one day in the AI response / existing plan. Loose so we
+// can pass it around during normalisation without tripping TS.
+type RawMeal = {
+  meal_type: string;
+  name: string;
+  description?: string;
+  ingredients: { name: string; quantity: string; checked?: boolean }[];
+  method: string[];
+  prep_time_minutes: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  is_maybe_food: boolean;
+};
+type RawDay = { day: string; meals: RawMeal[] };
+
+// Placeholder meal used only when the AI skipped a meal_type for a
+// day AND we have no existing day to fall back to. Deliberately
+// bland so the user can see it needs attention.
+function placeholderMeal(meal_type: string): RawMeal {
+  const label = meal_type.charAt(0).toUpperCase() + meal_type.slice(1);
+  return {
+    meal_type,
+    name: `${label} — tap REBUILD to try again`,
+    description: "The AI didn't return a meal for this slot. Tap REBUILD at the top of the page to regenerate.",
+    ingredients: [],
+    method: [],
+    prep_time_minutes: 0,
+    calories: 0,
+    protein_g: 0,
+    carbs_g: 0,
+    fat_g: 0,
+    is_maybe_food: false,
+  };
+}
+
+// Ensure a day has exactly the four required meal types. Pads any
+// missing ones from the existing plan (if we have one) or with a
+// placeholder. Drops unexpected meal types.
+function normaliseDayMeals(day: RawDay, fallbackDay?: RawDay): RawDay {
+  const mealsByType = new Map<string, RawMeal>();
+  for (const meal of day.meals ?? []) {
+    const type = String(meal?.meal_type ?? "").toLowerCase().trim();
+    if ((MEAL_TYPES_REQUIRED as readonly string[]).includes(type)) {
+      mealsByType.set(type, { ...meal, meal_type: type });
+    }
+  }
+
+  const fallbackByType = new Map<string, RawMeal>();
+  for (const meal of fallbackDay?.meals ?? []) {
+    const type = String(meal?.meal_type ?? "").toLowerCase().trim();
+    fallbackByType.set(type, { ...meal, meal_type: type });
+  }
+
+  const filled: RawMeal[] = MEAL_TYPES_REQUIRED.map(
+    (type) => mealsByType.get(type) ?? fallbackByType.get(type) ?? placeholderMeal(type),
+  );
+
+  return { day: day.day, meals: filled };
+}
 
 export async function POST(request: Request) {
   try {
@@ -170,11 +233,66 @@ Remember: keep it simple. British comfort food. Nothing fancy.`;
       userPrompt,
     });
 
-    // Validate response — must match the number of days we asked for
-    if (!mealPlan.days || mealPlan.days.length !== daysToGenerate.length) {
-      throw new Error(
-        `Meal plan must have exactly ${daysToGenerate.length} day${daysToGenerate.length === 1 ? "" : "s"}`
-      );
+    // Normalise the AI response. Gemini is inconsistent about day
+    // counts and ordering, so instead of throwing when the shape
+    // doesn't match we build the final day list ourselves:
+    //
+    //   1. Index whatever the AI returned by lowercased day name.
+    //   2. For each day we ASKED for, prefer the AI's version,
+    //      then fall back to the existing plan for partial rebuilds,
+    //      then fall back to a placeholder so the UI never 500s.
+    //   3. Ensure every day has exactly breakfast/lunch/dinner/snack,
+    //      padding any missing meal types from the existing plan.
+    //
+    // This makes the endpoint resilient to the "Meal plan must have
+    // exactly N days" error that used to surface whenever the AI
+    // returned 6 or 8 days instead of 7.
+    const aiDaysByName = new Map<string, RawDay>();
+    for (const d of (mealPlan.days ?? [])) {
+      const key = String(d?.day ?? "").toLowerCase().trim();
+      if (DAY_ORDER.includes(key)) {
+        aiDaysByName.set(key, { day: key, meals: d.meals ?? [] });
+      }
+    }
+
+    const existingByName = new Map<string, RawDay>();
+    if (isPartial && body.existingPlanData) {
+      for (const d of body.existingPlanData) {
+        const key = String(d?.day ?? "").toLowerCase().trim();
+        existingByName.set(key, { day: key, meals: (d.meals ?? []) as RawMeal[] });
+      }
+    }
+
+    const normalisedDays: RawDay[] = daysToGenerate.map((dayName) => {
+      const aiDay = aiDaysByName.get(dayName);
+      const existingDay = existingByName.get(dayName);
+
+      if (aiDay && (aiDay.meals?.length ?? 0) > 0) {
+        // AI gave us something for this day — normalise its meal count
+        // and pad any missing slots from the existing plan.
+        return normaliseDayMeals(aiDay, existingDay);
+      }
+
+      if (existingDay && (existingDay.meals?.length ?? 0) > 0) {
+        // AI skipped this day but we're doing a partial rebuild and
+        // already have a version of it — keep that one untouched.
+        return normaliseDayMeals(existingDay);
+      }
+
+      // Neither AI nor existing — emit a placeholder day so the
+      // plan structure stays intact. The user will see tap-to-retry
+      // prompts and can hit REBUILD again.
+      return normaliseDayMeals({ day: dayName, meals: [] });
+    });
+
+    // Last-ditch sanity check: we must have AT LEAST one real meal
+    // in the final result, otherwise something went catastrophically
+    // wrong and the user should see an actionable error.
+    const hasAnyRealMeal = normalisedDays.some((d) =>
+      d.meals.some((m) => m.name && !m.name.includes("tap REBUILD")),
+    );
+    if (!hasAnyRealMeal) {
+      throw new Error("The AI didn't return any usable meals. Please try again.");
     }
 
     // Calculate week start (Monday)
@@ -191,12 +309,12 @@ Remember: keep it simple. British comfort food. Nothing fancy.`;
       checked: false,
     }));
 
-    const newDays = mealPlan.days.map((day) => ({
+    const newDays = normalisedDays.map((day) => ({
       ...day,
       day: day.day.toLowerCase(), // normalise so merge lookups work
       meals: day.meals.map((meal) => ({
         ...meal,
-        ingredients: meal.ingredients.map((ing) => ({ ...ing, checked: false })),
+        ingredients: (meal.ingredients ?? []).map((ing) => ({ ...ing, checked: false })),
       })),
     }));
 
