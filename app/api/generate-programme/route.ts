@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { callGemini } from "@/lib/gemini";
 import { createClient } from "@/lib/supabase/server";
+import { pickWorkoutOperationName } from "@/lib/missions/codenames";
 import type { TrainingSchedule, ScheduleDay } from "@/types";
 
 const SYSTEM_PROMPT = `You are a military fitness instructor creating a weekly bodyweight training programme. No gym equipment.
@@ -284,6 +285,20 @@ IMPORTANT: Return exactly 7 days in the "days" array (monday through sunday). Th
         day.is_rest_day = true;
         day.workout = null;
       }
+    }
+
+    // Override the AI-generated workout names with UK-conflict-themed
+    // codenames. Gemini tends to fall back on the same few words
+    // (Thunder, Storm, Iron…) so we replace its output with a single-word
+    // codename drawn from real UK military ops — past, present, and
+    // future-sounding. We track names already used in this programme to
+    // avoid duplicates across the week.
+    const usedCodenames: string[] = [];
+    for (const day of days) {
+      if (day.is_rest_day || !day.workout) continue;
+      const newName = pickWorkoutOperationName(usedCodenames);
+      day.workout.name = newName;
+      usedCodenames.push(newName);
     }
 
     // Calculate the week start date (Monday of this week)

@@ -44,7 +44,10 @@ function getWorkoutLabel(focus: string): { label: string; color: string } {
     return { label: "CARDIO", color: "text-danger" };
   if (f.includes("pull") || f.includes("back"))
     return { label: "PULL", color: "text-green-light" };
-  return { label: focus.slice(0, 5).toUpperCase(), color: "text-text-secondary" };
+  // "General fitness" / mixed / unmatched focus → "ALL"
+  if (f.includes("general") || f.includes("mixed") || f.includes("all"))
+    return { label: "ALL", color: "text-sand" };
+  return { label: "ALL", color: "text-text-secondary" };
 }
 
 export default function MissionsPage() {

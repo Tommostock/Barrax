@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { callGemini } from "@/lib/gemini";
 import { createClient } from "@/lib/supabase/server";
+import { pickWorkoutOperationName } from "@/lib/missions/codenames";
 
 // System prompt: Gemini acts as a military fitness instructor
 const SYSTEM_PROMPT = `You are a military fitness instructor. Generate bodyweight workout programmes that require ZERO gym equipment. All exercises must be doable in a garden, park, or indoors at home.
@@ -109,6 +110,11 @@ Make the workout fit within ${body.availableMinutes} minutes including warmup an
     if (!workout.name || !workout.exercises || workout.exercises.length === 0) {
       throw new Error("Invalid workout structure from AI");
     }
+
+    // Override the AI-generated name with a UK-conflict-themed
+    // codename so we get real variety (Granby, Telic, Herrick…)
+    // rather than Gemini's usual Thunder/Storm output.
+    workout.name = pickWorkoutOperationName();
 
     // Ensure XP value is set correctly based on duration
     if (workout.duration_minutes < 15) {
