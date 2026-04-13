@@ -189,7 +189,7 @@ export interface RunSplit {
 }
 
 // --- Nutrition ---
-export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack" | "supplement";
 
 export interface MealPlan {
   id: string;

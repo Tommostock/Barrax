@@ -42,7 +42,7 @@ const DAY_LABELS: Record<string, string> = {
   thursday: "Thursday", friday: "Friday", saturday: "Saturday", sunday: "Sunday",
 };
 const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
-const MEAL_LABELS: Record<string, string> = { breakfast: "BREAKFAST", lunch: "LUNCH", dinner: "DINNER", snack: "SNACK" };
+const MEAL_LABELS: Record<string, string> = { breakfast: "BREAKFAST", lunch: "LUNCH", dinner: "DINNER", snack: "SNACK", supplement: "SUPPLEMENT" };
 
 export default function RationsPage() {
   const router = useRouter();
@@ -188,6 +188,11 @@ export default function RationsPage() {
     }
     if (data) setDiaryEntries(prev => [...prev, data as FoodDiaryEntry]);
     navigator.vibrate?.(50);
+
+    // Fire-and-forget daily protein-target check — idempotent.
+    import("@/lib/protein-xp")
+      .then(({ awardProteinTargetIfHit }) => awardProteinTargetIfHit())
+      .catch(() => {});
   }
 
   // Delete diary entry

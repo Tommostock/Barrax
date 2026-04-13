@@ -13,6 +13,7 @@ import WeighInReminder from "@/components/layout/WeighInReminder";
 import WeeklySummary from "@/components/layout/WeeklySummary";
 import WeeklyBriefing from "@/components/layout/WeeklyBriefing";
 import PFTReminder from "@/components/layout/PFTReminder";
+import SuppsReminder from "@/components/layout/SuppsReminder";
 import AuthGuard from "@/components/layout/AuthGuard";
 import RankUpOverlay from "@/components/ui/RankUpOverlay";
 import ClassifiedOpBriefingOverlay from "@/components/mission/ClassifiedOpBriefingOverlay";
@@ -33,6 +34,7 @@ export default function AppLayout({
       <WeeklySummary />
       <WeeklyBriefing />
       <PFTReminder />
+      <SuppsReminder />
       <RankUpOverlay />
       <ClassifiedOpBriefingOverlay />
     </AuthGuard>

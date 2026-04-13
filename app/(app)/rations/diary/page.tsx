@@ -74,6 +74,7 @@ const MEAL_SECTIONS: { type: MealType; label: string }[] = [
   { type: "lunch", label: "Lunch" },
   { type: "dinner", label: "Dinner" },
   { type: "snack", label: "Snack" },
+  { type: "supplement", label: "Supplement" },
 ];
 
 // ──────────────────────────────────────────────
@@ -114,7 +115,7 @@ export default function FoodDiaryPage() {
 
   // Which meal sections are expanded (all open by default)
   const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(
-    new Set(["breakfast", "lunch", "dinner", "snack"])
+    new Set(["breakfast", "lunch", "dinner", "snack", "supplement"])
   );
 
   // AddFoodSheet state — which meal type is being added to
@@ -355,6 +356,12 @@ export default function FoodDiaryPage() {
     // it works offline too.
     import("@/lib/missions/progress")
       .then(({ updateMissionsProgress }) => updateMissionsProgress(supabase, user.id))
+      .catch(() => {});
+
+    // Fire-and-forget daily protein-target check. Idempotent —
+    // the helper checks xp_events for today's payout first.
+    import("@/lib/protein-xp")
+      .then(({ awardProteinTargetIfHit }) => awardProteinTargetIfHit())
       .catch(() => {});
   }
 

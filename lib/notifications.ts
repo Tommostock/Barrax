@@ -174,6 +174,18 @@ export function notifyWeighIn() {
   );
 }
 
+// Daily supplement stack reminder — fired every morning at 07:00
+// reminding the user to tap the SUPPS button on the HQ page so their
+// creatine + whey stack gets logged into the diary.
+export function notifySupplementsDue() {
+  showNotification(
+    "SUPPS INTAKE DUE",
+    "Morning stack waiting for you. Log your creatine + whey on HQ.",
+    "supps-reminder",
+    "/",
+  );
+}
+
 // Quarterly PFT reminder — fired when any of the three benchmark tests
 // (push-up max, plank hold, 1.5-mile run) is overdue (>=90 days old or
 // never taken). Deduped to once per week client-side.
