@@ -16,6 +16,8 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import BottomSheet from "@/components/ui/BottomSheet";
+import Tag from "@/components/ui/Tag";
+import { loadFitnessTestSummaries, hasOverdueTest } from "@/lib/fitness/tests";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon, Route, Trophy, ArrowLeftRight, Target } from "lucide-react";
 import { estimateCaloriesBurned } from "@/lib/calories";
@@ -75,6 +77,13 @@ export default function MissionsPage() {
   // UI while the API call is in flight.
   const [swapSheetOpen, setSwapSheetOpen] = useState(false);
   const [swapping, setSwapping] = useState(false);
+
+  // --- PFT overdue flag ---
+  // Drives the OVERDUE tag on the Physical Assessment quick-link
+  // card. Uses the same helpers as PFTReminder / the fitness-test
+  // hub, so "overdue" means any of the three benchmarks is 90+
+  // days old or has never been recorded.
+  const [pftOverdue, setPftOverdue] = useState(false);
 
   // --- Swipe detection for day navigation ---
   const touchStartX = useRef<number>(0);
@@ -150,6 +159,23 @@ export default function MissionsPage() {
   }, [supabase]);
 
   useEffect(() => { loadProgramme(); }, [loadProgramme]);
+
+  // Check PFT status on mount so the Physical Assessment card can
+  // flag itself as OVERDUE when any of the three benchmarks is 90+
+  // days old. Cheap enough to re-run on every mount — it's the same
+  // query the fitness-test hub itself runs.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const summaries = await loadFitnessTestSummaries(user.id);
+      if (!cancelled) setPftOverdue(hasOverdueTest(summaries));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   async function generateProgramme() {
     setGenerating(true);
@@ -669,7 +695,9 @@ export default function MissionsPage() {
 
         {/* Physical Assessment — moved here from the Debrief (Intel) page
             so the user's quarterly PFT benchmarks sit alongside their
-            other active mission shortcuts. */}
+            other active mission shortcuts. Shows an OVERDUE tag in
+            the top-right whenever any of the three benchmarks is 90+
+            days old (same rule as the fitness-test hub header). */}
         <Card onClick={() => router.push("/intel/fitness-test")} className="press-scale">
           <div className="flex items-center gap-3">
             <div className="min-w-[40px] min-h-[40px] bg-bg-panel-alt border border-green-dark flex items-center justify-center">
@@ -679,6 +707,7 @@ export default function MissionsPage() {
               <h4 className="text-sm font-heading uppercase tracking-wider text-sand">Physical Assessment</h4>
               <p className="text-xs text-text-secondary">Quarterly fitness benchmarks (PFT)</p>
             </div>
+            {pftOverdue && <Tag variant="danger">OVERDUE</Tag>}
           </div>
         </Card>
 
