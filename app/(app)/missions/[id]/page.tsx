@@ -13,7 +13,8 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
 import ExerciseDetailSheet from "@/components/workout/ExerciseDetailSheet";
-import { ArrowLeft, Play, Clock, Zap, Swords, Flame, Info } from "lucide-react";
+import { Play, Clock, Zap, Swords, Flame, Info } from "lucide-react";
+import BackLink from "@/components/ui/BackLink";
 import { estimateCaloriesBurned } from "@/lib/calories";
 import type { Workout, WorkoutData, WorkoutExercise } from "@/types";
 
@@ -61,11 +62,7 @@ export default function WorkoutDetailPage() {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
-      {/* Back button */}
-      <button onClick={() => router.push("/missions")}
-        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">
-        <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Back</span>
-      </button>
+      <BackLink href="/missions" label="Missions" />
 
       {/* Mission briefing header */}
       <div className="bg-bg-panel border border-green-dark p-4">

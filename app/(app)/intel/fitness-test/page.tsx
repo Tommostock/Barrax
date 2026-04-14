@@ -27,8 +27,8 @@ import Tag from "@/components/ui/Tag";
 import Button from "@/components/ui/Button";
 import PushUpTestModal from "@/components/fitness/PushUpTestModal";
 import PlankTestModal from "@/components/fitness/PlankTestModal";
+import BackLink from "@/components/ui/BackLink";
 import {
-  ArrowLeft,
   Dumbbell,
   Timer,
   Footprints,
@@ -130,13 +130,7 @@ export default function FitnessTestHubPage() {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
-      <button
-        onClick={() => router.push("/intel")}
-        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]"
-      >
-        <ArrowLeft size={18} />
-        <span className="text-xs font-mono uppercase">Intel</span>
-      </button>
+      <BackLink href="/intel" label="Intel" />
 
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-heading uppercase tracking-wider text-sand">

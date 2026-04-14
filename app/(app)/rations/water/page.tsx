@@ -9,15 +9,14 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
-import { ArrowLeft, Droplets, Plus, Target } from "lucide-react";
+import { Droplets, Plus, Target } from "lucide-react";
+import BackLink from "@/components/ui/BackLink";
 
 export default function WaterTrackerPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   const [todayTotal, setTodayTotal] = useState(0);
@@ -94,10 +93,7 @@ export default function WaterTrackerPage() {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
-      <button onClick={() => router.push("/rations")}
-        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">
-        <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Rations</span>
-      </button>
+      <BackLink href="/rations" label="Rations" />
 
       <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Hydration Protocol</h2>
 

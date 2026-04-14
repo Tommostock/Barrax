@@ -6,11 +6,13 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Tag from "@/components/ui/Tag";
 import ProgressBar from "@/components/ui/ProgressBar";
 import RankInsignia from "@/components/rank/RankInsignia";
+import PullToRefresh from "@/components/ui/PullToRefresh";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
 import { RANK_THRESHOLDS } from "@/types";
 import { BADGE_DEFINITIONS } from "@/lib/badges";
 import { Award, Calendar, Trophy } from "lucide-react";
@@ -91,28 +93,32 @@ export default function RecordPage() {
   const [workoutCount, setWorkoutCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setLoading(false); return; }
+  const load = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
 
-      const [pResult, rResult, bResult, wResult, prResult] = await Promise.all([
-        supabase.from("profiles").select("name, created_at").eq("id", user.id).single(),
-        supabase.from("ranks").select("current_rank, total_xp, rank_history").eq("user_id", user.id).single(),
-        supabase.from("badges").select("badge_key, earned_at").eq("user_id", user.id),
-        supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "complete"),
-        supabase.from("personal_records").select("*").eq("user_id", user.id).order("achieved_at", { ascending: false }),
-      ]);
+    const [pResult, rResult, bResult, wResult, prResult] = await Promise.all([
+      supabase.from("profiles").select("name, created_at").eq("id", user.id).single(),
+      supabase.from("ranks").select("current_rank, total_xp, rank_history").eq("user_id", user.id).single(),
+      supabase.from("badges").select("badge_key, earned_at").eq("user_id", user.id),
+      supabase.from("workouts").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "complete"),
+      supabase.from("personal_records").select("*").eq("user_id", user.id).order("achieved_at", { ascending: false }),
+    ]);
 
-      if (pResult.data) setProfile(pResult.data);
-      if (rResult.data) setRank(rResult.data as typeof rank);
-      if (bResult.data) setEarnedBadges(bResult.data);
-      if (prResult.data) setPersonalRecords(prResult.data as PersonalRecord[]);
-      setWorkoutCount(wResult.count ?? 0);
-      setLoading(false);
-    }
-    load();
+    if (pResult.data) setProfile(pResult.data);
+    if (rResult.data) setRank(rResult.data as typeof rank);
+    if (bResult.data) setEarnedBadges(bResult.data);
+    if (prResult.data) setPersonalRecords(prResult.data as PersonalRecord[]);
+    setWorkoutCount(wResult.count ?? 0);
+    setLoading(false);
   }, [supabase]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Pull-to-refresh hook reuses the same loader
+  const { pullDistance, refreshing } = usePullToRefresh({ onRefresh: load });
 
   if (loading) {
     return (
@@ -149,6 +155,7 @@ export default function RecordPage() {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
+      <PullToRefresh pullDistance={pullDistance} refreshing={refreshing} />
       <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Service Record</h2>
 
       {/* Rank card */}

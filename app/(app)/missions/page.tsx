@@ -19,6 +19,8 @@ import BottomSheet from "@/components/ui/BottomSheet";
 import Tag from "@/components/ui/Tag";
 import { loadFitnessTestSummaries, hasOverdueTest } from "@/lib/fitness/tests";
 import { SkeletonCard } from "@/components/ui/Skeleton";
+import PullToRefresh from "@/components/ui/PullToRefresh";
+import usePullToRefresh from "@/hooks/usePullToRefresh";
 import { Swords, Plus, Play, Check, Clock, Zap, MapPin, Loader2, Wrench, Flame, Moon, Route, Trophy, ArrowLeftRight, Target } from "lucide-react";
 import { estimateCaloriesBurned } from "@/lib/calories";
 import type { Workout, WorkoutData, TrainingSchedule } from "@/types";
@@ -369,6 +371,12 @@ export default function MissionsPage() {
     return DAY_NAMES[wd.getDay() === 0 ? 6 : wd.getDay() - 1] === selectedDay;
   });
 
+  // Pull-to-refresh: re-run the programme load (which also refreshes
+  // the workouts + PFT flag). Consistent gesture across the whole app.
+  const { pullDistance, refreshing } = usePullToRefresh({
+    onRefresh: loadProgramme,
+  });
+
   if (loading) {
     return (
       <div className="px-4 py-4 space-y-4">
@@ -385,6 +393,7 @@ export default function MissionsPage() {
 
   return (
     <div className="px-4 py-4 space-y-4">
+      <PullToRefresh pullDistance={pullDistance} refreshing={refreshing} />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Battle Plan</h2>
         <Button onClick={generateProgramme} disabled={generating} className="text-xs px-3 py-2">

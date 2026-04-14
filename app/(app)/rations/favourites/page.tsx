@@ -11,12 +11,12 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import nextDynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { ArrowLeft, Heart, Search, Trash2, Scan, Loader2, Plus } from "lucide-react";
+import { Heart, Search, Trash2, Scan, Loader2, Plus } from "lucide-react";
+import BackLink from "@/components/ui/BackLink";
 import type { SavedFood, FoodLookupResult } from "@/types";
 
 // Dynamic import for barcode scanner (needs camera API)
@@ -25,7 +25,6 @@ const BarcodeScanner = nextDynamic(() => import("@/components/nutrition/BarcodeS
 type Tab = "saved" | "find";
 
 export default function MyFoodPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   // Tab state
@@ -166,10 +165,7 @@ export default function MyFoodPage() {
 
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
-      <button onClick={() => router.push("/rations")}
-        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">
-        <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Rations</span>
-      </button>
+      <BackLink href="/rations" label="Rations" />
 
       <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Saved Foods</h2>
 

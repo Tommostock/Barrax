@@ -16,13 +16,12 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import ProgressBar from "@/components/ui/ProgressBar";
+import BackLink from "@/components/ui/BackLink";
 import {
-  ArrowLeft,
   Swords,
   Clock,
   Zap,
@@ -65,7 +64,6 @@ const RATINGS = [
    MAIN COMPONENT
    ============================================== */
 export default function WeeklyReportPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   // ---- State ----
@@ -262,13 +260,7 @@ export default function WeeklyReportPage() {
   return (
     <div className="px-4 py-4 space-y-6 pb-24">
       {/* ---- BACK BUTTON ---- */}
-      <button
-        onClick={() => router.push("/intel")}
-        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]"
-      >
-        <ArrowLeft size={18} />
-        <span className="text-xs font-mono uppercase">Intel</span>
-      </button>
+      <BackLink href="/intel" label="Intel" />
 
       {/* ---- BRIEFING HEADER ---- */}
       <div>

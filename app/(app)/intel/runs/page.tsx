@@ -10,20 +10,19 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from "react";
 import nextDynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
 import { SkeletonCard } from "@/components/ui/Skeleton";
 import { formatPace, formatDistance, formatDuration } from "@/lib/geolocation";
 import { ArrowLeft, MapPin, Clock, TrendingUp, Zap } from "lucide-react";
+import BackLink from "@/components/ui/BackLink";
 import type { Run, GpsPoint } from "@/types";
 
 // Dynamic import for the map (Leaflet needs browser APIs)
 const RunMap = nextDynamic(() => import("@/components/run/RunMap"), { ssr: false });
 
 export default function RunHistoryPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   const [runs, setRuns] = useState<Run[]>([]);
@@ -146,10 +145,7 @@ export default function RunHistoryPage() {
   // Main run history view
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
-      <button onClick={() => router.push("/intel")}
-        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">
-        <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Intel</span>
-      </button>
+      <BackLink href="/intel" label="Intel" />
 
       <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Run Stats</h2>
 
