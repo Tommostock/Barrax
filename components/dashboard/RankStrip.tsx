@@ -114,9 +114,13 @@ export default function RankStrip({ currentRank, totalXp }: RankStripProps) {
           showLabel
         />
 
-        {/* XP text */}
-        <p className="text-[0.65rem] text-text-secondary font-mono mt-1">
-          {totalXp.toLocaleString()} XP TOTAL
+        {/* XP text -- gold to stay consistent with every other
+            XP surface in the app. */}
+        <p className="text-[0.65rem] font-mono mt-1 tabular-nums">
+          <span className="text-xp-gold font-bold">
+            {totalXp.toLocaleString()} XP
+          </span>
+          <span className="text-text-secondary"> TOTAL</span>
         </p>
       </div>
     </div>

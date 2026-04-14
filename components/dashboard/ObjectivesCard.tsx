@@ -357,7 +357,8 @@ function ContractRow({
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
-            {contract.current_value} / {contract.target_value} {contract.unit} · +{contract.xp_value} XP
+            {contract.current_value} / {contract.target_value} {contract.unit}
+            <span className="text-xp-gold"> · +{contract.xp_value} XP</span>
           </p>
           {onLog && (
             <button
@@ -438,7 +439,8 @@ function OpRow({
         </div>
         <div className="flex items-center justify-between mt-0.5">
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
-            {op.current_value} / {op.target_value} {op.unit} · +{op.xp_value} XP
+            {op.current_value} / {op.target_value} {op.unit}
+            <span className="text-xp-gold"> · +{op.xp_value} XP</span>
           </p>
           {onLog && (
             <button

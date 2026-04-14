@@ -174,8 +174,14 @@ export default function RecordPage() {
             </div>
           </div>
           <ProgressBar value={xpInRank} max={xpNeeded} color={progressColor} showLabel />
-          <p className="text-[0.65rem] text-text-secondary font-mono mt-1">
-            {totalXp.toLocaleString()} XP TOTAL — {(nextRankInfo.xp - totalXp).toLocaleString()} to {nextRankInfo?.title}
+          <p className="text-[0.65rem] font-mono mt-1 tabular-nums">
+            <span className="text-xp-gold font-bold">
+              {totalXp.toLocaleString()} XP
+            </span>
+            <span className="text-text-secondary">
+              {" "}
+              TOTAL — {(nextRankInfo.xp - totalXp).toLocaleString()} to {nextRankInfo?.title}
+            </span>
           </p>
           <div className="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-white/5">
             <div className="text-center">

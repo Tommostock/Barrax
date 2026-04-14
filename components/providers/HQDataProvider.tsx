@@ -50,6 +50,7 @@ import {
 } from "@/lib/missions/date";
 import type { Workout } from "@/types";
 import type { DailyContract, ClassifiedOp } from "@/types/missions";
+import { calculateMacroTargets } from "@/lib/macros";
 
 interface RankRow {
   current_rank: number;
@@ -59,8 +60,18 @@ interface RankRow {
 export interface HQSnapshot {
   rank: RankRow | null;
   todayWorkout: Workout | null;
+  /** Calories logged today (sum of food_diary rows) */
   caloriesToday: number;
+  /** Daily calorie target from profile */
   calorieTarget: number;
+  /** Macro totals logged today (grams) */
+  proteinToday: number;
+  carbsToday: number;
+  fatToday: number;
+  /** Macro targets in grams, derived from calorie target + macro split pcts */
+  proteinTarget: number;
+  carbsTarget: number;
+  fatTarget: number;
   contract: DailyContract | null;
   op: ClassifiedOp | null;
   /** User's rank level -- exposed separately because multiple consumers gate on it. */
@@ -81,6 +92,12 @@ const EMPTY_SNAPSHOT: HQSnapshot = {
   todayWorkout: null,
   caloriesToday: 0,
   calorieTarget: 2000,
+  proteinToday: 0,
+  carbsToday: 0,
+  fatToday: 0,
+  proteinTarget: 150,
+  carbsTarget: 200,
+  fatTarget: 67,
   contract: null,
   op: null,
   rankLevel: 1,
@@ -148,7 +165,9 @@ export default function HQDataProvider({ children }: { children: ReactNode }) {
         : null;
       const rankLevel = rank?.current_rank ?? 1;
 
-      // Fire everything else in parallel
+      // Fire everything else in parallel. Profile includes the macro
+      // split pcts so we can derive grams targets for the macro rings.
+      // Diary pulls protein/carbs/fat columns for the same rings.
       const [
         workoutRes,
         profileRes,
@@ -165,12 +184,12 @@ export default function HQDataProvider({ children }: { children: ReactNode }) {
           .maybeSingle(),
         supabase
           .from("profiles")
-          .select("calorie_target")
+          .select("calorie_target, protein_pct, carb_pct, fat_pct")
           .eq("id", user.id)
           .maybeSingle(),
         supabase
           .from("food_diary")
-          .select("calories")
+          .select("calories, protein_g, carbs_g, fat_g, quantity")
           .eq("user_id", user.id)
           .gte("logged_at", todayStart.toISOString())
           .lte("logged_at", todayEnd.toISOString()),
@@ -190,16 +209,48 @@ export default function HQDataProvider({ children }: { children: ReactNode }) {
           .maybeSingle(),
       ]);
 
+      // Macro totals -- multiply by quantity so servings count correctly
+      const diaryRows = diaryRes.data ?? [];
       const caloriesToday = Math.round(
-        (diaryRes.data ?? []).reduce((s, r) => s + (r.calories ?? 0), 0),
+        diaryRows.reduce((s, r) => s + (r.calories ?? 0), 0),
       );
+      const proteinToday = Math.round(
+        diaryRows.reduce(
+          (s, r) => s + (r.protein_g ?? 0) * (r.quantity ?? 1),
+          0,
+        ),
+      );
+      const carbsToday = Math.round(
+        diaryRows.reduce(
+          (s, r) => s + (r.carbs_g ?? 0) * (r.quantity ?? 1),
+          0,
+        ),
+      );
+      const fatToday = Math.round(
+        diaryRows.reduce(
+          (s, r) => s + (r.fat_g ?? 0) * (r.quantity ?? 1),
+          0,
+        ),
+      );
+
+      const calTarget = profileRes.data?.calorie_target ?? 2000;
+      const proteinPct = profileRes.data?.protein_pct ?? 30;
+      const carbPct = profileRes.data?.carb_pct ?? 40;
+      const fatPct = profileRes.data?.fat_pct ?? 30;
+      const macros = calculateMacroTargets(calTarget, proteinPct, carbPct, fatPct);
 
       setData({
         rank,
         rankLevel,
         todayWorkout: (workoutRes.data as Workout | null) ?? null,
         caloriesToday,
-        calorieTarget: profileRes.data?.calorie_target ?? 2000,
+        calorieTarget: calTarget,
+        proteinToday,
+        carbsToday,
+        fatToday,
+        proteinTarget: macros.protein,
+        carbsTarget: macros.carbs,
+        fatTarget: macros.fat,
         contract: (contractRes.data as DailyContract | null) ?? null,
         op: (opRes.data as ClassifiedOp | null) ?? null,
       });

@@ -194,7 +194,7 @@ export default function XPLogPage() {
           <p className="text-[0.55rem] font-mono text-text-secondary uppercase">
             All Time
           </p>
-          <p className="text-2xl font-bold font-mono text-text-primary">
+          <p className="text-2xl font-bold font-mono text-xp-gold tabular-nums">
             {totalXP.toLocaleString()}
           </p>
         </div>

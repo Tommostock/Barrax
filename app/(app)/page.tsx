@@ -62,7 +62,7 @@ export default function DashboardPage() {
       <div className="px-4 py-4 space-y-3">
         <div className="skeleton h-20 w-full" />
         <div className="skeleton h-12 w-full" />
-        <div className="skeleton h-24 w-full" />
+        <div className="skeleton h-44 w-full" />
         <div className="skeleton h-36 w-full" />
       </div>
     );
