@@ -35,8 +35,6 @@ import {
   Info,
   Mic,
   MicOff,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import {
   countdownBeep,
@@ -44,13 +42,9 @@ import {
   exerciseCompleteSound,
   workoutCompleteSound,
   restOverBeep,
-  setWorkoutAudioContext,
 } from "@/lib/workout-audio";
 import { requestWakeLock, releaseWakeLock } from "@/lib/wake-lock";
 import { queueOrExecute } from "@/lib/offline/queue";
-import { useCoachingAudio } from "@/hooks/useCoachingAudio";
-import CoachingSubtitle from "@/components/workout/CoachingSubtitle";
-import CoachingStatus from "@/components/workout/CoachingStatus";
 import type { WorkoutData, WorkoutExercise } from "@/types";
 
 // ──────────────────────────────────────────────
@@ -172,8 +166,10 @@ export default function WorkoutPlayerPage() {
   const [overloadSuggestions, setOverloadSuggestions] = useState<{ name: string; current: string; next: string }[]>([]);
 
   // ── Feature 1: Audio countdown timer tracking ──
+  // We mirror the visible Timer component's countdown in React state so
+  // we can fire the 3-2-1-0 beep cues at the right moments. The Timer
+  // itself owns the on-screen number; this state is purely for beeps.
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Feature 2: "Well done" moment before rest ──
   const [showWellDone, setShowWellDone] = useState(false);
@@ -199,19 +195,6 @@ export default function WorkoutPlayerPage() {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
-
-  // ── AI Audio Coach (Battle Buddy) ──
-  // Pre-generates drill-sergeant cues via /api/coaching-script at DEPLOY
-  // time, then dispatches them onto existing state transitions. See
-  // hooks/useCoachingAudio.ts + lib/coaching/controller.ts.
-  const coaching = useCoachingAudio({ workoutId, workoutData });
-
-  // ── Rest countdown (parallel to Timer component for 10s-remaining cue) ──
-  // The Timer component only exposes onComplete, so we mirror its countdown
-  // here in state. Same pattern as the duration countdown above. Timer still
-  // fires restOverBeep via onComplete — this is purely for cue dispatch.
-  const [restSecondsLeft, setRestSecondsLeft] = useState<number | null>(null);
-  const restCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ────────────────────────────────────────────
   // 1. Load workout from Supabase on mount
@@ -280,67 +263,50 @@ export default function WorkoutPlayerPage() {
 
   // ────────────────────────────────────────────
   // Feature 1: Audio countdown beeps for timer exercises
+  //
+  // Two effects, intentionally split:
+  //   1. INIT — resets secondsLeft to the exercise duration whenever the
+  //      current exercise/set/phase changes.
+  //   2. TICK — runs a setInterval that decrements secondsLeft once per
+  //      second, but only while we're actually mid-exercise and unpaused.
+  //
+  // Splitting them this way means pause/resume never resets the counter,
+  // and changing exercise mid-pause cleans up the old interval correctly.
+  // The previous implementation tried to do both jobs in one effect with
+  // [paused] alone in the deps array, which captured stale closures and
+  // sometimes left the timer frozen.
   // ────────────────────────────────────────────
 
-  // Initialize secondsLeft when exercise changes or subPhase changes to exercise
+  // 1. INIT: set the starting value when exercise/set/phase changes.
   useEffect(() => {
     if (phase !== "active" || subPhase !== "exercise") {
       setSecondsLeft(null);
-      if (countdownRef.current) clearInterval(countdownRef.current);
       return;
     }
-
     const exercise = allExercises[currentExIndex];
     if (!exercise || !exercise.duration_seconds) {
       setSecondsLeft(null);
       return;
     }
-
-    // Set initial seconds left
     setSecondsLeft(exercise.duration_seconds);
+  }, [phase, subPhase, currentExIndex, currentSet, allExercises]);
 
-    // Start countdown interval
-    countdownRef.current = setInterval(() => {
+  // 2. TICK: decrement once a second while not paused.
+  useEffect(() => {
+    if (phase !== "active" || subPhase !== "exercise" || paused) return;
+    const exercise = allExercises[currentExIndex];
+    if (!exercise?.duration_seconds) return;
+
+    const interval = setInterval(() => {
       setSecondsLeft((prev) => {
-        if (prev === null || prev <= 0) {
-          if (countdownRef.current) clearInterval(countdownRef.current);
-          return 0;
-        }
+        if (prev === null) return null;
+        if (prev <= 0) return 0;
         return prev - 1;
       });
     }, 1000);
 
-    return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
-  }, [phase, subPhase, currentExIndex, currentSet, allExercises]);
-
-  // Pause/resume the countdown with the main pause
-  useEffect(() => {
-    if (paused && countdownRef.current) {
-      clearInterval(countdownRef.current);
-      countdownRef.current = null;
-    } else if (!paused && phase === "active" && subPhase === "exercise") {
-      const exercise = allExercises[currentExIndex];
-      if (exercise?.duration_seconds && secondsLeft !== null && secondsLeft > 0) {
-        countdownRef.current = setInterval(() => {
-          setSecondsLeft((prev) => {
-            if (prev === null || prev <= 0) {
-              if (countdownRef.current) clearInterval(countdownRef.current);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }
-    }
-
-    return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
-      countdownRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused]);
+    return () => clearInterval(interval);
+  }, [phase, subPhase, currentExIndex, currentSet, allExercises, paused]);
 
   // Play beeps based on secondsLeft
   useEffect(() => {
@@ -352,123 +318,6 @@ export default function WorkoutPlayerPage() {
       completeBeep();
     }
   }, [secondsLeft]);
-
-  // Coach cues tied to the duration countdown:
-  // - 10s remaining → push cue
-  // - halfway       → momentum cue (only for exercises ≥30s)
-  // - 0s            → "go" cue, delayed 400ms so completeBeep plays first
-  useEffect(() => {
-    if (secondsLeft === null || !coaching.ready) return;
-    const ex = allExercises[currentExIndex];
-    if (!ex?.duration_seconds) return;
-
-    if (secondsLeft === 10) {
-      coaching.dispatch("exercise_countdown_10s", currentExIndex, currentSet);
-    }
-    if (ex.duration_seconds >= 30) {
-      const halfway = Math.floor(ex.duration_seconds / 2);
-      if (secondsLeft === halfway) {
-        coaching.dispatch("exercise_halfway", currentExIndex, currentSet);
-      }
-    }
-    if (secondsLeft === 0) {
-      // Delay so the beep + cue don't overlap (beep ~300ms, cue ~1s)
-      const t = setTimeout(() => {
-        coaching.dispatch("exercise_countdown_go", currentExIndex, currentSet);
-      }, 400);
-      return () => clearTimeout(t);
-    }
-  }, [secondsLeft, coaching, currentExIndex, currentSet, allExercises]);
-
-  // Dispatch exercise_start / final_exercise_intro whenever we enter
-  // an exercise sub-phase. Runs on every (exercise, set) change.
-  useEffect(() => {
-    if (phase !== "active" || subPhase !== "exercise") return;
-    if (!coaching.ready) return;
-    const isFinal =
-      currentExIndex === allExercises.length - 1 && currentSet === 1;
-    if (isFinal) {
-      coaching.dispatch("final_exercise_intro", currentExIndex, currentSet);
-    } else {
-      coaching.dispatch("exercise_start", currentExIndex, currentSet);
-    }
-  }, [phase, subPhase, currentExIndex, currentSet, coaching, allExercises.length]);
-
-  // Rest countdown: mirror the Timer's countdown in React state so we can
-  // dispatch rest_start + rest_countdown_10s cues. Timer itself handles
-  // onComplete → handleRestComplete.
-  useEffect(() => {
-    if (phase !== "active" || subPhase !== "rest") {
-      setRestSecondsLeft(null);
-      if (restCountdownRef.current) {
-        clearInterval(restCountdownRef.current);
-        restCountdownRef.current = null;
-      }
-      return;
-    }
-    const ex = allExercises[currentExIndex];
-    const restTotal = ex?.rest_seconds || 30;
-    setRestSecondsLeft(restTotal);
-
-    // Dispatch rest_start cue once on entry
-    if (coaching.ready) {
-      coaching.dispatch("rest_start", currentExIndex, currentSet);
-    }
-
-    restCountdownRef.current = setInterval(() => {
-      setRestSecondsLeft((prev) => {
-        if (prev === null || prev <= 0) {
-          if (restCountdownRef.current) clearInterval(restCountdownRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (restCountdownRef.current) clearInterval(restCountdownRef.current);
-    };
-    // We deliberately omit coaching from deps to avoid re-running the
-    // interval whenever the hook reference changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, subPhase, currentExIndex, currentSet, allExercises, restKey]);
-
-  // 10s-remaining cue for rest
-  useEffect(() => {
-    if (restSecondsLeft === 10 && coaching.ready) {
-      coaching.dispatch("rest_countdown_10s", currentExIndex, currentSet);
-    }
-  }, [restSecondsLeft, coaching, currentExIndex, currentSet]);
-
-  // Pause/resume the rest countdown with the main pause
-  useEffect(() => {
-    if (paused && restCountdownRef.current) {
-      clearInterval(restCountdownRef.current);
-      restCountdownRef.current = null;
-    } else if (!paused && phase === "active" && subPhase === "rest" && restSecondsLeft !== null && restSecondsLeft > 0) {
-      restCountdownRef.current = setInterval(() => {
-        setRestSecondsLeft((prev) => {
-          if (prev === null || prev <= 0) {
-            if (restCountdownRef.current) clearInterval(restCountdownRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (restCountdownRef.current) clearInterval(restCountdownRef.current);
-      restCountdownRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paused]);
-
-  // Destroy the coaching controller on unmount
-  useEffect(() => {
-    return () => {
-      setWorkoutAudioContext(null);
-    };
-  }, []);
 
   // ────────────────────────────────────────────
   // Feature 4: Cleanup wake lock on unmount
@@ -588,22 +437,6 @@ export default function WorkoutPlayerPage() {
       clock and the real workout state do not start until the countdown
       hits zero (see the prep-countdown effect below). */
   const handleDeploy = useCallback(async () => {
-    // ───── CRITICAL: init audio inside the user gesture ─────
-    // On iOS Safari, the silent-loop trick only works if
-    // HTMLAudioElement.play() runs synchronously inside a click handler.
-    // This MUST come before any `await` — even a microtask break
-    // invalidates the gesture. The coach also disables voice commands
-    // to avoid the microphone stealing iOS audio focus (which would duck
-    // Spotify aggressively and fight cue playback).
-    if (coaching.enabled) {
-      coaching.initAudio();
-      // Share the same AudioContext with the beep system so both play
-      // through the silent-loop-unlocked graph.
-      setWorkoutAudioContext(coaching.getContext());
-      // If coach is active, disable voice commands for this mission.
-      setVoiceActive(false);
-    }
-
     // Feature 4: Keep screen awake — do this at the start of the
     // countdown so the screen stays on during prep too.
     requestWakeLock();
@@ -620,17 +453,7 @@ export default function WorkoutPlayerPage() {
     // transitions to active when it hits zero.
     setPrepSecondsLeft(PREP_COUNTDOWN_SECONDS);
     setPhase("countdown");
-
-    // Fire manifest fetch in parallel with the countdown. This hides
-    // the Gemini + Edge TTS latency behind the 5-second prep window —
-    // by the time the countdown finishes, the cues should be decoded
-    // and ready to dispatch on the first exercise_start.
-    if (coaching.enabled) {
-      void coaching.loadManifest().then(() => {
-        coaching.dispatch("mission_start");
-      });
-    }
-  }, [workoutId, supabase, coaching]);
+  }, [workoutId, supabase]);
 
   /** Complete the current set (or final set of the exercise) */
   const handleCompleteExercise = useCallback(() => {
@@ -642,9 +465,6 @@ export default function WorkoutPlayerPage() {
 
     // Feature 1: Play exercise complete sound
     exerciseCompleteSound();
-
-    // Coach cue: set done (after the beep, short overlap is fine)
-    coaching.dispatch("exercise_done", currentExIndex, currentSet);
 
     // Feature 3: Flash green
     setShowFlash(true);
@@ -683,7 +503,7 @@ export default function WorkoutPlayerPage() {
     // Move to next exercise (or finish)
     moveToNextExercise();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allExercises, currentExIndex, currentSet, actualReps, coaching]);
+  }, [allExercises, currentExIndex, currentSet, actualReps]);
 
   /** Skip the current exercise entirely */
   const handleSkipExercise = useCallback(() => {
@@ -848,7 +668,6 @@ export default function WorkoutPlayerPage() {
 
       if (cancelled) return;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const recognition = new SR();
       recognition.continuous = true;
       recognition.interimResults = false;
@@ -938,9 +757,6 @@ export default function WorkoutPlayerPage() {
 
     // Feature 1: Play workout complete sound
     workoutCompleteSound();
-
-    // Coach cue: mission complete (drill sergeant sign-off)
-    coaching.dispatch("mission_end");
 
     // Feature 4: Release wake lock
     releaseWakeLock();
@@ -1365,9 +1181,6 @@ export default function WorkoutPlayerPage() {
             </span>
           </div>
           <div className="flex items-center gap-1">
-            {/* Coach status chip — only visible when loading/lost/error */}
-            <CoachingStatus state={coaching.state} onResume={coaching.resume} />
-
             {/* Feature 10: Music launcher */}
             <button
               onClick={handleOpenMusic}
@@ -1377,30 +1190,15 @@ export default function WorkoutPlayerPage() {
               <Music size={18} />
             </button>
 
-            {/* Coach mute toggle — only visible when feature enabled */}
-            {coaching.enabled && (
-              <button
-                onClick={() => coaching.setMute(!coaching.muted)}
-                className={`min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors
-                           ${coaching.muted ? "text-text-secondary hover:text-green-light" : "text-green-light"}`}
-                aria-label={coaching.muted ? "Unmute coach" : "Mute coach"}
-              >
-                {coaching.muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </button>
-            )}
-
-            {/* Voice commands toggle — hidden when coach is enabled to avoid
-                iOS audio session fight (mic → PlayAndRecord ducks Spotify) */}
-            {!coaching.enabled && (
-              <button
-                onClick={() => setVoiceActive((v) => !v)}
-                className={`min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors
-                           ${voiceActive ? "text-green-light" : "text-text-secondary hover:text-green-light"}`}
-                aria-label={voiceActive ? "Disable voice commands" : "Enable voice commands"}
-              >
-                {voiceActive ? <Mic size={18} /> : <MicOff size={18} />}
-              </button>
-            )}
+            {/* Voice commands toggle */}
+            <button
+              onClick={() => setVoiceActive((v) => !v)}
+              className={`min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors
+                         ${voiceActive ? "text-green-light" : "text-text-secondary hover:text-green-light"}`}
+              aria-label={voiceActive ? "Disable voice commands" : "Enable voice commands"}
+            >
+              {voiceActive ? <Mic size={18} /> : <MicOff size={18} />}
+            </button>
 
             {/* Finish workout early — two-tap safety */}
             <button
@@ -1541,9 +1339,6 @@ export default function WorkoutPlayerPage() {
                 {exerciseHistory}
               </p>
             )}
-
-            {/* Coach subtitle — auto-fades after 4s */}
-            <CoachingSubtitle subtitle={coaching.lastSubtitle} />
 
             {/* Form cue — bigger and brighter */}
             {(currentExercise.form_cue || currentExercise.description) && (
@@ -1691,7 +1486,14 @@ export default function WorkoutPlayerPage() {
 
     return (
       <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col overflow-y-auto">
-        <div className="flex-1 flex flex-col items-center px-4 py-8">
+        <div
+          className="flex-1 flex flex-col items-center px-4 pb-8"
+          style={{
+            // Push the whole debrief below the iPhone notch / status bar.
+            // Same pattern used by the active-phase top bar.
+            paddingTop: "max(env(safe-area-inset-top, 20px), 60px)",
+          }}
+        >
           {/* Tag */}
           <Tag variant="complete">HOSTILE ELIMINATED</Tag>
 

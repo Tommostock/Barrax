@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface TimerProps {
   initialSeconds: number;  // Starting seconds
@@ -27,21 +27,38 @@ export default function Timer({
 }: TimerProps) {
   const [seconds, setSeconds] = useState(initialSeconds);
 
+  // Stash the latest onComplete + mode in refs so the tick effect below
+  // doesn't have to depend on them. Without this the effect would
+  // re-subscribe every time the parent re-renders with a new callback
+  // identity (e.g. a fresh useCallback closure), and because setInterval
+  // only fires its first tick after the full delay, the interval could
+  // be cleared and recreated repeatedly without ever advancing —
+  // leaving the visible countdown frozen.
+  const onCompleteRef = useRef(onComplete);
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
   // Reset when initialSeconds changes (e.g. new exercise)
   useEffect(() => {
     setSeconds(initialSeconds);
   }, [initialSeconds]);
 
-  // Tick every second when running
+  // Tick every second when running. Only depends on `running` so the
+  // interval is preserved across unrelated parent re-renders.
   useEffect(() => {
     if (!running) return;
 
     const interval = setInterval(() => {
       setSeconds((prev) => {
-        if (mode === "countdown") {
+        if (modeRef.current === "countdown") {
           if (prev <= 1) {
             clearInterval(interval);
-            onComplete?.();
+            onCompleteRef.current?.();
             return 0;
           }
           return prev - 1;
@@ -52,7 +69,7 @@ export default function Timer({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [running, mode, onComplete]);
+  }, [running]);
 
   // Format seconds into a readable time string
   const formatTime = useCallback((totalSeconds: number) => {

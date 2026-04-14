@@ -14,19 +14,19 @@
      the network for fresh session state.
    ============================================ */
 
-const STATIC_CACHE = "barrax-static-v12";
+const STATIC_CACHE = "barrax-static-v13";
 const NAV_CACHE = "barrax-nav-v8";
-const AUDIO_CACHE = "barrax-audio-v1";
 
 // Install — skip waiting so new SW activates immediately
 self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-// Activate — clean up old caches (preserve NAV_CACHE + AUDIO_CACHE so users
-// don't lose their offline shell or coaching audio on a code deploy)
+// Activate — clean up old caches (preserve NAV_CACHE so users don't
+// lose their offline shell on a code deploy). The legacy AUDIO_CACHE
+// from the old AI coach is intentionally NOT kept and will be deleted.
 self.addEventListener("activate", (event) => {
-  const keep = new Set([STATIC_CACHE, NAV_CACHE, AUDIO_CACHE]);
+  const keep = new Set([STATIC_CACHE, NAV_CACHE]);
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)))
@@ -35,11 +35,10 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch handler — routes requests to one of four strategies:
+// Fetch handler — routes requests to one of three strategies:
 // 1. Navigation: stale-while-revalidate from NAV_CACHE
-// 2. Coaching audio (Supabase Storage MP3s): cache-first from AUDIO_CACHE
-// 3. Static asset: cache-first from STATIC_CACHE
-// 4. Everything else: pass through to network (no SW involvement)
+// 2. Static asset: cache-first from STATIC_CACHE
+// 3. Everything else: pass through to network (no SW involvement)
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
@@ -49,36 +48,7 @@ self.addEventListener("fetch", (event) => {
   // Skip API calls — always hit network (Supabase, /api/*)
   if (url.pathname.startsWith("/api/")) return;
 
-  // --- STRATEGY 2: Coaching audio MP3s from Supabase Storage ---
-  // Must come BEFORE the cross-origin skip because Storage is on a
-  // different hostname. Cache-first: once an MP3 is on disk, it plays
-  // instantly and works offline.
-  if (
-    url.hostname.includes("supabase.co") &&
-    url.pathname.includes("/coaching-audio/")
-  ) {
-    event.respondWith(
-      caches.match(event.request, { cacheName: AUDIO_CACHE }).then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).then((response) => {
-          // Only cache successful audio responses
-          if (
-            response.ok &&
-            (response.headers.get("content-type") || "").includes("audio")
-          ) {
-            const clone = response.clone();
-            caches
-              .open(AUDIO_CACHE)
-              .then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        });
-      }),
-    );
-    return;
-  }
-
-  // Skip other cross-origin requests entirely
+  // Skip cross-origin requests entirely
   if (url.origin !== self.location.origin) return;
 
   // --- STRATEGY 1: Navigation (HTML page loads) ---

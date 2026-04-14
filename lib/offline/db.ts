@@ -1,17 +1,13 @@
 /* ============================================
    Offline DB — IndexedDB storage via Dexie
-   Two purposes:
-   1. QUEUE — mutations that failed (or were made while offline) so they
-      can be replayed against Supabase when the connection returns.
-   2. COACHING CACHE — AI coaching script manifests + per-cue MP3 blobs
-      so a workout can be replayed without hitting the network.
+   Stores mutations that failed (or were made while offline) so they
+   can be replayed against Supabase when the connection returns.
 
    Read-side caching of regular Supabase rows (food diary, workouts)
    is NOT handled here — pages still fetch live.
    ============================================ */
 
 import Dexie, { type Table } from "dexie";
-import type { CoachingScript } from "@/types";
 
 /** A single mutation waiting to be replayed against Supabase. */
 export interface QueuedMutation {
@@ -33,29 +29,8 @@ export interface QueuedMutation {
   created_at: number;
 }
 
-/** A cached coaching script manifest, keyed by workoutId. */
-export interface CachedCoachingScript {
-  workoutId: string;
-  manifest: CoachingScript;
-  voice: string;
-  /** sha256 of workoutData JSON — invalidates if the workout is regenerated. */
-  workout_hash: string;
-  created_at: number;
-}
-
-/** A cached MP3 blob for a single cue, keyed by `${workoutId}:${cueId}`. */
-export interface CachedCoachingBlob {
-  key: string;
-  workoutId: string;
-  cueId: string;
-  blob: Blob;
-  created_at: number;
-}
-
 class BarraxOfflineDB extends Dexie {
   queue!: Table<QueuedMutation, number>;
-  coachingScripts!: Table<CachedCoachingScript, string>;
-  coachingBlobs!: Table<CachedCoachingBlob, string>;
 
   constructor() {
     super("barrax_offline");
@@ -63,11 +38,19 @@ class BarraxOfflineDB extends Dexie {
     this.version(1).stores({
       queue: "++id, table, created_at",
     });
-    // Schema v2 — add coaching cache stores. Dexie handles the upgrade.
+    // Schema v2 — historical: added coaching cache stores. Kept in the
+    // version chain so existing user databases upgrade cleanly.
     this.version(2).stores({
       queue: "++id, table, created_at",
       coachingScripts: "workoutId, created_at",
       coachingBlobs: "key, workoutId",
+    });
+    // Schema v3 — coach removed. Drop the coaching stores so existing
+    // installs reclaim the space. Passing `null` to Dexie deletes a store.
+    this.version(3).stores({
+      queue: "++id, table, created_at",
+      coachingScripts: null,
+      coachingBlobs: null,
     });
   }
 }
