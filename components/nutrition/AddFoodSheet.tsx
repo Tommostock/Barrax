@@ -284,7 +284,7 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
               <p className="text-[0.45rem] font-mono text-text-secondary">CARBS</p>
             </div>
             <div className="text-center">
-              <p className="text-sm font-mono font-bold text-khaki">{Math.round(pendingFood.fat_g * quantity * 10) / 10}g</p>
+              <p className="text-sm font-mono font-bold text-sand">{Math.round(pendingFood.fat_g * quantity * 10) / 10}g</p>
               <p className="text-[0.45rem] font-mono text-text-secondary">FAT</p>
             </div>
           </div>

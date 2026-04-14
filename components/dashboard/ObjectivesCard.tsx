@@ -403,7 +403,7 @@ function ContractRow({
         </p>
 
         {/* Progress bar */}
-        <div className="mt-1.5 h-1.5 bg-green-darkest w-full overflow-hidden border border-green-dark">
+        <div className="mt-1.5 h-1.5 bg-bg-input w-full overflow-hidden border border-green-dark">
           <div
             className={`h-full transition-all duration-500 ${
               completed ? "bg-green-light" : accentBg
@@ -484,7 +484,7 @@ function OpRow({
           {op.codename}
         </button>
 
-        <div className="mt-1.5 h-1.5 bg-green-darkest w-full overflow-hidden border border-green-dark">
+        <div className="mt-1.5 h-1.5 bg-bg-input w-full overflow-hidden border border-green-dark">
           <div
             className={`h-full transition-all duration-500 ${
               completed ? "bg-green-light" : "bg-danger"

@@ -82,7 +82,7 @@ export default function WorkoutDetailPage() {
             <span className="flex items-center gap-1 text-sm font-mono text-xp-gold">
               <Zap size={14} /> +{wd.xp_value} XP
             </span>
-            <span className="flex items-center gap-1 text-sm font-mono text-khaki">
+            <span className="flex items-center gap-1 text-sm font-mono text-sand">
               <Flame size={14} /> ~{estimateCaloriesBurned(wd.type, (wd.duration_minutes ?? 30) * 60)} kcal
             </span>
             <span className="flex items-center gap-1 text-sm font-mono text-text-secondary">

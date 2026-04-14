@@ -12,6 +12,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Settings } from "lucide-react";
 import { RANK_THRESHOLDS } from "@/types";
+import { formatDateMono } from "@/lib/format/date";
 import OfflineIndicator from "./OfflineIndicator";
 
 export default function Header() {
@@ -21,14 +22,7 @@ export default function Header() {
 
   const [rankTitle, setRankTitle] = useState<string | null>(null);
 
-  const today = new Date();
-  const formattedDate = today
-    .toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    })
-    .toUpperCase();
+  const formattedDate = formatDateMono(new Date());
 
   // Fetch rank title once on mount
   useEffect(() => {

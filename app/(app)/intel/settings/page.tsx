@@ -683,8 +683,8 @@ const DAY_LABELS: Record<string, string> = {
 const DAY_TYPES: { value: DayType; label: string; color: string }[] = [
   { value: "workout", label: "WORKOUT", color: "bg-green-primary" },
   { value: "rest",    label: "REST",    color: "bg-bg-panel-alt" },
-  { value: "run",     label: "RUN",     color: "bg-green-muted" },
-  { value: "activity", label: "ACTIVITY", color: "bg-khaki/30" },
+  { value: "run",     label: "RUN",     color: "bg-green-dark" },
+  { value: "activity", label: "ACTIVITY", color: "bg-sand/30" },
 ];
 
 function TrainingScheduleEditor({
@@ -712,7 +712,7 @@ function TrainingScheduleEditor({
     if (!dayData) return { label: "WORKOUT", color: "bg-green-primary" };
 
     if (dayData.type === "activity" && dayData.activity_name) {
-      return { label: dayData.activity_name.toUpperCase(), color: "bg-khaki/30" };
+      return { label: dayData.activity_name.toUpperCase(), color: "bg-sand/30" };
     }
 
     const typeInfo = DAY_TYPES.find((t) => t.value === dayData.type);

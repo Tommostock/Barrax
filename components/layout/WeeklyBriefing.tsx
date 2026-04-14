@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { notifyWeeklyBriefing, getPermissionStatus } from "@/lib/notifications";
 import Tag from "@/components/ui/Tag";
 import { X, Calendar, Shield, TrendingUp, Utensils } from "lucide-react";
+import { formatDateFull, formatDayShort } from "@/lib/format/date";
 
 // ---------- Config ----------
 const BRIEFING_DAY = 0;            // Sunday (0 = Sunday in JS)
@@ -80,12 +81,7 @@ function localDateISO(daysFromNow: number): string {
 }
 
 function prettyDayLabel(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
+  return formatDayShort(new Date(iso));
 }
 
 // ---------- Data load ----------
@@ -273,7 +269,7 @@ export default function WeeklyBriefing() {
           Weekly Briefing
         </h2>
         <p className="text-xs font-mono uppercase tracking-wider text-text-secondary mt-1">
-          Week of {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+          Week of {formatDateFull(new Date())}
         </p>
 
         {/* Section: scheduled workouts */}
@@ -327,7 +323,7 @@ export default function WeeklyBriefing() {
               <p className="text-sm font-heading uppercase tracking-wider text-sand">
                 {data.op.codename}
               </p>
-              <div className="mt-2 h-2 bg-green-darkest w-full overflow-hidden border border-green-dark">
+              <div className="mt-2 h-2 bg-bg-input w-full overflow-hidden border border-green-dark">
                 <div
                   className="h-full bg-danger transition-all duration-500"
                   style={{ width: `${opPct}%` }}

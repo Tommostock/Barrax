@@ -5,55 +5,72 @@
    Dark mode only. No border-radius. No gradients.
    ============================================ */
 
-/* --- Colour Palette --- */
+/* --- Colour Palette ---
+   Disciplined token list. 6 accent colours, 3 text
+   colours, 4 background colours. Anything else is a
+   regression -- new features MUST reuse these rather
+   than add new hex codes.
+
+   Accents:
+     green-primary     main actions, "active" tags, progress fill
+     green-light       highlights, "complete" tags
+     green-dark        borders, dividers, subtle separators
+     xp-gold           gold accent, XP, bounty + scavenger contracts
+     recon             teal accent, recon contracts
+     danger            red, classified ops, urgent states, errors
+
+   Text:
+     text-primary      body copy
+     text-secondary    muted labels, metadata
+     sand              headings (Barlow Condensed looks right in sand)
+
+   Background:
+     bg-primary        page background
+     bg-panel          card background
+     bg-panel-alt      inset panels, active nav tab
+     bg-input          form fields, progress track
+*/
 :root {
+  /* Backgrounds */
   --bg-primary: #0C0C0C;
   --bg-panel: #141A14;
   --bg-panel-alt: #1A221A;
   --bg-input: #0F150F;
+
+  /* Accents */
   --green-primary: #4A6B3A;
   --green-light: #6B8F5A;
   --green-dark: #2D4220;
-  --green-muted: #3A4F2E;
-  --camo-1: #4A6B3A;
-  --camo-2: #2D4220;
-  --camo-3: #5C7A4A;
-  --camo-4: #1A2A14;
-  --khaki: #8B7D5E;
-  --sand: #C4B090;
+  --xp-gold: #B8A04A;
+  --recon: #5AA89B;       /* teal -- Recon contracts + secondary accent */
+  --danger: #8B3232;
+
+  /* Text */
   --text-primary: #D4D4C8;
   --text-secondary: #7A7A6E;
-  --danger: #8B3232;
-  --success: #4A6B3A;
-  --xp-gold: #B8A04A;
-  /* Contract type accents */
-  --scavenger: #C4B090;   /* sand -- Scavenger contracts */
-  --recon: #5AA89B;       /* teal -- Recon contracts */
+  --sand: #C4B090;
 }
 
 /* --- Tailwind v4 Theme Integration --- */
 @theme inline {
+  /* Backgrounds */
   --color-bg-primary: var(--bg-primary);
   --color-bg-panel: var(--bg-panel);
   --color-bg-panel-alt: var(--bg-panel-alt);
   --color-bg-input: var(--bg-input);
+
+  /* Accents */
   --color-green-primary: var(--green-primary);
   --color-green-light: var(--green-light);
   --color-green-dark: var(--green-dark);
-  --color-green-muted: var(--green-muted);
-  --color-camo-1: var(--camo-1);
-  --color-camo-2: var(--camo-2);
-  --color-camo-3: var(--camo-3);
-  --color-camo-4: var(--camo-4);
-  --color-khaki: var(--khaki);
-  --color-sand: var(--sand);
+  --color-xp-gold: var(--xp-gold);
+  --color-recon: var(--recon);
+  --color-danger: var(--danger);
+
+  /* Text */
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
-  --color-danger: var(--danger);
-  --color-success: var(--success);
-  --color-xp-gold: var(--xp-gold);
-  --color-scavenger: var(--scavenger);
-  --color-recon: var(--recon);
+  --color-sand: var(--sand);
 
   /* Font families — mapped to next/font CSS variables */
   --font-heading: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
@@ -102,23 +119,6 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-mono);
 }
 
-/* --- Camo Pattern Background ---
-   CSS-only camo pattern using multiple layered gradients.
-   Apply with class "camo-bg" on any element. */
-.camo-bg {
-  background-color: var(--bg-panel);
-  background-image:
-    radial-gradient(ellipse 60% 40% at 20% 30%, var(--camo-1) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 50% at 70% 60%, var(--camo-2) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 60% at 40% 80%, var(--camo-3) 0%, transparent 50%),
-    radial-gradient(ellipse 70% 30% at 80% 20%, var(--camo-4) 0%, transparent 65%),
-    radial-gradient(ellipse 30% 50% at 10% 70%, var(--camo-2) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 40% at 55% 45%, var(--camo-1) 0%, transparent 60%);
-  background-size: 200px 200px;
-  background-repeat: repeat;
-  opacity: 0.85; /* Slightly toned down for subtlety */
-}
-
 /* --- Scan-Line Overlay ---
    Subtle CRT/tactical screen effect. Apply with class "scan-lines". */
 .scan-lines::after {
@@ -158,8 +158,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tag-complete {
-  color: var(--success);
-  border-color: var(--success);
+  color: var(--green-primary);
+  border-color: var(--green-primary);
 }
 
 .tag-locked {
@@ -173,9 +173,12 @@ h1, h2, h3, h4, h5, h6 {
   border-color: var(--danger);
 }
 
+/* Scavenger contracts visually share the gold accent with bounty --
+   the contract TYPE tag and icon differentiate them, so we don't
+   need a distinct colour token. */
 .tag-scavenger {
-  color: var(--scavenger);
-  border-color: var(--scavenger);
+  color: var(--xp-gold);
+  border-color: var(--xp-gold);
 }
 
 .tag-recon {

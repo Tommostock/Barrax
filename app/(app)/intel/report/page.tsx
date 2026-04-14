@@ -355,7 +355,7 @@ export default function WeeklyReportPage() {
           {/* Meals followed */}
           <Card>
             <div className="flex items-center gap-2 mb-2">
-              <Utensils size={16} className="text-khaki" />
+              <Utensils size={16} className="text-sand" />
               <span className="text-[0.55rem] font-mono text-text-secondary uppercase">
                 Meals Logged
               </span>

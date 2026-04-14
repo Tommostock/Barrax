@@ -118,7 +118,7 @@ export default function ClassifiedOpBriefingOverlay() {
 
         {/* Large progress bar */}
         <div className="mb-2">
-          <div className="h-2 bg-green-darkest w-full overflow-hidden">
+          <div className="h-2 bg-bg-input w-full overflow-hidden">
             <div
               className={`h-full transition-all duration-500 ${
                 op.completed ? "bg-green-light" : "bg-danger"

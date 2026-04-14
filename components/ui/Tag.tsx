@@ -28,7 +28,7 @@ export default function Tag({
 }: TagProps) {
   const variants = {
     active: "text-green-light border-green-primary",
-    complete: "text-success border-success",
+    complete: "text-green-primary border-green-primary",
     locked: "text-text-secondary border-text-secondary opacity-50",
     danger: "text-danger border-danger",
     gold: "text-xp-gold border-xp-gold",

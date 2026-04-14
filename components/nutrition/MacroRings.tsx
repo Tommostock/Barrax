@@ -148,7 +148,7 @@ export default function MacroRings({
             max={fatTarget}
             size={72}
             strokeWidth={5}
-            color="var(--khaki)"
+            color="var(--sand)"
             label="Fat"
             unit="g"
           />

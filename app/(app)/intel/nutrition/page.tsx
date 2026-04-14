@@ -46,7 +46,7 @@ const COLOURS = {
   calories: "#4A6B3A",      // green-primary
   protein: "#6B8F5A",       // green-light
   carbs: "#B8A04A",         // xp-gold
-  fat: "#8B7D5E",           // khaki
+  fat: "#C4B090",           // sand
   target: "#7A7A6E",        // text-secondary
 };
 
@@ -388,7 +388,7 @@ export default function NutritionTrendsPage() {
                 dot={false}
                 activeDot={{ r: 4, fill: COLOURS.carbs }}
               />
-              {/* Fat line (khaki) */}
+              {/* Fat line (sand) */}
               <Line
                 type="monotone"
                 dataKey="fat"

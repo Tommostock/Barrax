@@ -165,7 +165,7 @@ export default function TodayStrip() {
               <span className="text-text-secondary"> / {target.toLocaleString()}</span>
             </p>
             {/* Thin progress bar */}
-            <div className="mt-1 h-1 bg-green-darkest w-full overflow-hidden">
+            <div className="mt-1 h-1 bg-bg-input w-full overflow-hidden">
               <div
                 className="h-full bg-green-primary transition-all duration-500"
                 style={{ width: `${caloriePct}%` }}

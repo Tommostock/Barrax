@@ -45,7 +45,7 @@ function getWorkoutLabel(focus: string): { label: string; color: string } {
   if (f.includes("lower") || f.includes("leg") || f.includes("squat") || f.includes("glute"))
     return { label: "LEGS", color: "text-xp-gold" };
   if (f.includes("full") || f.includes("total"))
-    return { label: "FULL", color: "text-khaki" };
+    return { label: "FULL", color: "text-sand" };
   if (f.includes("core") || f.includes("abs"))
     return { label: "CORE", color: "text-sand" };
   if (f.includes("cardio") || f.includes("hiit") || f.includes("conditioning"))
@@ -434,7 +434,7 @@ export default function MissionsPage() {
 
                       if (isComplete) return <Check size={14} className="text-xp-gold" />;
                       if (effectiveType === "run") return <Route size={12} className={activeColor} />;
-                      if (effectiveType === "activity") return <Trophy size={12} className={isSelected || isToday ? "text-khaki" : "text-text-secondary"} />;
+                      if (effectiveType === "activity") return <Trophy size={12} className={isSelected || isToday ? "text-sand" : "text-text-secondary"} />;
                       if (isRest) return <Moon size={11} className="text-text-secondary" />;
                       return <Swords size={12} className={activeColor} />;
                     })()}
@@ -579,7 +579,7 @@ export default function MissionsPage() {
                       <span className="flex items-center gap-1 text-[0.65rem] font-mono text-xp-gold">
                         <Zap size={12} /> +{wd.xp_value} XP
                       </span>
-                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-khaki">
+                      <span className="flex items-center gap-1 text-[0.65rem] font-mono text-sand">
                         <Flame size={12} /> ~{wd.estimated_calories
                           ? wd.estimated_calories
                           : estimateCaloriesBurned(wd.type, (wd.duration_minutes ?? 30) * 60)} kcal

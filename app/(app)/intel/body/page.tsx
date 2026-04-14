@@ -9,7 +9,6 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -17,8 +16,10 @@ import { SkeletonCard } from "@/components/ui/Skeleton";
 import usePullToRefresh from "@/hooks/usePullToRefresh";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { ArrowLeft, Plus, Scale, Camera, Trash2, ArrowLeftRight, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Scale, Camera, Trash2, ArrowLeftRight, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import BackLink from "@/components/ui/BackLink";
+import { formatDateCompact, formatDateFull } from "@/lib/format/date";
 import type { WeightLog } from "@/types";
 
 // NOTE: despite the column name, `photo_url` now stores the STORAGE
@@ -43,7 +44,6 @@ function extractStoragePath(value: string): string {
 }
 
 export default function BodyTrackingPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   const [weightLogs, setWeightLogs] = useState<WeightLog[]>([]);
@@ -243,10 +243,7 @@ export default function BodyTrackingPage() {
   return (
     <div className="px-4 py-4 space-y-4 pb-24">
       <PullToRefresh pullDistance={pullDistance} refreshing={refreshing} />
-      <button onClick={() => router.push("/intel")}
-        className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">
-        <ArrowLeft size={18} /> <span className="text-xs font-mono uppercase">Intel</span>
-      </button>
+      <BackLink href="/intel" label="Intel" />
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-heading uppercase tracking-wider text-sand">Body Tracking</h2>
@@ -292,7 +289,7 @@ export default function BodyTrackingPage() {
           <h3 className="text-xs font-heading uppercase tracking-wider text-text-secondary mb-3">Weight Trend</h3>
           <ResponsiveContainer width="100%" height={160}>
             <LineChart data={[...weightLogs].reverse().map((log) => ({
-              date: new Date(log.logged_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+              date: formatDateCompact(log.logged_at),
               weight: log.weight_kg,
             }))}>
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#7A7A6E" }} axisLine={{ stroke: "#2D4220" }} tickLine={false} />
@@ -333,10 +330,10 @@ export default function BodyTrackingPage() {
             <div className="bg-bg-panel border border-green-dark p-3">
               <div className="flex items-center gap-1 mb-2">
                 <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
-                  {new Date(comparePhotoA.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
+                  {formatDateFull(comparePhotoA.taken_at)}
                 </span>
                 <span className="text-[0.55rem] font-mono text-text-secondary uppercase flex-1 text-center">
-                  {new Date(comparePhotoB.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "2-digit" })}
+                  {formatDateFull(comparePhotoB.taken_at)}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-1">
@@ -380,7 +377,7 @@ export default function BodyTrackingPage() {
                     </div>
                   )}
                   <p className="absolute bottom-0 left-0 right-0 bg-black/60 text-[0.45rem] font-mono text-text-secondary text-center py-0.5">
-                    {new Date(photo.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                    {formatDateCompact(photo.taken_at)}
                   </p>
                 </button>
               );
@@ -401,12 +398,12 @@ export default function BodyTrackingPage() {
               type="button"
               onClick={() => setViewerIndex(index)}
               className="relative group text-left"
-              aria-label={`View progress photo from ${new Date(photo.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+              aria-label={`View progress photo from ${formatDateCompact(photo.taken_at)}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photoUrls[photo.id] ?? ""} alt="Progress" className="w-full aspect-square object-cover border border-green-dark/30" />
               <p className="absolute bottom-0 left-0 right-0 bg-black/60 text-[0.45rem] font-mono text-text-secondary text-center py-0.5">
-                {new Date(photo.taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                {formatDateCompact(photo.taken_at)}
               </p>
             </button>
           ))}
@@ -431,7 +428,7 @@ export default function BodyTrackingPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-xs font-mono uppercase tracking-wider text-text-secondary">
-              {new Date(photos[viewerIndex].taken_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+              {formatDateFull(photos[viewerIndex].taken_at)}
               {` · ${viewerIndex + 1} / ${photos.length}`}
             </p>
             <button
@@ -522,7 +519,7 @@ export default function BodyTrackingPage() {
           {weightLogs.map((log) => (
             <div key={log.id} className="flex items-center justify-between py-2 px-3 bg-bg-panel border border-green-dark/50">
               <span className="text-xs font-mono text-text-secondary">
-                {new Date(log.logged_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                {formatDateCompact(log.logged_at)}
               </span>
               <span className="text-sm font-mono font-bold text-text-primary">{log.weight_kg} kg</span>
             </div>
