@@ -27,7 +27,7 @@ import {
   useState,
 } from "react";
 import Card from "@/components/ui/Card";
-import { Shield, Check, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   classifiedOpExpiry,
   formatCountdown,
@@ -59,6 +59,16 @@ function labelForKey(key: ProgressKey): string {
   }
   if (key === "reps_any") return "Total Reps";
   return "Progress";
+}
+
+// Strip markdown bold markers and grab the first sentence-ish chunk
+// of the briefing for the card preview. The full briefing still
+// renders in the overlay when the card is tapped.
+function briefingSnippet(briefing: string): string {
+  const cleaned = briefing.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const firstPara = cleaned.split("\n\n")[0] ?? cleaned;
+  return firstPara;
 }
 
 // ---------- Component ----------
@@ -112,25 +122,24 @@ export default function ClassifiedOpCard() {
   }, [op]);
 
   // ---------- Render ----------
-  if (loading && !data) return <div className="skeleton h-40 w-full" />;
+  if (loading && !data) return <div className="skeleton h-full w-full" />;
 
   if (!op) {
     return (
       <Card tag="CLASSIFIED" tagVariant="danger">
         <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-danger flex items-center justify-center flex-shrink-0">
-              <Shield size={14} className="text-danger" />
-            </div>
-            <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
-              Classified
-            </p>
-          </div>
+          <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
+            Classified · pending
+          </p>
           <p className="text-sm font-heading uppercase tracking-wider text-sand">
             Standing by
           </p>
-          <p className="text-[0.6rem] font-mono text-text-secondary mt-auto pt-1">
-            Command radio silent
+          <p className="text-[0.6rem] font-mono text-text-secondary leading-snug">
+            Command radio silent. A new high-value operation will be assigned
+            on the next sync.
+          </p>
+          <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider mt-auto pt-2">
+            Pull to refresh
           </p>
         </div>
       </Card>
@@ -140,6 +149,7 @@ export default function ClassifiedOpCard() {
   const pct = clampPct(op.current_value, op.target_value);
   const completed = op.completed;
   const canLog = !completed && supportsManualLog(op.progress_key);
+  const snippet = briefingSnippet(op.briefing);
 
   return (
     <>
@@ -159,24 +169,22 @@ export default function ClassifiedOpCard() {
             </span>
           )}
 
-          {/* Icon + label */}
-          <div className="flex items-center gap-2 relative">
-            <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-danger flex items-center justify-center flex-shrink-0">
-              {completed ? (
-                <Check size={14} className="text-green-light" />
-              ) : (
-                <Shield size={14} className="text-danger" />
-              )}
-            </div>
-            <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
-              Classified
-            </p>
-          </div>
+          {/* Label (icon removed) */}
+          <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary relative">
+            Classified · {op.tier} · {op.category}
+          </p>
 
           {/* Codename (2 lines max) */}
           <p className="text-sm font-heading uppercase tracking-wider text-sand line-clamp-2 leading-snug w-full relative">
             {op.codename}
           </p>
+
+          {/* Briefing snippet — first paragraph, 3 lines max */}
+          {snippet && (
+            <p className="text-[0.6rem] font-mono text-text-secondary line-clamp-3 leading-snug w-full relative">
+              {snippet}
+            </p>
+          )}
 
           {/* Countdown + XP on one compact line */}
           {!completed && countdown && (

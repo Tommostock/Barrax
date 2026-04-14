@@ -44,20 +44,21 @@ export default function DashboardPage() {
 
   // Skeleton matches the final layout: one full-width block for
   // RankStrip, one for QuickActionsBar, then two side-by-side rows
-  // for the Today cards and the Objectives cards. Only shown on
-  // first paint -- tab-switch re-renders reuse the cached snapshot.
+  // for the Today cards and the Objectives cards. Grid uses the same
+  // gap-2 as QuickActionsBar so the four cards line up with the four
+  // quick-log buttons above.
   if (loading && !data) {
     return (
       <div className="px-4 py-4 space-y-3">
         <div className="skeleton h-20 w-full" />
         <div className="skeleton h-12 w-full" />
-        <div className="grid grid-cols-2 gap-3">
-          <div className="skeleton h-44" />
-          <div className="skeleton h-44" />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="skeleton h-60" />
+          <div className="skeleton h-60" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="skeleton h-40" />
-          <div className="skeleton h-40" />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="skeleton h-60" />
+          <div className="skeleton h-60" />
         </div>
       </div>
     );
@@ -74,14 +75,17 @@ export default function DashboardPage() {
 
       <QuickActionsBar />
 
-      {/* Today row: two separate cards, side by side */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Today row: two separate cards, side by side.
+          gap-2 (same as QuickActionsBar) keeps the card edges aligned
+          with the left/right pairs of quick-log buttons above.
+          min-h forces the boxes to fill the empty space under them. */}
+      <div className="grid grid-cols-2 gap-2 min-h-[240px]">
         <TodayWorkoutCard />
         <TodayCaloriesCard />
       </div>
 
-      {/* Objectives row: two separate cards, side by side */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Objectives row: two separate cards, side by side. */}
+      <div className="grid grid-cols-2 gap-2 min-h-[240px]">
         <ContractCard />
         <ClassifiedOpCard />
       </div>

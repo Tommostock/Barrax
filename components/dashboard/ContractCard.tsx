@@ -24,19 +24,13 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
-import {
-  Crosshair,
-  Eye,
-  ListChecks,
-  Lock,
-  Check,
-  Plus,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   contractExpiry,
   formatCountdown,
 } from "@/lib/missions/date";
 import type { ContractType, ProgressKey } from "@/types/missions";
+import { RANK_THRESHOLDS } from "@/types";
 import LogProgressModal from "@/components/mission/LogProgressModal";
 import { useHQData } from "@/components/providers/HQDataProvider";
 
@@ -48,23 +42,19 @@ const VARIANT_BY_TYPE: Record<ContractType, "gold" | "scavenger" | "recon"> = {
   recon: "recon",
 };
 
-const TYPE_ACCENT_TEXT: Record<ContractType, string> = {
-  bounty: "text-xp-gold",
-  scavenger: "text-xp-gold", // scavenger merged into gold in the token cleanup
-  recon: "text-recon",
-};
-
 const TYPE_ACCENT_BG: Record<ContractType, string> = {
   bounty: "bg-xp-gold",
   scavenger: "bg-xp-gold",
   recon: "bg-recon",
 };
 
-function contractIcon(type: ContractType, className: string) {
-  if (type === "bounty") return <Crosshair size={14} className={className} />;
-  if (type === "recon") return <Eye size={14} className={className} />;
-  return <ListChecks size={14} className={className} />;
-}
+// Tagline shown under the title when there's no description text
+// yet (generation fallback) — keeps the card from looking empty.
+const TYPE_TAGLINE: Record<ContractType, string> = {
+  bounty: "High-value target. Execute with prejudice.",
+  scavenger: "Forage, gather, return with the spoils.",
+  recon: "Observe. Report. Leave no trace.",
+};
 
 function clampPct(current: number, target: number): number {
   if (target <= 0) return 0;
@@ -100,6 +90,7 @@ export default function ContractCard() {
   const rank = data?.rankLevel ?? 1;
   const contract = data?.contract ?? null;
   const op = data?.op ?? null; // read op too so self-heal updates both
+  const totalXp = data?.rank?.total_xp ?? 0;
 
   // ---------- Generation ----------
   useEffect(() => {
@@ -162,27 +153,45 @@ export default function ContractCard() {
   }, [contract, nowMs]);
 
   // ---------- Render ----------
-  if (loading && !data) return <div className="skeleton h-40 w-full" />;
+  if (loading && !data) return <div className="skeleton h-full w-full" />;
 
   // Rank < 2 gate
   if (rank < 2) {
+    const rank2Threshold = RANK_THRESHOLDS[1]?.xp ?? 200;
+    const xpToRank2 = Math.max(0, rank2Threshold - totalXp);
+    const progressToRank2 = clampPct(totalXp, rank2Threshold);
     return (
       <Card tag="LOCKED" tagVariant="locked">
         <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">
-              <Lock size={14} className="text-text-secondary" />
+          <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
+            Contract · locked
+          </p>
+          <p className="text-sm font-heading uppercase tracking-wider text-sand">
+            Insufficient clearance
+          </p>
+          <p className="text-[0.6rem] font-mono text-text-secondary leading-snug">
+            Daily bounty, scavenger and recon contracts unlock at{" "}
+            <span className="text-sand">Private (Rank 2)</span>.
+          </p>
+
+          {/* Progress toward rank 2 */}
+          <div className="w-full mt-auto pt-2">
+            <div className="flex items-center justify-between text-[0.55rem] font-mono uppercase tracking-wider tabular-nums">
+              <span className="text-text-secondary">To rank 2</span>
+              <span className="text-xp-gold">
+                {xpToRank2.toLocaleString()} XP
+              </span>
             </div>
-            <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
-              Contract
+            <div className="h-1.5 bg-bg-input w-full overflow-hidden border border-green-dark mt-1">
+              <div
+                className="h-full bg-xp-gold transition-all duration-500"
+                style={{ width: `${progressToRank2}%` }}
+              />
+            </div>
+            <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider mt-0.5 tabular-nums">
+              {totalXp.toLocaleString()} / {rank2Threshold.toLocaleString()} XP
             </p>
           </div>
-          <p className="text-sm font-heading uppercase tracking-wider text-sand">
-            Locked
-          </p>
-          <p className="text-[0.6rem] font-mono text-text-secondary mt-auto pt-1">
-            Unlocks at Rank 2
-          </p>
         </div>
       </Card>
     );
@@ -193,19 +202,18 @@ export default function ContractCard() {
     return (
       <Card tag="CONTRACT" tagVariant="gold">
         <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">
-              <Crosshair size={14} className="text-text-secondary" />
-            </div>
-            <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
-              Contract
-            </p>
-          </div>
+          <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
+            Contract · pending
+          </p>
           <p className="text-sm font-heading uppercase tracking-wider text-sand">
             Standing by
           </p>
-          <p className="text-[0.6rem] font-mono text-text-secondary mt-auto pt-1">
-            HQ comms offline
+          <p className="text-[0.6rem] font-mono text-text-secondary leading-snug">
+            HQ comms offline. A new daily contract will be issued on the next
+            refresh.
+          </p>
+          <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider mt-auto pt-2">
+            Pull to refresh
           </p>
         </div>
       </Card>
@@ -219,31 +227,28 @@ export default function ContractCard() {
   const tagVariant: "complete" | "gold" | "scavenger" | "recon" = completed
     ? "complete"
     : VARIANT_BY_TYPE[type];
-  const accentText = TYPE_ACCENT_TEXT[type];
   const accentBg = TYPE_ACCENT_BG[type];
   const canLog = !completed && supportsManualLog(contract.progress_key);
+  const description =
+    contract.description?.trim() || TYPE_TAGLINE[type];
 
   return (
     <>
       <Card tag={tagText} tagVariant={tagVariant}>
         <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
-          {/* Icon + label */}
-          <div className="flex items-center gap-2">
-            <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">
-              {completed ? (
-                <Check size={14} className="text-green-light" />
-              ) : (
-                contractIcon(type, accentText)
-              )}
-            </div>
-            <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
-              Contract
-            </p>
-          </div>
+          {/* Label (icon removed) */}
+          <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
+            Contract · {contract.difficulty}
+          </p>
 
           {/* Title (2 lines max) */}
           <p className="text-sm font-heading uppercase tracking-wider text-sand line-clamp-2 leading-snug w-full">
             {contract.title}
+          </p>
+
+          {/* Description / flavour (3 lines max) */}
+          <p className="text-[0.6rem] font-mono text-text-secondary line-clamp-3 leading-snug w-full">
+            {description}
           </p>
 
           {/* Countdown + XP on one compact line */}

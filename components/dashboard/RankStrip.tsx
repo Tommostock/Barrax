@@ -41,6 +41,9 @@ export default function RankStrip({ currentRank, totalXp }: RankStripProps) {
 
   const xpInRank = totalXp - current.xp;
   const xpNeeded = next.xp - current.xp;
+  const xpToNext = Math.max(0, next.xp - totalXp);
+  const atMaxRank = currentRank >= RANK_THRESHOLDS.length;
+  const nextTitleShort = next.title.split(" ").pop() ?? next.title;
 
   const style = RANK_STYLES[currentRank] ?? RANK_STYLES[1];
 
@@ -115,13 +118,24 @@ export default function RankStrip({ currentRank, totalXp }: RankStripProps) {
         />
 
         {/* XP text -- gold to stay consistent with every other
-            XP surface in the app. */}
-        <p className="text-[0.65rem] font-mono mt-1 tabular-nums">
-          <span className="text-xp-gold font-bold">
-            {totalXp.toLocaleString()} XP
-          </span>
-          <span className="text-text-secondary"> TOTAL</span>
-        </p>
+            XP surface in the app. Total on the left, countdown to
+            the next rank on the right. */}
+        <div className="flex items-center justify-between text-[0.65rem] font-mono mt-1 tabular-nums">
+          <p>
+            <span className="text-xp-gold font-bold">
+              {totalXp.toLocaleString()} XP
+            </span>
+            <span className="text-text-secondary"> TOTAL</span>
+          </p>
+          {!atMaxRank && (
+            <p>
+              <span className="text-text-secondary">TO {nextTitleShort.toUpperCase()} </span>
+              <span className="text-sand font-bold">
+                {xpToNext.toLocaleString()} XP
+              </span>
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

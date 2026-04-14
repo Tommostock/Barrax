@@ -14,7 +14,7 @@
 
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
-import { Swords, Check, Clock, Zap } from "lucide-react";
+import { Check, Clock, Zap } from "lucide-react";
 import type { WorkoutData } from "@/types";
 import { useHQData } from "@/components/providers/HQDataProvider";
 
@@ -22,7 +22,7 @@ export default function TodayWorkoutCard() {
   const router = useRouter();
   const { data, loading } = useHQData();
 
-  if (loading && !data) return <div className="skeleton h-44 w-full" />;
+  if (loading && !data) return <div className="skeleton h-full w-full" />;
 
   const workout = data?.todayWorkout ?? null;
   const wd = (workout?.workout_data as WorkoutData | undefined) ?? null;
@@ -34,6 +34,12 @@ export default function TodayWorkoutCard() {
     wd?.focus?.trim() ||
     (wd?.type ? wd.type.replace(/_/g, " ") : null) ||
     (wd ? "No focus set" : null);
+
+  // Main exercise roster (excludes warmup + cooldown). Show up to 3
+  // to fill the expanded card without overflowing.
+  const mainExercises = wd?.exercises ?? [];
+  const previewExercises = mainExercises.slice(0, 3);
+  const extraCount = Math.max(0, mainExercises.length - previewExercises.length);
 
   function handleTap() {
     if (!workout) {
@@ -54,19 +60,10 @@ export default function TodayWorkoutCard() {
       onClick={handleTap}
     >
       <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
-        {/* Icon + label */}
-        <div className="flex items-center gap-2">
-          <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">
-            {isComplete ? (
-              <Check size={14} className="text-green-light" />
-            ) : (
-              <Swords size={14} className="text-green-primary" />
-            )}
-          </div>
-          <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
-            Workout
-          </p>
-        </div>
+        {/* Label (icon removed — was taking up valuable space) */}
+        <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
+          {isComplete ? "Workout · done" : "Workout · today"}
+        </p>
 
         {/* Operation codename */}
         <p className="text-sm font-heading uppercase tracking-wider text-sand truncate w-full">
@@ -84,12 +81,40 @@ export default function TodayWorkoutCard() {
           </p>
         )}
 
-        {/* Footer: duration + XP badge (gold) */}
+        {/* Exercise roster — up to 3 main exercises, one per line */}
+        {previewExercises.length > 0 && (
+          <div className="w-full mt-1 space-y-0.5">
+            {previewExercises.map((ex, i) => (
+              <p
+                key={`${ex.name}-${i}`}
+                className="text-[0.6rem] font-mono text-text-primary truncate"
+              >
+                <span className="text-green-primary">›</span> {ex.name}
+                {ex.sets && ex.reps ? (
+                  <span className="text-text-secondary">
+                    {" "}
+                    · {ex.sets}×{ex.reps}
+                  </span>
+                ) : null}
+              </p>
+            ))}
+            {extraCount > 0 && (
+              <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
+                +{extraCount} more
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Footer: duration + XP badge (gold) anchored to bottom */}
         {wd && (
           <div className="flex items-center gap-2 mt-auto pt-2 flex-wrap">
             <span className="flex items-center gap-1 text-[0.6rem] font-mono text-text-secondary">
               <Clock size={10} />
               {wd.duration_minutes} min
+            </span>
+            <span className="flex items-center gap-1 text-[0.6rem] font-mono text-text-secondary">
+              {mainExercises.length} ex
             </span>
             {isComplete ? (
               <span className="flex items-center gap-1 text-[0.6rem] font-mono text-green-light uppercase tracking-wider">

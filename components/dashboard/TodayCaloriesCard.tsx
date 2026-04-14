@@ -12,7 +12,6 @@
 
 import { useRouter } from "next/navigation";
 import Card from "@/components/ui/Card";
-import { Utensils } from "lucide-react";
 import { useHQData } from "@/components/providers/HQDataProvider";
 
 // ---------- Mini macro ring ----------
@@ -29,12 +28,13 @@ function MacroRing({
   colour: string;
   label: string;
 }) {
-  const size = 30;
+  const size = 34;
   const strokeWidth = 3;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const pct = target > 0 ? Math.min(1, value / target) : 0;
   const offset = circumference - pct * circumference;
+  const remaining = Math.max(0, Math.round(target - value));
 
   return (
     <div className="flex flex-col items-center">
@@ -70,6 +70,9 @@ function MacroRing({
       <p className="text-[0.45rem] font-mono text-text-secondary uppercase mt-0.5 leading-none tracking-wider">
         {label}
       </p>
+      <p className="text-[0.45rem] font-mono text-text-secondary uppercase leading-none tabular-nums">
+        {remaining}g LEFT
+      </p>
     </div>
   );
 }
@@ -79,12 +82,14 @@ export default function TodayCaloriesCard() {
   const router = useRouter();
   const { data, loading } = useHQData();
 
-  if (loading && !data) return <div className="skeleton h-44 w-full" />;
+  if (loading && !data) return <div className="skeleton h-full w-full" />;
 
   const calories = data?.caloriesToday ?? 0;
   const target = data?.calorieTarget ?? 2000;
   const caloriePct =
     target > 0 ? Math.min(100, Math.round((calories / target) * 100)) : 0;
+  const remaining = Math.max(0, target - calories);
+  const over = calories > target;
 
   return (
     <Card
@@ -93,15 +98,10 @@ export default function TodayCaloriesCard() {
       onClick={() => router.push("/rations")}
     >
       <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
-        {/* Icon + label */}
-        <div className="flex items-center gap-2">
-          <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">
-            <Utensils size={14} className="text-green-primary" />
-          </div>
-          <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
-            Calories
-          </p>
-        </div>
+        {/* Label (icon removed — was taking up valuable space) */}
+        <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
+          Calories · today
+        </p>
 
         {/* Big number / target */}
         <p className="text-sm font-heading uppercase tracking-wider text-sand tabular-nums">
@@ -112,16 +112,42 @@ export default function TodayCaloriesCard() {
           </span>
         </p>
 
+        {/* Remaining or over-budget readout */}
+        <p className="text-[0.6rem] font-mono uppercase tracking-wider tabular-nums">
+          {over ? (
+            <>
+              <span className="text-danger">
+                +{(calories - target).toLocaleString()}
+              </span>
+              <span className="text-text-secondary"> over target</span>
+            </>
+          ) : (
+            <>
+              <span className="text-green-light">
+                {remaining.toLocaleString()}
+              </span>
+              <span className="text-text-secondary"> kcal left</span>
+            </>
+          )}
+        </p>
+
         {/* Progress bar */}
-        <div className="h-1 bg-bg-input w-full overflow-hidden">
+        <div className="h-1 bg-bg-input w-full overflow-hidden mt-1">
           <div
-            className="h-full bg-green-primary transition-all duration-500"
+            className={`h-full transition-all duration-500 ${
+              over ? "bg-danger" : "bg-green-primary"
+            }`}
             style={{ width: `${caloriePct}%` }}
           />
         </div>
 
-        {/* Macro rings row -- fills the remaining vertical space */}
-        <div className="flex items-center justify-around w-full mt-auto pt-2">
+        {/* Macros header */}
+        <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary mt-auto pt-2">
+          Macros
+        </p>
+
+        {/* Macro rings row */}
+        <div className="flex items-start justify-around w-full pt-1">
           <MacroRing
             value={data?.proteinToday ?? 0}
             target={data?.proteinTarget ?? 150}
