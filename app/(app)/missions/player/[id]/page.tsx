@@ -1486,7 +1486,14 @@ export default function WorkoutPlayerPage() {
 
     return (
       <div className="fixed inset-0 z-[100] bg-bg-primary flex flex-col overflow-y-auto">
-        <div className="flex-1 flex flex-col items-center px-4 py-8">
+        <div
+          className="flex-1 flex flex-col items-center px-4 pb-8"
+          style={{
+            // Push the whole debrief below the iPhone notch / status bar.
+            // Same pattern used by the active-phase top bar.
+            paddingTop: "max(env(safe-area-inset-top, 20px), 60px)",
+          }}
+        >
           {/* Tag */}
           <Tag variant="complete">HOSTILE ELIMINATED</Tag>
 
