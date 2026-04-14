@@ -2,24 +2,16 @@
    ObjectivesCard
    Single card showing both the daily Contract and
    the monthly Classified Op as compact rows inside
-   a shared frame. Replaces the two separate
-   ContractCard + ClassifiedOpCard components with
-   a single component that:
+   a shared frame. Reads cached data from HQDataProvider
+   instead of fetching on mount.
 
-   - Loads contract + op + rank in one pass
-   - Generates either if missing (best-effort, online)
-   - Listens for completion events and re-loads
-   - Self-heals progress via updateMissionsProgress
-   - Renders rank-2 lock state for contracts
-   - Dispatches open-classified-op on tap
-   - Exposes a LOG PROGRESS button for rep-based
-     contracts/ops via the shared LogProgressModal
-   - Shows per-row countdowns (1s tick for contract,
-     1m tick for op) using the formatCountdown helper
-
-   Visually: classification tag at top, two mission
-   rows inside. Each row is icon · title · progress
-   bar · countdown · (optional) log-plus button.
+   Side effects it still owns:
+     - Best-effort generation of a missing contract or op
+       via the /api/generate-* endpoints
+     - Self-heal of current_value via updateMissionsProgress
+     - Refresh the HQ provider after any of the above
+   Completion events (contract-complete / classified-op-complete)
+   are picked up by the provider automatically.
    ============================================ */
 
 "use client";
@@ -42,8 +34,6 @@ import {
   Plus,
 } from "lucide-react";
 import {
-  todayLocalISO,
-  monthStartLocalISO,
   contractExpiry,
   classifiedOpExpiry,
   formatCountdown,
@@ -55,18 +45,19 @@ import type {
   ProgressKey,
 } from "@/types/missions";
 import LogProgressModal from "@/components/mission/LogProgressModal";
+import { useHQData } from "@/components/providers/HQDataProvider";
 
-// ---------- Helpers (same rules as the old cards) ----------
+// ---------- Helpers ----------
 
 const TYPE_ACCENT_TEXT: Record<ContractType, string> = {
   bounty: "text-xp-gold",
-  scavenger: "text-scavenger",
+  scavenger: "text-xp-gold",
   recon: "text-recon",
 };
 
 const TYPE_ACCENT_BG: Record<ContractType, string> = {
   bounty: "bg-xp-gold",
-  scavenger: "bg-scavenger",
+  scavenger: "bg-xp-gold",
   recon: "bg-recon",
 };
 
@@ -102,11 +93,9 @@ function labelForKey(key: ProgressKey): string {
 // ---------- Component ----------
 export default function ObjectivesCard() {
   const supabase = createClient();
-  const [loading, setLoading] = useState(true);
-  const [rank, setRank] = useState(1);
-  const [contract, setContract] = useState<DailyContract | null>(null);
-  const [op, setOp] = useState<ClassifiedOp | null>(null);
+  const { data, loading, refresh } = useHQData();
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [triedGeneration, setTriedGeneration] = useState(false);
 
   // Log-progress modal state. Shared by both rows; the selected row
   // decides which progress key to log against.
@@ -116,117 +105,76 @@ export default function ObjectivesCard() {
     | null
   >(null);
 
-  // ---------- Data load ----------
-  const reload = useCallback(async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  const rank = data?.rankLevel ?? 1;
+  const contract = data?.contract ?? null;
+  const op = data?.op ?? null;
 
-    // 1. Rank (for contract gating)
-    const { data: rankRow } = await supabase
-      .from("ranks")
-      .select("current_rank")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const currentRank = rankRow?.current_rank ?? 1;
-    setRank(currentRank);
+  // ---------- Best-effort generation of missing contract/op ----------
+  // Runs once per HQ visit. The server routes are idempotent so this
+  // is safe even if the DB already has a row. Only attempted when the
+  // provider has loaded AND we're online AND the row is genuinely
+  // missing.
+  useEffect(() => {
+    if (loading || triedGeneration) return;
+    if (!data) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
 
-    // 2. Load existing contract + op in parallel
-    const today = todayLocalISO();
-    const monthStart = monthStartLocalISO();
-    const [contractRes, opRes] = await Promise.all([
-      currentRank >= 2
-        ? supabase
-            .from("daily_contracts")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("date", today)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      supabase
-        .from("classified_ops")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("month_start", monthStart)
-        .maybeSingle(),
-    ]);
+    async function generateMissing() {
+      let mutated = false;
 
-    let loadedContract = (contractRes.data as DailyContract | null) ?? null;
-    let loadedOp = (opRes.data as ClassifiedOp | null) ?? null;
-
-    // 3. Self-heal progress on anything we found
-    if (loadedContract || loadedOp) {
-      try {
-        const { updateContractProgress, updateOpProgress } = await import(
-          "@/lib/missions/progress"
-        );
-        if (loadedContract) {
-          const updated = await updateContractProgress(supabase, user.id);
-          if (updated) loadedContract = updated;
-        }
-        if (loadedOp) {
-          const updated = await updateOpProgress(supabase, user.id);
-          if (updated) loadedOp = updated;
-        }
-      } catch (err) {
-        console.warn("[ObjectivesCard] progress recompute failed:", err);
-      }
-    }
-
-    // 4. Best-effort generate anything missing (only online)
-    if (typeof navigator !== "undefined" && navigator.onLine) {
-      if (!loadedContract && currentRank >= 2) {
+      if (!contract && rank >= 2) {
         try {
           const res = await fetch("/api/generate-contract", { method: "POST" });
-          if (res.ok) {
-            const { contract: generated } = await res.json();
-            if (generated) loadedContract = generated as DailyContract;
-          }
+          if (res.ok) mutated = true;
         } catch (err) {
           console.warn("[ObjectivesCard] contract generation failed:", err);
         }
       }
-      if (!loadedOp) {
+      if (!op) {
         try {
           const res = await fetch("/api/generate-classified-op", { method: "POST" });
-          if (res.ok) {
-            const { op: generated } = await res.json();
-            if (generated) loadedOp = generated as ClassifiedOp;
-          }
+          if (res.ok) mutated = true;
         } catch (err) {
           console.warn("[ObjectivesCard] op generation failed:", err);
         }
       }
+      if (mutated) refresh();
     }
 
-    setContract(loadedContract);
-    setOp(loadedOp);
-    setLoading(false);
-  }, [supabase]);
+    setTriedGeneration(true);
+    generateMissing();
+  }, [loading, triedGeneration, data, contract, op, rank, refresh]);
 
+  // ---------- Self-heal progress on mount ----------
+  // The progress engine runs from workout/meal/run hooks, but if a hook
+  // was missed (e.g. offline, tab unmounted mid-write) we reconcile
+  // here so HQ always shows the freshest aggregate.
   useEffect(() => {
-    reload();
-  }, [reload]);
-
-  // Re-fetch on completion events dispatched by the progress engine
-  useEffect(() => {
-    function handler() {
-      reload();
-    }
-    window.addEventListener("contract-complete", handler);
-    window.addEventListener("classified-op-complete", handler);
+    if (!data || (!contract && !op)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { updateMissionsProgress } = await import("@/lib/missions/progress");
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+        await updateMissionsProgress(supabase, user.id);
+        // updateMissionsProgress writes to Supabase but doesn't update
+        // our local cache -- trigger a refresh so the bar moves.
+        if (!cancelled) refresh();
+      } catch (err) {
+        console.warn("[ObjectivesCard] progress recompute failed:", err);
+      }
+    })();
     return () => {
-      window.removeEventListener("contract-complete", handler);
-      window.removeEventListener("classified-op-complete", handler);
+      cancelled = true;
     };
-  }, [reload]);
+    // Only run once per data load, not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.rank?.current_rank, contract?.id, op?.id]);
 
-  // 1s tick so the contract countdown is live. Op countdown measures
-  // in days so the same tick is more than fast enough.
+  // ---------- Countdown tick ----------
   useEffect(() => {
     const anyLive =
       (contract && !contract.completed) || (op && !op.completed);
@@ -246,15 +194,14 @@ export default function ObjectivesCard() {
   }, [op, nowMs]);
 
   // ---------- Tap handlers ----------
-  function openOpBriefing() {
+  const openOpBriefing = useCallback(() => {
     if (!op) return;
     window.dispatchEvent(new CustomEvent("open-classified-op", { detail: op }));
-  }
+  }, [op]);
 
   // ---------- Render ----------
-  if (loading) return <div className="skeleton h-36 w-full" />;
+  if (loading && !data) return <div className="skeleton h-36 w-full" />;
 
-  // Rank 2 gate -- no contracts yet, but still show op if we have one
   const contractLocked = rank < 2;
 
   return (
@@ -278,7 +225,6 @@ export default function ObjectivesCard() {
           <EmptyRow label="NO CONTRACT AVAILABLE" />
         )}
 
-        {/* Divider between the two rows */}
         <div className="my-3 h-px bg-green-dark" />
 
         {/* ---------- CLASSIFIED OP ROW ---------- */}
@@ -299,12 +245,11 @@ export default function ObjectivesCard() {
         )}
       </Card>
 
-      {/* Shared log-progress modal, wired by the current logTarget */}
       {logTarget && (
         <LogProgressModal
           isOpen={logTarget !== null}
           onClose={() => setLogTarget(null)}
-          onLogged={reload}
+          onLogged={refresh}
           progressKey={logTarget.row.progress_key}
           label={labelForKey(logTarget.row.progress_key)}
           unit={logTarget.row.unit}
@@ -316,7 +261,7 @@ export default function ObjectivesCard() {
   );
 }
 
-// ---------- Subcomponents (inline rows) ----------
+// ---------- Subcomponents ----------
 
 function ContractLockedRow() {
   return (
@@ -402,7 +347,6 @@ function ContractRow({
           {contract.title}
         </p>
 
-        {/* Progress bar */}
         <div className="mt-1.5 h-1.5 bg-bg-input w-full overflow-hidden border border-green-dark">
           <div
             className={`h-full transition-all duration-500 ${

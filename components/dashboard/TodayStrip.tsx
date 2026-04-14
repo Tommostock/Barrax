@@ -1,98 +1,32 @@
 /* ============================================
    TodayStrip
-   A single compact card showing the two most
-   important "today" signals side-by-side:
-
-     LEFT  column: today's scheduled workout
-     RIGHT column: today's calorie pill
-
-   Replaces the separate TodayMission + TodayRations
-   cards from the old HQ. Each column deep-links to
-   the relevant screen on tap. Tight by design -- one
-   glance, one tap, nothing more.
+   Single compact card showing today's workout on
+   the left and today's calorie pill on the right,
+   divided by a thin border. Reads from HQDataProvider
+   (no fetch on mount -- the context already has the
+   data cached at the layout level).
    ============================================ */
 
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import { Swords, Check, Utensils, Clock } from "lucide-react";
-import type { Workout, WorkoutData } from "@/types";
+import type { WorkoutData } from "@/types";
+import { useHQData } from "@/components/providers/HQDataProvider";
 
-// ---------- Types ----------
-interface StripData {
-  workout: Workout | null;
-  caloriesLogged: number;
-  calorieTarget: number;
-}
-
-// ---------- Component ----------
 export default function TodayStrip() {
   const router = useRouter();
-  const supabase = createClient();
-  const [data, setData] = useState<StripData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading } = useHQData();
 
-  useEffect(() => {
-    async function load() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+  // First-paint skeleton only. On tab-switch re-renders we already
+  // have `data` from the provider, so no skeleton flash.
+  if (loading && !data) return <div className="skeleton h-24 w-full" />;
 
-      const today = new Date().toISOString().split("T")[0];
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
-
-      const [workoutRes, profileRes, diaryRes] = await Promise.all([
-        supabase
-          .from("workouts")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("scheduled_date", today)
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("profiles")
-          .select("calorie_target")
-          .eq("id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("food_diary")
-          .select("calories")
-          .eq("user_id", user.id)
-          .gte("logged_at", todayStart.toISOString())
-          .lte("logged_at", todayEnd.toISOString()),
-      ]);
-
-      const caloriesLogged = (diaryRes.data ?? []).reduce(
-        (sum, e) => sum + (e.calories ?? 0),
-        0,
-      );
-
-      setData({
-        workout: (workoutRes.data as Workout | null) ?? null,
-        caloriesLogged: Math.round(caloriesLogged),
-        calorieTarget: profileRes.data?.calorie_target ?? 2000,
-      });
-      setLoading(false);
-    }
-    load();
-  }, [supabase]);
-
-  if (loading) return <div className="skeleton h-24 w-full" />;
-
-  const workout = data?.workout ?? null;
+  const workout = data?.todayWorkout ?? null;
   const wd = (workout?.workout_data as WorkoutData | undefined) ?? null;
   const isComplete = workout?.status === "complete";
-  const calories = data?.caloriesLogged ?? 0;
+  const calories = data?.caloriesToday ?? 0;
   const target = data?.calorieTarget ?? 2000;
   const caloriePct = target > 0 ? Math.min(100, Math.round((calories / target) * 100)) : 0;
 
@@ -164,7 +98,6 @@ export default function TodayStrip() {
               {calories.toLocaleString()}
               <span className="text-text-secondary"> / {target.toLocaleString()}</span>
             </p>
-            {/* Thin progress bar */}
             <div className="mt-1 h-1 bg-bg-input w-full overflow-hidden">
               <div
                 className="h-full bg-green-primary transition-all duration-500"

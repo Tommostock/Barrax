@@ -17,6 +17,7 @@ import SuppsReminder from "@/components/layout/SuppsReminder";
 import AuthGuard from "@/components/layout/AuthGuard";
 import RankUpOverlay from "@/components/ui/RankUpOverlay";
 import ClassifiedOpBriefingOverlay from "@/components/mission/ClassifiedOpBriefingOverlay";
+import HQDataProvider from "@/components/providers/HQDataProvider";
 
 export default function AppLayout({
   children,
@@ -25,18 +26,24 @@ export default function AppLayout({
 }) {
   return (
     <AuthGuard>
-      <Header />
-      <main className="flex-1 pb-28 animate-page-enter">{children}</main>
-      <BottomNav />
-      <InstallPrompt />
-      <NotificationPermission />
-      <WeighInReminder />
-      <WeeklySummary />
-      <WeeklyBriefing />
-      <PFTReminder />
-      <SuppsReminder />
-      <RankUpOverlay />
-      <ClassifiedOpBriefingOverlay />
+      {/* HQDataProvider lives at the layout level so the HQ cache
+          survives tab switches -- children unmount/remount on route
+          changes but the provider persists, so HQ re-renders
+          instantly from the last snapshot instead of re-fetching. */}
+      <HQDataProvider>
+        <Header />
+        <main className="flex-1 pb-28 animate-page-enter">{children}</main>
+        <BottomNav />
+        <InstallPrompt />
+        <NotificationPermission />
+        <WeighInReminder />
+        <WeeklySummary />
+        <WeeklyBriefing />
+        <PFTReminder />
+        <SuppsReminder />
+        <RankUpOverlay />
+        <ClassifiedOpBriefingOverlay />
+      </HQDataProvider>
     </AuthGuard>
   );
 }
