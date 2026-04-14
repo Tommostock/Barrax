@@ -52,9 +52,8 @@ export default function TodayWorkoutCard() {
       tag={isComplete ? "COMPLETE" : "MISSION"}
       tagVariant={isComplete ? "complete" : "active"}
       onClick={handleTap}
-      className="h-full"
     >
-      <div className="flex flex-col items-start gap-1 min-w-0 h-full">
+      <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
         {/* Icon + label */}
         <div className="flex items-center gap-2">
           <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">

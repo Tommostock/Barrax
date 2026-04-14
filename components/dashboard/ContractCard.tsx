@@ -167,8 +167,8 @@ export default function ContractCard() {
   // Rank < 2 gate
   if (rank < 2) {
     return (
-      <Card tag="LOCKED" tagVariant="locked" className="h-full">
-        <div className="flex flex-col items-start gap-1 min-w-0 h-full">
+      <Card tag="LOCKED" tagVariant="locked">
+        <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">
               <Lock size={14} className="text-text-secondary" />
@@ -191,8 +191,8 @@ export default function ContractCard() {
   // No contract yet (generation still pending or failed)
   if (!contract) {
     return (
-      <Card tag="CONTRACT" tagVariant="gold" className="h-full">
-        <div className="flex flex-col items-start gap-1 min-w-0 h-full">
+      <Card tag="CONTRACT" tagVariant="gold">
+        <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">
               <Crosshair size={14} className="text-text-secondary" />
@@ -225,8 +225,8 @@ export default function ContractCard() {
 
   return (
     <>
-      <Card tag={tagText} tagVariant={tagVariant} className="h-full">
-        <div className="flex flex-col items-start gap-1 min-w-0 h-full">
+      <Card tag={tagText} tagVariant={tagVariant}>
+        <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
           {/* Icon + label */}
           <div className="flex items-center gap-2">
             <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-green-dark flex items-center justify-center flex-shrink-0">

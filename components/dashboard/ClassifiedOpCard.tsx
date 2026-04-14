@@ -116,8 +116,8 @@ export default function ClassifiedOpCard() {
 
   if (!op) {
     return (
-      <Card tag="CLASSIFIED" tagVariant="danger" className="h-full">
-        <div className="flex flex-col items-start gap-1 min-w-0 h-full">
+      <Card tag="CLASSIFIED" tagVariant="danger">
+        <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="min-w-[28px] min-h-[28px] bg-bg-panel-alt border border-danger flex items-center justify-center flex-shrink-0">
               <Shield size={14} className="text-danger" />
@@ -147,9 +147,8 @@ export default function ClassifiedOpCard() {
         tag={completed ? "MISSION ACCOMPLISHED" : "CLASSIFIED"}
         tagVariant={completed ? "complete" : "danger"}
         onClick={openBriefing}
-        className="h-full"
       >
-        <div className="flex flex-col items-start gap-1 min-w-0 h-full relative">
+        <div className="flex flex-col items-start gap-1 min-w-0 flex-1 relative">
           {/* COMPLETE watermark (behind content) */}
           {completed && (
             <span

@@ -49,15 +49,19 @@ export default function Card({
     <div
       className={`
         bg-bg-panel border border-green-dark p-4 relative
+        flex flex-col
         ${scanLines ? "scan-lines" : ""}
         ${onClick ? "cursor-pointer press-scale" : ""}
         ${className}
       `}
       onClick={onClick}
     >
-      {/* Classification tag at top of card -- kept bracketed for emphasis */}
+      {/* Classification tag at top of card -- kept bracketed for emphasis.
+          flex-shrink-0 so the tag never compresses in a flex column. */}
       {tag && (
-        <span className={`tag ${tagStyles[tagVariant]} mb-3 block w-fit`}>
+        <span
+          className={`tag ${tagStyles[tagVariant]} mb-3 block w-fit flex-shrink-0`}
+        >
           [{tag}]
         </span>
       )}
