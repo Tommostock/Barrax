@@ -1029,6 +1029,12 @@ export default function WorkoutPlayerPage() {
       const { completeWorkoutAndNotify } = await import("@/lib/award-and-notify");
       await completeWorkoutAndNotify(xp, totalDuration);
 
+      // 4c-bis. Tell the HQ data cache that something changed so the
+      // rank/XP + today's workout card refresh next time HQ is visible.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("workout-complete"));
+      }
+
       // Check and award badges
       const { data: { user } } = await supabase.auth.getUser();
 

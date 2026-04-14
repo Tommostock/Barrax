@@ -139,22 +139,44 @@ export default function BodyTrackingPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // OPTIMISTIC UI: clear the input, close the editor, and push a
+    // temp entry into the head of the list immediately so the user
+    // sees the new weight in the trend + history the same frame
+    // they tap SAVE. Reconcile with a background loadData() once
+    // the server confirms.
+    const optimisticEntry: WeightLog = {
+      id: `pending_${Date.now()}`,
+      user_id: user.id,
+      weight_kg: weight,
+      logged_at: new Date().toISOString(),
+    };
+    setWeightLogs((prev) => [optimisticEntry, ...prev]);
+    setNewWeight("");
+    setShowInput(false);
+
     const { error } = await supabase.from("weight_logs").insert({
       user_id: user.id,
       weight_kg: weight,
     });
 
     if (error) {
+      // Roll back on failure
+      setWeightLogs((prev) => prev.filter((l) => l.id !== optimisticEntry.id));
       alert(`Failed to log weight: ${error.message}`);
       return;
     }
 
-    const { awardXPAndNotify } = await import("@/lib/award-and-notify");
-    await awardXPAndNotify(10, "weight_logged");
+    // Background XP award + fire HQ refresh so rank updates in the
+    // cache without waiting for the 30s TTL.
+    import("@/lib/award-and-notify")
+      .then(({ awardXPAndNotify }) => awardXPAndNotify(10, "weight_logged"))
+      .catch(() => {});
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("hq-refresh"));
+    }
 
-    setNewWeight("");
-    setShowInput(false);
-    loadData();
+    // Reconcile the temp row with the real server-assigned ID.
+    loadData().catch(() => {});
   }
 
   // Upload a progress photo via camera or file picker

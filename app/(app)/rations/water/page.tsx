@@ -59,21 +59,26 @@ export default function WaterTrackerPage() {
     // Haptic feedback
     navigator.vibrate?.(50);
 
+    // OPTIMISTIC UI: bump the total immediately so the ring animates
+    // the moment the user taps. Server insert runs in background.
+    const previousTotal = todayTotal;
+    const newTotal = previousTotal + amount;
+    setTodayTotal(newTotal);
+
     const { error } = await supabase.from("water_logs").insert({
       user_id: user.id,
       amount_ml: amount,
     });
 
     if (error) {
+      // Roll back on failure
+      setTodayTotal(previousTotal);
       alert(`Failed to log water: ${error.message}`);
       return;
     }
 
-    const newTotal = todayTotal + amount;
-    setTodayTotal(newTotal);
-
-    // Award XP + notify if just hit the daily target
-    if (todayTotal < dailyTarget && newTotal >= dailyTarget) {
+    // Award XP + notify if just crossed the daily target
+    if (previousTotal < dailyTarget && newTotal >= dailyTarget) {
       const { hitWaterGoalAndNotify } = await import("@/lib/award-and-notify");
       await hitWaterGoalAndNotify();
     }

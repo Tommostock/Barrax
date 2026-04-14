@@ -310,6 +310,36 @@ export default function FoodDiaryPage() {
       throw new Error("Food name is required");
     }
 
+    // OPTIMISTIC UI: append a temp entry to local state immediately so
+    // the user sees their food in the diary within one frame. The
+    // real insert runs in the background; on success we reload to
+    // reconcile IDs, on failure we drop the temp entry.
+    const tempId = `pending_${Date.now()}`;
+    const tempEntry: FoodDiaryEntry = {
+      id: tempId,
+      user_id: user.id,
+      food_name: payload.food_name,
+      brand: payload.brand,
+      barcode: payload.barcode,
+      calories: payload.calories,
+      protein_g: payload.protein_g,
+      carbs_g: payload.carbs_g,
+      fat_g: payload.fat_g,
+      quantity: food.quantity ?? 1,
+      serving_size: payload.serving_size,
+      meal_type: payload.meal_type,
+      source: payload.source,
+      logged_at: payload.logged_at,
+    };
+    setEntries((prev) => [...prev, tempEntry]);
+
+    // Fire-and-forget: HQ cache invalidation for the calorie pill.
+    // The provider refetches so HQ shows the new total immediately
+    // the next time it's visible.
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("meal-logged"));
+    }
+
     // Wrap the insert in queueOrExecute so offline logs still work.
     // When offline (or on a transient error) the payload is persisted
     // to IndexedDB and replayed on the next `online` event.
@@ -322,33 +352,16 @@ export default function FoodDiaryPage() {
     );
 
     if (!result.success) {
+      // Roll back the optimistic entry if IndexedDB is also unavailable.
+      setEntries((prev) => prev.filter((e) => e.id !== tempId));
       throw new Error("Failed to save food — IndexedDB unavailable");
     }
 
-    if (result.queued) {
-      // Optimistically append to local state so the entry appears
-      // immediately even though it hasn't hit the server yet.
-      // Use a temporary UUID — the real row will arrive on next refresh.
-      const tempEntry: FoodDiaryEntry = {
-        id: `pending_${Date.now()}`,
-        user_id: user.id,
-        food_name: payload.food_name,
-        brand: payload.brand,
-        barcode: payload.barcode,
-        calories: payload.calories,
-        protein_g: payload.protein_g,
-        carbs_g: payload.carbs_g,
-        fat_g: payload.fat_g,
-        quantity: food.quantity ?? 1,
-        serving_size: payload.serving_size,
-        meal_type: payload.meal_type,
-        source: payload.source,
-        logged_at: payload.logged_at,
-      };
-      setEntries((prev) => [...prev, tempEntry]);
-    } else {
-      // Online path: reload to get the real row with its server ID.
-      await loadEntries();
+    if (!result.queued) {
+      // Online path: reconcile by reloading so the temp entry gets
+      // replaced by the real row with its server ID. Fire-and-forget
+      // so the UI stays snappy.
+      loadEntries().catch(() => {});
     }
 
     // Recompute mission progress for scavenger/nutrition contracts.

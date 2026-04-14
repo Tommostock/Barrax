@@ -83,6 +83,13 @@ export default function QuickActionsBar() {
     } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Close the sheet FIRST so the user gets instant feedback, then
+    // fire the insert + HQ cache invalidation in the background.
+    setFoodSheetOpen(false);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("meal-logged"));
+    }
+
     await supabase.from("food_diary").insert({
       user_id: user.id,
       food_name: food.food_name,
@@ -98,19 +105,30 @@ export default function QuickActionsBar() {
       logged_at: new Date().toISOString(),
     });
 
-    setFoodSheetOpen(false);
     awardProteinTargetIfHit();
   }
 
   async function handleLogSupps() {
     if (loggingSupps || suppsLogged) return;
+
+    // OPTIMISTIC UI: flip the button to green before awaiting the
+    // server so the user sees instant feedback. Roll back on failure.
     setLoggingSupps(true);
+    setSuppsLogged(true);
     try {
       const ok = await logSuppsStack();
-      if (!ok) return;
+      if (!ok) {
+        setSuppsLogged(false);
+        return;
+      }
+      // Supps count as food rows -- invalidate HQ calorie pill.
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("meal-logged"));
+      }
       await awardXPAndNotify(SUPPS_XP, "supps_logged");
       awardProteinTargetIfHit();
-      setSuppsLogged(true);
+    } catch {
+      setSuppsLogged(false);
     } finally {
       setLoggingSupps(false);
     }
