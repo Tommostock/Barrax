@@ -67,6 +67,8 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
   // My foods state
   const [savedFoods, setSavedFoods] = useState<SavedFood[]>([]);
   const [savedLoading, setSavedLoading] = useState(true);
+  // Search box for filtering the user's saved foods library
+  const [savedFoodQuery, setSavedFoodQuery] = useState("");
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -213,7 +215,20 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
     setScannedProduct(null);
     setManual({ food_name: "", calories: "", protein_g: "", carbs_g: "", fat_g: "" });
     setBarcodeFallback(null);
+    setSavedFoodQuery("");
   }
+
+  // Filter saved foods by the user's search query (case-insensitive, matches
+  // both food name and brand) so the list updates as they type.
+  const filteredSavedFoods = savedFoodQuery.trim()
+    ? savedFoods.filter((food) => {
+        const q = savedFoodQuery.trim().toLowerCase();
+        return (
+          food.food_name.toLowerCase().includes(q) ||
+          (food.brand?.toLowerCase().includes(q) ?? false)
+        );
+      })
+    : savedFoods;
 
   if (showScanner) {
     return <BarcodeScanner onScan={handleBarcodeScan} onClose={() => setShowScanner(false)} />;
@@ -330,40 +345,68 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
 
           {/* MY FOODS TAB */}
           {tab === "my_foods" && (
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {savedLoading ? (
-                <div className="text-center py-4"><Loader2 size={20} className="text-green-primary animate-spin mx-auto" /></div>
-              ) : savedFoods.length === 0 ? (
-                <div className="text-center py-6">
-                  <Star size={24} className="text-text-secondary mx-auto mb-2" />
-                  <p className="text-xs text-text-secondary">No saved foods yet.</p>
-                  <p className="text-[0.6rem] text-text-secondary mt-1">Search or scan a food, then tap &quot;SAVE TO MY FOODS&quot;.</p>
+            <div className="space-y-3">
+              {/* Search box — lets the user quickly filter saved foods by
+                  name or brand. Only shown once there's something to search. */}
+              {!savedLoading && savedFoods.length > 0 && (
+                <div className="relative">
+                  <Search
+                    size={14}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary pointer-events-none"
+                  />
+                  <input
+                    type="text"
+                    value={savedFoodQuery}
+                    onChange={(e) => setSavedFoodQuery(e.target.value)}
+                    placeholder="Search my foods..."
+                    className="w-full pl-9 pr-3 py-2.5 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm"
+                  />
                 </div>
-              ) : (
-                savedFoods.map((food) => (
-                  <div key={food.id} className="flex items-center gap-2">
-                    <button onClick={() => selectFood({
-                      food_name: food.food_name, brand: food.brand ?? undefined, barcode: food.barcode ?? undefined,
-                      calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g,
-                      serving_size: food.serving_size ?? undefined, source: "manual",
-                    })}
-                      className="flex-1 flex items-center justify-between p-3 bg-bg-panel border border-green-dark/50 text-left hover:bg-bg-panel-alt transition-colors min-h-[44px]">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-text-primary truncate">{food.food_name}</p>
-                        {food.brand && <p className="text-[0.6rem] text-text-secondary">{food.brand}</p>}
-                      </div>
-                      <div className="text-right ml-2">
-                        <p className="text-sm font-mono font-bold text-text-primary">{food.calories}</p>
-                        <p className="text-[0.45rem] font-mono text-text-secondary">kcal</p>
-                      </div>
-                    </button>
-                    <button onClick={() => deleteSavedFood(food.id)}
-                      className="min-w-[36px] min-h-[36px] flex items-center justify-center text-text-secondary hover:text-danger">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))
               )}
+
+              {/* Scrollable list — each row is a fixed-height card so long
+                  food names get truncated instead of expanding the box.
+                  `min-w-0` + `w-full` on the flex chain is what lets
+                  `truncate` actually clip the text. */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {savedLoading ? (
+                  <div className="text-center py-4"><Loader2 size={20} className="text-green-primary animate-spin mx-auto" /></div>
+                ) : savedFoods.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Star size={24} className="text-text-secondary mx-auto mb-2" />
+                    <p className="text-xs text-text-secondary">No saved foods yet.</p>
+                    <p className="text-[0.6rem] text-text-secondary mt-1">Search or scan a food, then tap &quot;SAVE TO MY FOODS&quot;.</p>
+                  </div>
+                ) : filteredSavedFoods.length === 0 ? (
+                  <div className="text-center py-6">
+                    <p className="text-xs text-text-secondary">No matches for &quot;{savedFoodQuery}&quot;.</p>
+                  </div>
+                ) : (
+                  filteredSavedFoods.map((food) => (
+                    <div key={food.id} className="flex items-center gap-2 w-full min-w-0">
+                      <button onClick={() => selectFood({
+                        food_name: food.food_name, brand: food.brand ?? undefined, barcode: food.barcode ?? undefined,
+                        calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g,
+                        serving_size: food.serving_size ?? undefined, source: "manual",
+                      })}
+                        className="flex-1 min-w-0 flex items-center justify-between p-3 bg-bg-panel border border-green-dark/50 text-left hover:bg-bg-panel-alt transition-colors min-h-[44px]">
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <p className="text-sm text-text-primary truncate">{food.food_name}</p>
+                          {food.brand && <p className="text-[0.6rem] text-text-secondary truncate">{food.brand}</p>}
+                        </div>
+                        <div className="text-right ml-2 flex-shrink-0">
+                          <p className="text-sm font-mono font-bold text-text-primary">{food.calories}</p>
+                          <p className="text-[0.45rem] font-mono text-text-secondary">kcal</p>
+                        </div>
+                      </button>
+                      <button onClick={() => deleteSavedFood(food.id)}
+                        className="flex-shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center text-text-secondary hover:text-danger">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           )}
 
