@@ -18,7 +18,6 @@ import Timer from "@/components/ui/Timer";
 import ProgressBar from "@/components/ui/ProgressBar";
 import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
-import HudFrame from "@/components/ui/HudFrame";
 import AnimatedCounter from "@/components/ui/AnimatedCounter";
 import MusicBar from "@/components/workout/MusicBar";
 import ExerciseDetailSheet from "@/components/workout/ExerciseDetailSheet";
@@ -1695,52 +1694,43 @@ export default function WorkoutPlayerPage() {
           </h1>
 
           {/* Summary stats grid — animated counters count up like
-              a COD end-of-match XP tally. HudFrame corner brackets
-              on each stat row for the tactical HUD feel. */}
+              a COD end-of-match XP tally */}
           <div className="w-full max-w-sm space-y-4 mb-8">
             {/* Total duration */}
-            <HudFrame animated color="var(--green-dark)" className="bg-bg-panel p-3">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
-                  <Clock size={16} /> Duration
-                </span>
-                <span className="font-mono text-lg font-bold text-text-primary">
-                  {formatTime(elapsedSeconds)}
-                </span>
-              </div>
-            </HudFrame>
+            <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
+              <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
+                <Clock size={16} /> Duration
+              </span>
+              <span className="font-mono text-lg font-bold text-text-primary">
+                {formatTime(elapsedSeconds)}
+              </span>
+            </div>
 
             {/* Exercises completed */}
-            <HudFrame animated color="var(--green-dark)" className="bg-bg-panel p-3">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
-                  <Check size={16} /> Completed
-                </span>
-                <div className="font-mono text-lg font-bold text-text-primary">
-                  <AnimatedCounter target={completedCount} duration={800} delay={200} /> / {totalExerciseCount}
-                </div>
+            <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
+              <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
+                <Check size={16} /> Completed
+              </span>
+              <div className="font-mono text-lg font-bold text-text-primary">
+                <AnimatedCounter target={completedCount} duration={800} delay={200} /> / {totalExerciseCount}
               </div>
-            </HudFrame>
+            </div>
 
             {/* Exercises skipped */}
-            <HudFrame animated color="var(--green-dark)" className="bg-bg-panel p-3">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
-                  <SkipForward size={16} /> Skipped
-                </span>
-                <AnimatedCounter target={skippedCount} duration={800} delay={400} className="text-lg text-text-primary" />
-              </div>
-            </HudFrame>
+            <div className="flex items-center justify-between border border-green-dark bg-bg-panel p-3">
+              <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-text-secondary">
+                <SkipForward size={16} /> Skipped
+              </span>
+              <AnimatedCounter target={skippedCount} duration={800} delay={400} className="text-lg text-text-primary" />
+            </div>
 
-            {/* XP earned — highlighted with gold corners */}
-            <HudFrame animated color="var(--xp-gold)" className="bg-bg-panel p-4">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-xp-gold">
-                  <Zap size={18} /> XP Earned
-                </span>
-                <AnimatedCounter target={xpEarned} duration={1200} delay={600} prefix="+" className="text-2xl text-xp-gold" />
-              </div>
-            </HudFrame>
+            {/* XP earned — highlighted */}
+            <div className="flex items-center justify-between border border-xp-gold bg-bg-panel p-4">
+              <span className="flex items-center gap-2 text-xs font-heading uppercase tracking-wider text-xp-gold">
+                <Zap size={18} /> XP Earned
+              </span>
+              <AnimatedCounter target={xpEarned} duration={1200} delay={600} prefix="+" className="text-2xl text-xp-gold" />
+            </div>
           </div>
 
           {/* Feature 7: Post-workout exercise summary */}

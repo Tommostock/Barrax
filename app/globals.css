@@ -363,24 +363,6 @@ h1, h2, h3, h4, h5, h6 {
   display: none !important;
 }
 
-/* --- HUD Corner Bracket Animation ---
-   Corner brackets slide in from their respective edges
-   when the hud-corner-animate class is applied. */
-@keyframes hud-corner-in {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.hud-corner-animate {
-  animation: hud-corner-in 0.4s ease-out both;
-}
-
 /* --- XP Popup Rise ---
    The "+50 XP" text floats upward and fades out like
    a COD hit marker / kill confirmation. */
