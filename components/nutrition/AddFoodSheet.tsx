@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import BottomSheet from "@/components/ui/BottomSheet";
 import Button from "@/components/ui/Button";
@@ -74,6 +74,9 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<FoodLookupResult[]>([]);
   const [searching, setSearching] = useState(false);
+  // Tracks network/fetch errors during food search so the user sees
+  // a clear error message instead of a misleading "no results" state
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   // Barcode state
   const [scannedProduct, setScannedProduct] = useState<FoodLookupResult | null>(null);
@@ -109,9 +112,18 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
   // Whether the add or save operation is in progress
   const [saving, setSaving] = useState(false);
 
+  // Synchronous guard ref to prevent double-submit race conditions.
+  // React state updates (setSaving) are async — if a user taps a button
+  // twice quickly, both calls can slip past the `saving` state check before
+  // the first setSaving(true) takes effect. A ref updates immediately and
+  // synchronously, so the second call is blocked on the spot.
+  const savingRef = useRef(false);
+
   // Confirm and add with quantity — awaits the insert before closing
   async function confirmAdd() {
-    if (!pendingFood || saving) return;
+    // Synchronous ref check blocks rapid double-taps immediately
+    if (!pendingFood || saving || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       await onAddFood({
@@ -129,13 +141,16 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
       console.error("Failed to add food:", err);
       alert(`Failed to log food: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
 
   // Save the pending food to "My Foods" library
   async function saveToMyFoods() {
-    if (!pendingFood || saving) return;
+    // Synchronous ref check blocks rapid double-taps immediately
+    if (!pendingFood || saving || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -162,6 +177,7 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
       console.error("Failed to save food:", err);
       alert(`Failed to save to My Foods: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -172,15 +188,22 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
     setSavedFoods(prev => prev.filter(f => f.id !== id));
   }
 
-  // Search
+  // Search Open Food Facts for matching products
   async function handleSearch() {
     if (!searchQuery.trim()) return;
     setSearching(true);
+    // Clear any previous error so stale messages don't linger
+    setSearchError(null);
     try {
       const res = await fetch(`/api/food-lookup?query=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
       setSearchResults(data.products || []);
-    } catch { setSearchResults([]); }
+    } catch {
+      // Network failure — show an explicit error instead of silently
+      // returning empty results (which looks like "no matches")
+      setSearchResults([]);
+      setSearchError("Network error. Check your connection and try again.");
+    }
     finally { setSearching(false); }
   }
 
@@ -209,9 +232,11 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
   function resetState() {
     setPendingFood(null);
     setQuantity(1);
+    savingRef.current = false;
     setSaving(false);
     setSearchQuery("");
     setSearchResults([]);
+    setSearchError(null);
     setScannedProduct(null);
     setManual({ food_name: "", calories: "", protein_g: "", carbs_g: "", fat_g: "" });
     setBarcodeFallback(null);
@@ -446,8 +471,16 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
                     </div>
                   </button>
                 ))}
-                {searchResults.length === 0 && searchQuery && !searching && (
-                  <p className="text-xs text-text-secondary text-center py-4">No results.</p>
+                {/* Network error — shown when the fetch itself failed */}
+                {searchError && !searching && (
+                  <div className="bg-bg-panel border border-danger/50 p-3 mt-1">
+                    <p className="text-xs text-danger font-mono">{searchError}</p>
+                  </div>
+                )}
+                {/* No results — only shown when the search succeeded but
+                    returned nothing (not when there was a network error) */}
+                {searchResults.length === 0 && searchQuery && !searching && !searchError && (
+                  <p className="text-xs text-text-secondary text-center py-4">No results found for &quot;{searchQuery}&quot;.</p>
                 )}
               </div>
             </div>
