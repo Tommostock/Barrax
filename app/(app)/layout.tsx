@@ -16,6 +16,7 @@ import PFTReminder from "@/components/layout/PFTReminder";
 import SuppsReminder from "@/components/layout/SuppsReminder";
 import AuthGuard from "@/components/layout/AuthGuard";
 import RankUpOverlay from "@/components/ui/RankUpOverlay";
+import XpPopup from "@/components/ui/XpPopup";
 import ClassifiedOpBriefingOverlay from "@/components/mission/ClassifiedOpBriefingOverlay";
 import HQDataProvider from "@/components/providers/HQDataProvider";
 
@@ -42,6 +43,7 @@ export default function AppLayout({
         <PFTReminder />
         <SuppsReminder />
         <RankUpOverlay />
+        <XpPopup />
         <ClassifiedOpBriefingOverlay />
       </HQDataProvider>
     </AuthGuard>

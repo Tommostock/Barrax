@@ -362,3 +362,81 @@ h1, h2, h3, h4, h5, h6 {
 #barrax-barcode-reader br {
   display: none !important;
 }
+
+/* --- HUD Corner Bracket Animation ---
+   Corner brackets slide in from their respective edges
+   when the hud-corner-animate class is applied. */
+@keyframes hud-corner-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hud-corner-animate {
+  animation: hud-corner-in 0.4s ease-out both;
+}
+
+/* --- XP Popup Rise ---
+   The "+50 XP" text floats upward and fades out like
+   a COD hit marker / kill confirmation. */
+@keyframes xp-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  40% {
+    transform: translateY(-10px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(0.9);
+  }
+}
+
+.xp-popup-rise {
+  animation: xp-rise 1.5s ease-out forwards;
+}
+
+/* --- Rank-Up Light Sweep ---
+   A horizontal light bar sweeps across the rank insignia
+   during the promotion cinematic. */
+@keyframes light-sweep {
+  0% {
+    transform: translateX(-100%) skewX(-20deg);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(200%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+.rank-light-sweep {
+  animation: light-sweep 1.2s ease-in-out 1.4s both;
+}
+
+/* --- Typewriter Cursor ---
+   Blinking cursor for the typewriter text effect on
+   the rank-up cinematic. */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typewriter-cursor::after {
+  content: "_";
+  animation: blink-cursor 0.8s step-end infinite;
+  color: var(--xp-gold);
+}

@@ -70,15 +70,20 @@ export default function RankUpScreen({ newRank, totalXP, onDismiss }: RankUpScre
           <div className="w-16 h-[2px] mx-auto mt-3" style={{ backgroundColor: glowColour }} />
         </div>
 
-        {/* Rank insignia — large, centred, with glow border */}
+        {/* Rank insignia — large, centred, with glow border and light sweep */}
         <div className={`transition-all duration-700 ${phase >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}>
-          <div className="w-32 h-32 mx-auto border-2 flex items-center justify-center bg-bg-panel"
+          <div className="w-32 h-32 mx-auto border-2 flex items-center justify-center bg-bg-panel relative overflow-hidden"
             style={{ borderColor: glowColour, boxShadow: phase >= 2 ? `0 0 40px ${glowColour}40` : "none" }}>
             <RankInsignia rank={newRank} size={72} />
+            {/* Light sweep — a bright bar sweeps across the insignia */}
+            {phase >= 2 && (
+              <div className="absolute inset-0 rank-light-sweep"
+                style={{ background: `linear-gradient(90deg, transparent 0%, ${glowColour}80 50%, transparent 100%)`, width: "40%" }} />
+            )}
           </div>
         </div>
 
-        {/* Previous rank -> New rank */}
+        {/* Previous rank -> New rank (typewriter effect on title) */}
         <div className={`transition-all duration-700 ${phase >= 3 ? "opacity-100 scale-100" : "opacity-0 scale-90"}`}>
           {prevRankInfo && (
             <p className="text-xs font-mono text-text-secondary mb-2">
@@ -86,7 +91,7 @@ export default function RankUpScreen({ newRank, totalXP, onDismiss }: RankUpScre
             </p>
           )}
           <h1 className="text-4xl font-heading font-bold uppercase tracking-[0.15em] text-sand">
-            {rankInfo.title}
+            <TypewriterText text={rankInfo.title} active={phase >= 3} />
           </h1>
           <p className="text-sm font-mono text-text-secondary mt-2">RANK {newRank} OF 12</p>
         </div>
@@ -109,5 +114,38 @@ export default function RankUpScreen({ newRank, totalXP, onDismiss }: RankUpScre
         </div>
       </div>
     </div>
+  );
+}
+
+/* ---- Typewriter Text ----
+   Types out text one character at a time with a blinking cursor.
+   Used for the rank title reveal — feels like a military dispatch. */
+function TypewriterText({ text, active }: { text: string; active: boolean }) {
+  const [charCount, setCharCount] = useState(0);
+  const upperText = text.toUpperCase();
+
+  useEffect(() => {
+    if (!active) return;
+    setCharCount(0);
+
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setCharCount(i);
+      if (i >= upperText.length) clearInterval(interval);
+    }, 60); // 60ms per character — snappy but readable
+
+    return () => clearInterval(interval);
+  }, [active, upperText]);
+
+  if (!active) return null;
+
+  return (
+    <span>
+      {upperText.slice(0, charCount)}
+      {charCount < upperText.length && (
+        <span className="typewriter-cursor" />
+      )}
+    </span>
   );
 }

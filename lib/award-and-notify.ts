@@ -49,6 +49,11 @@ export async function awardXPAndNotify(
 
     const result: AwardResult = await response.json();
 
+    // Fire the XP popup — floats "+X XP" up the screen like a kill confirmation
+    window.dispatchEvent(new CustomEvent("xp-awarded", {
+      detail: { amount: result.xpAwarded, source },
+    }));
+
     // Fire rank-up notification if promoted
     if (result.rankedUp && result.rankTitle) {
       notifyRankUp(result.rankTitle);

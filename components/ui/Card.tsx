@@ -3,7 +3,11 @@
    Dark panel with 1px green-dark border.
    Optional classification tag at the top.
    Optional scan-line overlay for a HUD feel.
+   Optional HUD corner brackets for a tactical
+   FPS game UI look (like COD/Battlefield).
    ============================================ */
+
+import HudFrame from "@/components/ui/HudFrame";
 
 interface CardProps {
   children: React.ReactNode;
@@ -23,6 +27,9 @@ interface CardProps {
    *  the .scan-lines::after class. Enabled on the main HQ cards for
    *  a tactical HUD feel. */
   scanLines?: boolean;
+  /** When true, adds tactical corner bracket decorations to the card
+   *  edges — like a HUD element from a military FPS. */
+  hudFrame?: boolean;
 }
 
 export default function Card({
@@ -32,6 +39,7 @@ export default function Card({
   className = "",
   onClick,
   scanLines = false,
+  hudFrame = false,
 }: CardProps) {
   // Map tag variants to their CSS classes
   const tagStyles = {
@@ -45,7 +53,7 @@ export default function Card({
     default: "",
   };
 
-  return (
+  const inner = (
     <div
       className={`
         bg-bg-panel border border-green-dark p-4 relative
@@ -68,4 +76,11 @@ export default function Card({
       {children}
     </div>
   );
+
+  // Wrap in HudFrame corner brackets if requested
+  if (hudFrame) {
+    return <HudFrame animated>{inner}</HudFrame>;
+  }
+
+  return inner;
 }
