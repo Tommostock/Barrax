@@ -4,12 +4,18 @@
    using html5-qrcode (works on all browsers
    including Safari/iOS). Falls back to manual
    barcode entry if camera access fails.
+
+   Improvements:
+   - 30 FPS for reliable detection
+   - Responsive scan box that scales to screen
+   - Torch / flashlight toggle for low light
+   - Tips prompt after 6 seconds if nothing scans
    ============================================ */
 
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { X, Keyboard, Camera } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, Keyboard, Camera, Zap, ZapOff } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
@@ -39,6 +45,25 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
   const [manualBarcode, setManualBarcode] = useState("");
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
+  // Torch (flashlight) state
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchAvailable, setTorchAvailable] = useState(false);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+
+  // Show tips if no barcode is detected after a few seconds
+  const [showTips, setShowTips] = useState(false);
+  const tipsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Calculate a responsive scan box that scales to the screen.
+  // The box should be ~80% of the viewport width but capped so
+  // it doesn't get absurdly large on tablets.
+  const getScanBox = useCallback(() => {
+    const vw = Math.min(window.innerWidth, 500);
+    const width = Math.round(vw * 0.8);
+    const height = Math.round(width * 0.5); // barcode-friendly aspect ratio
+    return { width, height };
+  }, []);
+
   // Start the camera scanner on mount
   useEffect(() => {
     if (manualMode) return;
@@ -50,6 +75,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
 
     return () => {
       clearTimeout(timeout);
+      if (tipsTimerRef.current) clearTimeout(tipsTimerRef.current);
       stopScanner();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,10 +96,10 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       await scanner.start(
         { facingMode: "environment" },
         {
-          fps: 15,
-          qrbox: { width: 300, height: 180 },
-          aspectRatio: 1.0,
-          // Request high-res camera for better barcode readability
+          fps: 30, // Higher FPS = more chances to catch the barcode
+          qrbox: getScanBox(),
+          // No fixed aspectRatio — let the camera use its native ratio
+          // so the feed isn't awkwardly cropped on different devices
           videoConstraints: {
             facingMode: "environment",
             width: { ideal: 1920 },
@@ -83,6 +109,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
         (decodedText) => {
           // Barcode detected — haptic feedback and return result
           navigator.vibrate?.(200);
+          if (tipsTimerRef.current) clearTimeout(tipsTimerRef.current);
           stopScanner();
           onScan(decodedText);
         },
@@ -92,6 +119,32 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       );
 
       setScanning(true);
+
+      // Check if the camera supports torch (flashlight). We need to
+      // reach into the underlying video track to toggle it.
+      try {
+        const videoElement = document.querySelector(`#${SCANNER_ELEMENT_ID} video`) as HTMLVideoElement | null;
+        if (videoElement?.srcObject) {
+          const stream = videoElement.srcObject as MediaStream;
+          const track = stream.getVideoTracks()[0];
+          if (track) {
+            videoTrackRef.current = track;
+            // Check if torch capability exists on this device
+            const capabilities = track.getCapabilities?.() as MediaTrackCapabilities & { torch?: boolean };
+            if (capabilities?.torch) {
+              setTorchAvailable(true);
+            }
+          }
+        }
+      } catch {
+        // Torch detection failed — not critical, just hide the toggle
+      }
+
+      // Show scanning tips after 6 seconds if nothing has scanned yet
+      tipsTimerRef.current = setTimeout(() => {
+        setShowTips(true);
+      }, 6000);
+
     } catch (err) {
       console.error("Scanner error:", err);
       setError("Could not access camera. Check permissions or use manual entry.");
@@ -109,7 +162,26 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       // Ignore cleanup errors
     }
     scannerRef.current = null;
+    videoTrackRef.current = null;
     setScanning(false);
+    setTorchOn(false);
+    setTorchAvailable(false);
+    setShowTips(false);
+    if (tipsTimerRef.current) clearTimeout(tipsTimerRef.current);
+  }
+
+  // Toggle the camera torch / flashlight
+  async function toggleTorch() {
+    if (!videoTrackRef.current) return;
+    try {
+      const newState = !torchOn;
+      await videoTrackRef.current.applyConstraints({
+        advanced: [{ torch: newState } as MediaTrackConstraintSet],
+      });
+      setTorchOn(newState);
+    } catch {
+      // Torch toggle failed — some browsers block this
+    }
   }
 
   function handleManualSubmit() {
@@ -185,11 +257,43 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
           {/* html5-qrcode injects the video element into this div */}
           <div id={SCANNER_ELEMENT_ID} className="w-full h-full" />
 
+          {/* Torch toggle — only shown if the device camera supports it */}
+          {torchAvailable && (
+            <button
+              onClick={toggleTorch}
+              className={`absolute top-4 left-4 px-3 py-2 border text-xs font-mono
+                         min-h-[44px] min-w-[44px] flex items-center gap-2 z-10 transition-colors
+                         ${torchOn
+                           ? "bg-xp-gold/20 border-xp-gold text-xp-gold"
+                           : "bg-bg-panel/80 border-green-dark text-text-secondary"
+                         }`}
+            >
+              {torchOn ? <ZapOff size={16} /> : <Zap size={16} />}
+              {torchOn ? "FLASH ON" : "FLASH"}
+            </button>
+          )}
+
           {/* Status text overlay */}
-          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
+          <div className="absolute bottom-0 left-0 right-0 text-center pointer-events-none pb-20">
             <p className="text-xs font-mono text-text-primary bg-black/50 inline-block px-3 py-1">
               {scanning ? "POINT AT BARCODE" : "STARTING CAMERA..."}
             </p>
+
+            {/* Scanning tips — appear after 6 seconds with no result to
+                help the user troubleshoot without giving up */}
+            {showTips && scanning && (
+              <div className="mt-3 mx-6 bg-black/70 px-4 py-3 pointer-events-auto">
+                <p className="text-[0.65rem] font-mono text-text-secondary uppercase tracking-wider mb-2">
+                  HAVING TROUBLE?
+                </p>
+                <ul className="text-[0.6rem] text-text-secondary text-left space-y-1 font-mono">
+                  <li>- Hold steady and close to the barcode</li>
+                  <li>- Make sure the barcode is well-lit{torchAvailable ? " (try the torch)" : ""}</li>
+                  <li>- Keep the barcode flat, not angled</li>
+                  <li>- Avoid glare from overhead lights</li>
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Switch to manual mode */}
