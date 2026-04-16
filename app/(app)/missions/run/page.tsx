@@ -125,6 +125,16 @@ export default function RunTrackerPage() {
   // closure, so we read from this ref to always get the current value.
   const pausedRef = useRef(false);
 
+  // Did the USER manually pause? This ref lets us distinguish a manual
+  // pause from an automatic GPS-loss pause. When GPS signal returns, we
+  // only auto-resume if the user hasn't manually paused.
+  const manualPausedRef = useRef(false);
+
+  // Is the run auto-paused because GPS signal was lost?
+  // Tracked separately so it doesn't interfere with manual pause/resume.
+  const [gpsPaused, setGpsPaused] = useState(false);
+  const gpsPausedRef = useRef(false);
+
   // Lock mode prevents accidental button taps
   const [locked, setLocked] = useState(false);
 
@@ -226,6 +236,19 @@ export default function RunTrackerPage() {
       // Clear any previous error — GPS is working again
       setGpsError(null);
 
+      // --- AUTO-RESUME after GPS signal loss ---
+      // If the run was auto-paused because GPS dropped out, and the user
+      // hasn't manually paused, resume the timer now that GPS is back.
+      if (gpsPausedRef.current && !manualPausedRef.current) {
+        // Account for the time spent in GPS-loss pause
+        pausedDurationRef.current += Date.now() - pauseStartRef.current;
+        gpsPausedRef.current = false;
+        setGpsPaused(false);
+        setPaused(false);
+        pausedRef.current = false;
+        startTimer();
+      }
+
       // Don't record points while paused (read from ref, not state)
       if (pausedRef.current) return;
 
@@ -239,25 +262,38 @@ export default function RunTrackerPage() {
 
       setPoints((prev) => [...prev, newPoint]);
     },
-    []
+    [startTimer]
   );
 
   // Called when the GPS encounters an error (signal lost, denied, etc.)
+  // For POSITION_UNAVAILABLE and TIMEOUT errors (signal loss), we auto-pause
+  // the run timer so elapsed time only counts when GPS is actively tracking.
+  // This prevents the mismatch where the clock keeps ticking but distance
+  // stops recording, which would make pace calculations inaccurate.
   const handleGpsError = useCallback((error: GeolocationPositionError) => {
     switch (error.code) {
       case error.PERMISSION_DENIED:
         setGpsError("Location permission denied. Please enable GPS.");
         break;
       case error.POSITION_UNAVAILABLE:
-        setGpsError("GPS signal lost. Keep moving — tracking will resume.");
-        break;
       case error.TIMEOUT:
-        setGpsError("GPS signal lost. Keep moving — tracking will resume.");
+        setGpsError("GPS SIGNAL LOST - RUN PAUSED");
+
+        // Auto-pause the timer if not already paused (manually or by GPS loss).
+        // We don't touch manualPausedRef here — that's only for user-initiated pauses.
+        if (!pausedRef.current && !gpsPausedRef.current) {
+          gpsPausedRef.current = true;
+          setGpsPaused(true);
+          setPaused(true);
+          pausedRef.current = true;
+          pauseStartRef.current = Date.now();
+          stopTimer();
+        }
         break;
       default:
         setGpsError("GPS error. Tracking will resume when signal returns.");
     }
-  }, []);
+  }, [stopTimer]);
 
   // ===================== START RUN =====================
 
@@ -273,6 +309,9 @@ export default function RunTrackerPage() {
     setElapsed(0);
     setPaused(false);
     pausedRef.current = false;
+    manualPausedRef.current = false;
+    setGpsPaused(false);
+    gpsPausedRef.current = false;
     setLocked(false);
     setStats(null);
     setSaved(false);
@@ -337,6 +376,14 @@ export default function RunTrackerPage() {
   // ===================== PAUSE / RESUME =====================
 
   function pauseRun() {
+    // Mark this as a manual (user-initiated) pause so GPS recovery
+    // doesn't auto-resume while the user wants to stay paused.
+    manualPausedRef.current = true;
+
+    // If already paused by GPS loss, we just set the manual flag above
+    // but don't need to re-pause the timer or reset pauseStartRef.
+    if (gpsPausedRef.current) return;
+
     setPaused(true);
     pausedRef.current = true;
     pauseStartRef.current = Date.now();
@@ -346,6 +393,12 @@ export default function RunTrackerPage() {
   function resumeRun() {
     // Add the time spent paused to our offset
     pausedDurationRef.current += Date.now() - pauseStartRef.current;
+
+    // Clear both manual and GPS pause flags — user explicitly wants to go
+    manualPausedRef.current = false;
+    gpsPausedRef.current = false;
+    setGpsPaused(false);
+
     setPaused(false);
     pausedRef.current = false;
     startTimer();
@@ -708,9 +761,15 @@ export default function RunTrackerPage() {
             <p className="text-5xl font-mono text-sand tracking-wider">
               {formatDuration(elapsed)}
             </p>
-            {paused && (
+            {/* Show a different tag depending on WHY the run is paused */}
+            {paused && !gpsPaused && (
               <Tag variant="danger" className="mt-2">
                 PAUSED
+              </Tag>
+            )}
+            {gpsPaused && (
+              <Tag variant="danger" className="mt-2">
+                GPS SIGNAL LOST - RUN PAUSED
               </Tag>
             )}
           </div>
