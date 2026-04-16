@@ -61,14 +61,21 @@ export default function RunMap({ points, isLive = false, height = "h-48" }: RunM
         zoomControl={false}
         attributionControl={false}
       >
-        <TileLayer url={DARK_TILES} attribution={ATTRIBUTION} />
+        {/* Green-tinted tile layer — CSS filter shifts the neutral dark
+            CartoDB tiles toward the app's military green palette */}
+        <TileLayer
+          url={DARK_TILES}
+          attribution={ATTRIBUTION}
+          className="map-tiles-green"
+        />
 
-        {/* Draw the route as a green polyline */}
+        {/* Draw the route as an XP-gold polyline so it pops against the
+            green-tinted map background */}
         {positions.length > 1 && (
           <Polyline
             positions={positions}
             pathOptions={{
-              color: "#4A6B3A",  // --green-primary
+              color: "#B8A04A",  // --xp-gold
               weight: 4,
               opacity: 0.9,
             }}

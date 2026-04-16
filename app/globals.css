@@ -357,3 +357,11 @@ h1, h2, h3, h4, h5, h6 {
   display: none !important;
 }
 
+/* --- Running map green tint ---
+   Shift the neutral-grey CartoDB Dark Matter tiles toward the
+   app's military green palette. Applied via className on the
+   TileLayer in RunMap.tsx. */
+.map-tiles-green {
+  filter: sepia(0.3) hue-rotate(70deg) saturate(0.6) brightness(0.85);
+}
+
