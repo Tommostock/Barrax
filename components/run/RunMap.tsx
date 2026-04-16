@@ -1,7 +1,7 @@
 /* ============================================
    RunMap Component
    Leaflet map showing the run route in real-time.
-   Uses dark CartoDB tiles for the military aesthetic.
+   Uses light CartoDB tiles with a green route line.
    Must be dynamically imported (no SSR) because
    Leaflet requires the browser window object.
    ============================================ */
@@ -13,9 +13,9 @@ import { MapContainer, TileLayer, Polyline, useMap } from "react-leaflet";
 import type { GpsPoint } from "@/types";
 import "leaflet/dist/leaflet.css";
 
-// Dark map tiles from CartoDB — free, no API key needed
-// CartoDB Dark Matter — fully dark tiles, perfect for the military aesthetic
-const DARK_TILES = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+// Light map tiles from CartoDB — free, no API key needed
+// CartoDB Positron — clean white/light-grey base, easy to read
+const LIGHT_TILES = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 const ATTRIBUTION = '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>';
 
 interface RunMapProps {
@@ -61,21 +61,14 @@ export default function RunMap({ points, isLive = false, height = "h-48" }: RunM
         zoomControl={false}
         attributionControl={false}
       >
-        {/* Green-tinted tile layer — CSS filter shifts the neutral dark
-            CartoDB tiles toward the app's military green palette */}
-        <TileLayer
-          url={DARK_TILES}
-          attribution={ATTRIBUTION}
-          className="map-tiles-green"
-        />
+        <TileLayer url={LIGHT_TILES} attribution={ATTRIBUTION} />
 
-        {/* Draw the route as an XP-gold polyline so it pops against the
-            green-tinted map background */}
+        {/* Draw the route in the app's primary green */}
         {positions.length > 1 && (
           <Polyline
             positions={positions}
             pathOptions={{
-              color: "#B8A04A",  // --xp-gold
+              color: "#4A6B3A",  // --green-primary
               weight: 4,
               opacity: 0.9,
             }}
