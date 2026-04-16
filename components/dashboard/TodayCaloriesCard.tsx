@@ -96,6 +96,7 @@ export default function TodayCaloriesCard() {
       tag="FUEL"
       tagVariant="active"
       onClick={() => router.push("/rations")}
+      hudFrame
     >
       <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
         {/* Label (icon removed — was taking up valuable space) */}

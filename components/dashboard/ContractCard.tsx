@@ -200,7 +200,7 @@ export default function ContractCard() {
   // No contract yet (generation still pending or failed)
   if (!contract) {
     return (
-      <Card tag="CONTRACT" tagVariant="gold">
+      <Card tag="CONTRACT" tagVariant="gold" hudFrame>
         <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
           <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
             Contract · pending
