@@ -58,7 +58,6 @@ export default function TodayWorkoutCard() {
       tag={isComplete ? "COMPLETE" : "MISSION"}
       tagVariant={isComplete ? "complete" : "active"}
       onClick={handleTap}
-      hudFrame
     >
       <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
         {/* Label (icon removed — was taking up valuable space) */}

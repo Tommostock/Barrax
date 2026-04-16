@@ -126,7 +126,7 @@ export default function ClassifiedOpCard() {
 
   if (!op) {
     return (
-      <Card tag="CLASSIFIED" tagVariant="danger" hudFrame>
+      <Card tag="CLASSIFIED" tagVariant="danger">
         <div className="flex flex-col items-start gap-1 min-w-0 flex-1">
           <p className="text-[0.55rem] font-mono uppercase tracking-wider text-text-secondary">
             Classified · pending
