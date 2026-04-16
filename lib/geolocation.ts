@@ -142,10 +142,49 @@ export function calculateSplits(
   return splits;
 }
 
+/* ---- Smooth Altitudes (Moving Average) ----
+   GPS altitude readings have roughly ±10m of error on most phones.
+   A moving average slides a window across the raw data and replaces
+   each point with the average of its neighbours. This smooths out
+   the random noise while preserving genuine hills and valleys.
+
+   windowSize = how many readings to average (must be odd for symmetry).
+   A window of 5 means: the current point + 2 before + 2 after. */
+function smoothAltitudes(altitudes: number[], windowSize: number = 5): number[] {
+  // Not enough data to smooth — just return as-is
+  if (altitudes.length < windowSize) return [...altitudes];
+
+  const smoothed: number[] = [];
+
+  // How far to look either side of the current point
+  // e.g. windowSize 5 → halfWindow 2 → [i-2, i-1, i, i+1, i+2]
+  const halfWindow = Math.floor(windowSize / 2);
+
+  for (let i = 0; i < altitudes.length; i++) {
+    // Clamp the window edges so we don't go out of bounds
+    // At the start/end of the array, the window shrinks to fit
+    const start = Math.max(0, i - halfWindow);
+    const end = Math.min(altitudes.length - 1, i + halfWindow);
+
+    // Sum all values in the window, then divide by count
+    let sum = 0;
+    for (let j = start; j <= end; j++) {
+      sum += altitudes[j];
+    }
+    smoothed.push(sum / (end - start + 1));
+  }
+
+  return smoothed;
+}
+
 /* ---- Elevation Gain ----
    Calculates total elevation gained during a run.
    Only counts uphill sections (positive altitude changes).
-   Applies a small threshold to filter GPS noise. */
+
+   GPS altitude is noisy (±10m on most phones), so raw point-to-point
+   comparison on a flat run can show 100m+ of false gain. To fix this:
+   1. Smooth the altitude data with a 5-point moving average
+   2. Then apply a 2m threshold to ignore remaining small fluctuations */
 export function calculateElevationGain(points: GpsPoint[]): number | null {
   const altitudes = points
     .map((p) => p.altitude)
@@ -153,11 +192,16 @@ export function calculateElevationGain(points: GpsPoint[]): number | null {
 
   if (altitudes.length < 2) return null;
 
-  let gain = 0;
-  const THRESHOLD = 2; // Ignore changes smaller than 2m (GPS noise)
+  // Step 1: Smooth the raw altitudes to reduce GPS noise
+  // A window of 5 readings averages out the ±10m random errors
+  const smoothed = smoothAltitudes(altitudes, 5);
 
-  for (let i = 1; i < altitudes.length; i++) {
-    const diff = altitudes[i] - altitudes[i - 1];
+  // Step 2: Sum up only the uphill changes that exceed the threshold
+  let gain = 0;
+  const THRESHOLD = 2; // Ignore changes smaller than 2m after smoothing
+
+  for (let i = 1; i < smoothed.length; i++) {
+    const diff = smoothed[i] - smoothed[i - 1];
     if (diff > THRESHOLD) {
       gain += diff;
     }
