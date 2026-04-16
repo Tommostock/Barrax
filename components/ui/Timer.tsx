@@ -13,7 +13,7 @@ interface TimerProps {
   mode?: "countdown" | "countup";
   running?: boolean;
   onComplete?: () => void; // Called when countdown reaches 0
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
@@ -90,6 +90,7 @@ export default function Timer({
     sm: "text-lg",
     md: "text-3xl",
     lg: "text-5xl",
+    xl: "text-7xl",
   };
 
   return (
