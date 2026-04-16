@@ -209,6 +209,122 @@ export const EXERCISE_INSTRUCTIONS: Record<string, ExerciseInstructions> = {
     ],
   },
 
+  "Incline Push-Up": {
+    setup: [
+      "Find a stable elevated surface (bench, step, wall, or sturdy chair).",
+      "Place your hands shoulder-width apart on the surface, arms straight.",
+      "Walk your feet back until your body is in a straight line at an angle.",
+    ],
+    execution: [
+      "Bend your elbows at 45 degrees and lower your chest toward the surface.",
+      "Stop when your chest is just above the edge.",
+      "Push through your palms to return to the start.",
+    ],
+    breathing: "Inhale on the way down, exhale pressing up.",
+    commonMistakes: [
+      "Hips sagging — keep your core tight and body straight.",
+      "Flaring elbows out to 90 degrees — angle them back.",
+      "Using an unstable surface — make sure it won't slide.",
+    ],
+    tips: [
+      "The higher the surface, the easier the exercise — great for beginners.",
+      "Progress to lower surfaces as you get stronger.",
+      "Targets chest and triceps with less load than a flat push-up.",
+    ],
+  },
+
+  "Shoulder Press": {
+    setup: [
+      "Stand with feet hip-width apart, core braced.",
+      "Hold water bottles, books, or any weighted objects at shoulder height.",
+      "Elbows slightly in front of your body, palms facing forward.",
+    ],
+    execution: [
+      "Press the weight straight up overhead until your arms are fully extended.",
+      "Keep your core tight — don't arch your lower back.",
+      "Lower back to shoulder height with control.",
+    ],
+    breathing: "Exhale pressing up, inhale lowering down.",
+    commonMistakes: [
+      "Arching the lower back — brace your core and squeeze your glutes.",
+      "Pressing the weight forward instead of straight up.",
+      "Using momentum — control each rep.",
+    ],
+    tips: [
+      "No weights? Use filled water bottles, tins, or a loaded backpack.",
+      "Can also be done seated to reduce lower back involvement.",
+      "Pike push-ups are the pure bodyweight alternative.",
+    ],
+  },
+
+  "Bicep Curl": {
+    setup: [
+      "Stand with feet hip-width apart, core engaged.",
+      "Hold water bottles or weighted objects at your sides, palms facing forward.",
+    ],
+    execution: [
+      "Curl the weight up toward your shoulders, keeping elbows pinned to your sides.",
+      "Squeeze the bicep at the top.",
+      "Lower back down with control — full extension.",
+    ],
+    breathing: "Exhale curling up, inhale lowering.",
+    commonMistakes: [
+      "Swinging the body for momentum.",
+      "Elbows drifting forward — keep them locked at your sides.",
+      "Dropping the weight too fast on the way down.",
+    ],
+    tips: [
+      "Use anything with weight — filled bottles, bags, heavy books.",
+      "Slow the descent to 3 seconds for extra burn.",
+      "Alternate arms or curl both at once.",
+    ],
+  },
+
+  "Tricep Extension": {
+    setup: [
+      "Stand with feet hip-width apart.",
+      "Hold a water bottle or weight with both hands behind your head, elbows pointing up.",
+    ],
+    execution: [
+      "Extend your arms straight up, keeping elbows close to your head.",
+      "Squeeze the triceps at the top.",
+      "Lower back behind your head with control.",
+    ],
+    breathing: "Exhale extending up, inhale lowering.",
+    commonMistakes: [
+      "Elbows flaring out wide — keep them pointing forward.",
+      "Arching the lower back.",
+      "Using momentum instead of controlling the movement.",
+    ],
+    tips: [
+      "Can be done seated for better back support.",
+      "Use a single heavy water bottle or a filled backpack.",
+      "Tricep dips are a great bodyweight alternative.",
+    ],
+  },
+
+  "Jumping Jack": {
+    setup: [
+      "Stand tall with feet together, arms at your sides.",
+    ],
+    execution: [
+      "Jump your feet out wide while raising your arms overhead.",
+      "Jump back to the starting position with arms at your sides.",
+      "Maintain a steady rhythm throughout.",
+    ],
+    breathing: "Breathe naturally with the rhythm of the movement.",
+    commonMistakes: [
+      "Landing flat-footed — stay on the balls of your feet.",
+      "Arms not reaching fully overhead.",
+      "Losing rhythm and slowing down.",
+    ],
+    tips: [
+      "Classic warm-up and cardio exercise.",
+      "Step instead of jump for a low-impact option.",
+      "Keep a consistent pace to maintain heart rate.",
+    ],
+  },
+
   // ─── SQUAT VARIATIONS ─────────────────────────────────
   "Bodyweight Squat": {
     setup: [
@@ -1783,9 +1899,58 @@ export const EXERCISE_INSTRUCTIONS: Record<string, ExerciseInstructions> = {
 
 /**
  * Get detailed instructions for an exercise by name.
- * Returns null if the exercise isn't in the library — callers can fall
- * back to the exercise's own description/form_cue fields.
+ *
+ * Tries several matching strategies because the AI workout generator
+ * can produce names like "Shoulder Press (Using Water Bottles)" that
+ * don't exactly match the library keys:
+ *   1. Exact match
+ *   2. Case-insensitive match
+ *   3. Strip parenthetical suffix and retry (e.g. "Pike Push-Up (Elevated)" → "Pike Push-Up")
+ *   4. Normalised substring — check if any library key is contained
+ *      in the AI name or vice-versa (handles prefix differences)
+ *
+ * Returns null only if no strategy finds a match.
  */
 export function getExerciseInstructions(name: string): ExerciseInstructions | null {
-  return EXERCISE_INSTRUCTIONS[name] ?? null;
+  // 1. Exact match
+  if (EXERCISE_INSTRUCTIONS[name]) return EXERCISE_INSTRUCTIONS[name];
+
+  // 2. Case-insensitive match
+  const lowerName = name.toLowerCase();
+  for (const key of Object.keys(EXERCISE_INSTRUCTIONS)) {
+    if (key.toLowerCase() === lowerName) return EXERCISE_INSTRUCTIONS[key];
+  }
+
+  // 3. Strip parenthetical suffix — "Incline Push-Ups (Using Stairs)" → "Incline Push-Ups"
+  const stripped = name.replace(/\s*\(.*?\)\s*$/, "").trim();
+  if (stripped !== name) {
+    if (EXERCISE_INSTRUCTIONS[stripped]) return EXERCISE_INSTRUCTIONS[stripped];
+
+    // Also try case-insensitive on the stripped version
+    const lowerStripped = stripped.toLowerCase();
+    for (const key of Object.keys(EXERCISE_INSTRUCTIONS)) {
+      if (key.toLowerCase() === lowerStripped) return EXERCISE_INSTRUCTIONS[key];
+    }
+
+    // Handle plural/singular differences — "Push-Ups" vs "Push-Up"
+    const singularised = stripped.replace(/s$/i, "");
+    const pluralised = stripped + "s";
+    for (const key of Object.keys(EXERCISE_INSTRUCTIONS)) {
+      const lowerKey = key.toLowerCase();
+      if (lowerKey === singularised.toLowerCase() || lowerKey === pluralised.toLowerCase()) {
+        return EXERCISE_INSTRUCTIONS[key];
+      }
+    }
+  }
+
+  // 4. Substring containment — handles cases like "Incline Push-Up" matching
+  //    a library key of "Incline Push-Up" inside a longer AI-generated name
+  for (const key of Object.keys(EXERCISE_INSTRUCTIONS)) {
+    const lowerKey = key.toLowerCase();
+    if (lowerName.includes(lowerKey) || lowerKey.includes(lowerName)) {
+      return EXERCISE_INSTRUCTIONS[key];
+    }
+  }
+
+  return null;
 }

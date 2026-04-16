@@ -111,7 +111,9 @@ export default function ExerciseDetailSheet({ exercise, onClose }: ExerciseDetai
             </Section>
           </>
         ) : (
-          /* Fallback: use the exercise's own description + form cue */
+          /* Fallback: use the exercise's own AI-generated description
+             and form cue when the static instruction library doesn't
+             have a match for this exercise name. */
           <>
             <Section icon={<Target size={14} />} title="OVERVIEW">
               <p className="text-sm leading-relaxed">{exercise.description}</p>
@@ -122,10 +124,6 @@ export default function ExerciseDetailSheet({ exercise, onClose }: ExerciseDetai
                 <p className="text-sm leading-relaxed">{exercise.form_cue}</p>
               </Section>
             )}
-
-            <p className="text-[0.65rem] font-mono text-text-secondary italic">
-              Detailed breakdown coming soon for this exercise.
-            </p>
           </>
         )}
       </div>

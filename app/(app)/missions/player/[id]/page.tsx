@@ -1249,28 +1249,29 @@ export default function WorkoutPlayerPage() {
 
         {/* ── Rest timer between exercises / sets ── */}
         {subPhase === "rest" && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-6 px-4">
-            <Tag variant="default">CATCH YOUR BREATH</Tag>
-            <h2 className="text-xl font-heading uppercase tracking-wider text-sand">
-              Recovery Timer
-            </h2>
+          <div className="flex-1 flex flex-col items-center justify-evenly px-4 py-6">
+            {/* Header block */}
+            <div className="text-center">
+              <Tag variant="default">CATCH YOUR BREATH</Tag>
+              <h2 className="text-2xl font-heading uppercase tracking-wider text-sand mt-3">
+                Recovery Timer
+              </h2>
+            </div>
 
-            {/* Feature 2: Show what's coming next more prominently.
-                Includes the exercise description so the user can prepare
-                during the rest period — they shouldn't have to wait for
-                the rest timer to end before knowing what to do. */}
-            <div className="text-center border border-green-dark bg-bg-panel px-6 py-4 max-w-md mx-auto">
-              <p className="text-xs font-mono uppercase tracking-wider text-text-secondary mb-1">
+            {/* Show what's coming next so the user can prepare during
+                the rest period — no need to wait for the countdown. */}
+            <div className="text-center border border-green-dark bg-bg-panel px-6 py-5 w-full max-w-md">
+              <p className="text-xs font-mono uppercase tracking-wider text-text-secondary mb-2">
                 UP NEXT
               </p>
-              <p className="text-lg font-heading uppercase tracking-wider text-sand">
+              <p className="text-xl font-heading uppercase tracking-wider text-sand">
                 {currentExercise.name}
               </p>
-              <p className="text-sm font-mono text-green-light mt-1">
+              <p className="text-base font-mono text-green-light mt-2">
                 Round {currentSet} of {totalSets}
               </p>
               {(currentExercise.form_cue || currentExercise.description) && (
-                <p className="mt-3 text-sm text-text-primary leading-snug">
+                <p className="mt-3 text-base text-text-primary leading-snug">
                   {currentExercise.form_cue || currentExercise.description}
                 </p>
               )}
@@ -1284,8 +1285,9 @@ export default function WorkoutPlayerPage() {
               mode="countdown"
               running={!paused}
               onComplete={handleRestComplete}
-              size="lg"
+              size="xl"
             />
+
             <Button variant="secondary" fullWidth onClick={handleSkipRest}>
               <span className="flex items-center justify-center gap-2">
                 <SkipForward size={16} /> NO TIME FOR REST
