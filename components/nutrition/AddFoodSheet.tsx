@@ -530,20 +530,27 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
               <div className="grid grid-cols-2 gap-2">
                 <div><label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Calories</label>
                   <input type="number" value={manual.calories} onChange={(e) => setManual({ ...manual, calories: e.target.value })} placeholder="kcal"
+                    min="0" max="9999"
                     className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" /></div>
                 <div><label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Protein (g)</label>
                   <input type="number" value={manual.protein_g} onChange={(e) => setManual({ ...manual, protein_g: e.target.value })} placeholder="g"
+                    min="0" max="9999"
                     className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" /></div>
                 <div><label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Carbs (g)</label>
                   <input type="number" value={manual.carbs_g} onChange={(e) => setManual({ ...manual, carbs_g: e.target.value })} placeholder="g"
+                    min="0" max="9999"
                     className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" /></div>
                 <div><label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Fat (g)</label>
                   <input type="number" value={manual.fat_g} onChange={(e) => setManual({ ...manual, fat_g: e.target.value })} placeholder="g"
+                    min="0" max="9999"
                     className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" /></div>
               </div>
-              <Button onClick={() => { if (!manual.food_name.trim()) return; selectFood({
-                food_name: manual.food_name, calories: Number(manual.calories) || 0,
-                protein_g: Number(manual.protein_g) || 0, carbs_g: Number(manual.carbs_g) || 0, fat_g: Number(manual.fat_g) || 0, source: "manual",
+              {/* Clamp values: negatives become 0, anything over 9999 caps at 9999 */}
+              <Button onClick={() => { if (!manual.food_name.trim()) return;
+                const clamp = (v: string) => Math.max(0, Math.min(9999, Number(v) || 0));
+                selectFood({
+                food_name: manual.food_name, calories: clamp(manual.calories),
+                protein_g: clamp(manual.protein_g), carbs_g: clamp(manual.carbs_g), fat_g: clamp(manual.fat_g), source: "manual",
               }); }} disabled={!manual.food_name.trim()} fullWidth>
                 <span className="flex items-center justify-center gap-2"><Plus size={14} /> NEXT</span>
               </Button>
