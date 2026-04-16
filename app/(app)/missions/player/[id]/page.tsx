@@ -60,6 +60,27 @@ const PREP_COUNTDOWN_SECONDS = 5;
 /** What is happening inside the "active" phase */
 type ActiveSubPhase = "exercise" | "rest";
 
+// ──────────────────────────────────────────────
+// Crash recovery — localStorage key + snapshot shape
+// If the app closes mid-workout, we save enough state
+// to let the user pick up where they left off.
+// ──────────────────────────────────────────────
+
+const RECOVERY_KEY = "barrax_workout_recovery";
+
+/** How old a recovery snapshot can be before we discard it (2 hours) */
+const RECOVERY_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+/** The minimum state we need to resume a workout in progress */
+interface RecoverySnapshot {
+  workoutId: string;            // URL param — only restore if it matches
+  currentExIndex: number;       // which exercise the user was on
+  currentSet: number;           // which set within that exercise
+  subPhase: ActiveSubPhase;     // "exercise" or "rest"
+  elapsedSeconds: number;       // total elapsed workout time
+  timestamp: number;            // Date.now() when snapshot was saved
+}
+
 /** Tracks the result for each exercise so we can save it later */
 interface ExerciseResult {
   name: string;
@@ -196,6 +217,71 @@ export default function WorkoutPlayerPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
+  // ── Crash recovery state ──
+  // When a recovery snapshot is found on mount, this holds it until
+  // the user decides to resume or start fresh.
+  const [pendingRecovery, setPendingRecovery] = useState<RecoverySnapshot | null>(null);
+
+  // ────────────────────────────────────────────
+  // Crash recovery helpers
+  // ────────────────────────────────────────────
+
+  /**
+   * Save a recovery snapshot to localStorage.
+   * Called whenever progress-relevant state changes so the user
+   * can resume if they accidentally close the app.
+   */
+  function saveRecoverySnapshot(snapshot: RecoverySnapshot) {
+    try {
+      localStorage.setItem(RECOVERY_KEY, JSON.stringify(snapshot));
+    } catch {
+      // localStorage might be full or disabled — silently ignore
+    }
+  }
+
+  /**
+   * Remove the recovery snapshot from localStorage.
+   * Called when the workout finishes normally so we don't
+   * prompt the user to resume a completed workout.
+   */
+  function clearRecoverySnapshot() {
+    try {
+      localStorage.removeItem(RECOVERY_KEY);
+    } catch {
+      // Silently ignore — nothing critical
+    }
+  }
+
+  /**
+   * Read the recovery snapshot from localStorage.
+   * Returns null if there is no snapshot, the snapshot is for a
+   * different workout, or the snapshot is older than 2 hours.
+   */
+  function loadRecoverySnapshot(forWorkoutId: string): RecoverySnapshot | null {
+    try {
+      const raw = localStorage.getItem(RECOVERY_KEY);
+      if (!raw) return null;
+
+      const snapshot: RecoverySnapshot = JSON.parse(raw);
+
+      // Only offer recovery if the snapshot is for THIS workout
+      if (snapshot.workoutId !== forWorkoutId) return null;
+
+      // Discard snapshots older than 2 hours — the workout is stale
+      const age = Date.now() - snapshot.timestamp;
+      if (age > RECOVERY_MAX_AGE_MS) {
+        clearRecoverySnapshot();
+        return null;
+      }
+
+      return snapshot;
+    } catch {
+      // Corrupted data — clear it out and move on
+      clearRecoverySnapshot();
+      return null;
+    }
+  }
+
   // ────────────────────────────────────────────
   // 1. Load workout from Supabase on mount
   // ────────────────────────────────────────────
@@ -230,6 +316,15 @@ export default function WorkoutPlayerPage() {
         const wd = workout.workout_data as WorkoutData;
         setWorkoutData(wd);
         setAllExercises(flattenExercises(wd));
+
+        // ── Crash recovery check ──
+        // After loading the workout data, look for a saved snapshot
+        // in localStorage. If one exists for this workout and it's
+        // less than 2 hours old, show the recovery prompt.
+        const snapshot = loadRecoverySnapshot(workout.id);
+        if (snapshot) {
+          setPendingRecovery(snapshot);
+        }
       } catch {
         setError("Failed to load workout.");
       } finally {
@@ -260,6 +355,30 @@ export default function WorkoutPlayerPage() {
       if (elapsedRef.current) clearInterval(elapsedRef.current);
     };
   }, [phase, paused]);
+
+  // ────────────────────────────────────────────
+  // Crash recovery: persist state to localStorage
+  //
+  // We save a snapshot every time the user completes a set,
+  // changes exercise, or the subPhase flips (exercise <-> rest).
+  // The snapshot is intentionally lightweight — just indices
+  // and the elapsed time. The full workout data reloads from
+  // Supabase on mount.
+  // ────────────────────────────────────────────
+
+  useEffect(() => {
+    // Only save while the workout is actively in progress
+    if (phase !== "active" || !workoutId) return;
+
+    saveRecoverySnapshot({
+      workoutId,
+      currentExIndex,
+      currentSet,
+      subPhase,
+      elapsedSeconds,
+      timestamp: Date.now(),
+    });
+  }, [phase, workoutId, currentExIndex, currentSet, subPhase, elapsedSeconds]);
 
   // ────────────────────────────────────────────
   // Feature 1: Audio countdown beeps for timer exercises
@@ -430,6 +549,35 @@ export default function WorkoutPlayerPage() {
   // ────────────────────────────────────────────
   // 3. Actions
   // ────────────────────────────────────────────
+
+  /** Crash recovery: user chose to resume from where they left off.
+      Restores the saved indices/phase so the workout picks up mid-stream. */
+  const handleResumeRecovery = useCallback(() => {
+    if (!pendingRecovery) return;
+
+    // Restore the key state variables from the snapshot
+    setCurrentExIndex(pendingRecovery.currentExIndex);
+    setCurrentSet(pendingRecovery.currentSet);
+    setSubPhase(pendingRecovery.subPhase);
+    setElapsedSeconds(pendingRecovery.elapsedSeconds);
+
+    // Jump straight into the active phase (skip briefing + countdown)
+    startTimeRef.current = new Date();
+    setPhase("active");
+
+    // Keep the screen awake
+    requestWakeLock();
+
+    // Clear the prompt so it doesn't show again
+    setPendingRecovery(null);
+  }, [pendingRecovery]);
+
+  /** Crash recovery: user chose to start fresh.
+      Clears the snapshot and stays on the briefing screen. */
+  const handleStartFresh = useCallback(() => {
+    clearRecoverySnapshot();
+    setPendingRecovery(null);
+  }, []);
 
   /** Start the workout — transitions briefing → countdown → active.
       The 5s prep countdown is shown first so the user can get into
@@ -755,6 +903,10 @@ export default function WorkoutPlayerPage() {
     setPhase("debrief");
     setSaving(true);
 
+    // Crash recovery: workout completed normally — clear the
+    // snapshot so we don't prompt to resume a finished workout.
+    clearRecoverySnapshot();
+
     // Feature 1: Play workout complete sound
     workoutCompleteSound();
 
@@ -962,6 +1114,42 @@ export default function WorkoutPlayerPage() {
   if (phase === "briefing") {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col">
+        {/* ── Crash recovery prompt ──
+            Shown when we find a recent snapshot in localStorage.
+            Full-screen overlay so the user must choose before continuing. */}
+        {pendingRecovery && (
+          <div className="fixed inset-0 z-[300] bg-bg-primary/90 flex items-center justify-center px-6">
+            <div className="w-full max-w-sm border-2 border-green-primary bg-bg-panel p-6 space-y-5">
+              {/* Heading — military style, all caps */}
+              <h2 className="text-xl font-heading uppercase tracking-wider text-sand text-center">
+                RESUME FROM WHERE YOU LEFT OFF?
+              </h2>
+
+              {/* Context — tell the user what state we found */}
+              <p className="text-sm font-mono text-text-secondary text-center leading-relaxed">
+                PREVIOUS SESSION FOUND — EXERCISE{" "}
+                <span className="text-green-light">
+                  {pendingRecovery.currentExIndex + 1}/{allExercises.length}
+                </span>
+                {" "}— ELAPSED{" "}
+                <span className="text-green-light">
+                  {formatTime(pendingRecovery.elapsedSeconds)}
+                </span>
+              </p>
+
+              {/* Two action buttons */}
+              <div className="space-y-3">
+                <Button fullWidth onClick={handleResumeRecovery}>
+                  RESUME
+                </Button>
+                <Button fullWidth variant="secondary" onClick={handleStartFresh}>
+                  START FRESH
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header with back button */}
         <div className="px-4 pt-4 pb-2 flex items-center gap-3">
           <button

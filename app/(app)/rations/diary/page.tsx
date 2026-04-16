@@ -438,11 +438,13 @@ export default function FoodDiaryPage() {
   // Save edited food entry
   async function saveEdit() {
     if (!editEntry) return;
+    // Clamp values: negatives become 0, anything over 9999 caps at 9999
+    const clamp = (v: string) => Math.max(0, Math.min(9999, Number(v) || 0));
     const { error } = await supabase.from("food_diary").update({
-      calories: Number(editCalories) || 0,
-      protein_g: Number(editProtein) || 0,
-      carbs_g: Number(editCarbs) || 0,
-      fat_g: Number(editFat) || 0,
+      calories: clamp(editCalories),
+      protein_g: clamp(editProtein),
+      carbs_g: clamp(editCarbs),
+      fat_g: clamp(editFat),
     }).eq("id", editEntry.id);
 
     if (error) {
@@ -698,21 +700,25 @@ export default function FoodDiaryPage() {
               <div>
                 <label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Calories</label>
                 <input type="number" value={editCalories} onChange={(e) => setEditCalories(e.target.value)}
+                  min="0" max="9999"
                   className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" />
               </div>
               <div>
                 <label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Protein (g)</label>
                 <input type="number" value={editProtein} onChange={(e) => setEditProtein(e.target.value)}
+                  min="0" max="9999"
                   className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" />
               </div>
               <div>
                 <label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Carbs (g)</label>
                 <input type="number" value={editCarbs} onChange={(e) => setEditCarbs(e.target.value)}
+                  min="0" max="9999"
                   className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" />
               </div>
               <div>
                 <label className="block text-[0.55rem] font-mono text-text-secondary uppercase mb-1">Fat (g)</label>
                 <input type="number" value={editFat} onChange={(e) => setEditFat(e.target.value)}
+                  min="0" max="9999"
                   className="w-full px-3 py-2 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm" />
               </div>
             </div>
