@@ -335,13 +335,19 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* --- Barcode scanner overrides ---
-   html5-qrcode injects its own container styles that constrain the
-   video feed. These overrides force it to fill the available space
-   so there's no black bar at the bottom on mobile. */
+   html5-qrcode injects its own container styles and intermediate divs
+   that constrain the video feed. These overrides force everything to
+   fill the available space so the camera feed is always visible. */
 #barrax-barcode-reader {
   width: 100% !important;
   height: 100% !important;
   border: none !important;
+  position: relative !important;
+}
+
+#barrax-barcode-reader > div {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 #barrax-barcode-reader video {

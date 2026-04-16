@@ -252,10 +252,12 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
           </button>
         </div>
       ) : (
-        /* Camera view — html5-qrcode renders into this container */
-        <div className="flex-1 relative overflow-hidden">
-          {/* html5-qrcode injects the video element into this div */}
-          <div id={SCANNER_ELEMENT_ID} className="w-full h-full" />
+        /* Camera view — html5-qrcode renders into this container.
+           We need an explicit height for the video to render because
+           html5-qrcode's inner elements need a concrete pixel height,
+           not just flex-1 which doesn't give one. */
+        <div className="flex-1 relative overflow-hidden min-h-0">
+          <div id={SCANNER_ELEMENT_ID} className="absolute inset-0" />
 
           {/* Torch toggle — only shown if the device camera supports it */}
           {torchAvailable && (
