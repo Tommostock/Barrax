@@ -6,9 +6,9 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Plus, Clock, Star } from "lucide-react";
+import { Plus, Clock, Star, Check } from "lucide-react";
 
 interface RecentFood {
   food_name: string;
@@ -21,6 +21,8 @@ interface RecentFood {
 }
 
 interface RecentFoodsProps {
+  // Parent may return a Promise so we can await the insert and only show
+  // the "logged" confirmation once the save actually succeeded.
   onQuickAdd: (food: {
     food_name: string;
     calories: number;
@@ -29,13 +31,58 @@ interface RecentFoodsProps {
     fat_g: number;
     brand?: string;
     source: "manual";
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 export default function RecentFoods({ onQuickAdd }: RecentFoodsProps) {
   const supabase = createClient();
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [loading, setLoading] = useState(true);
+  // Tracks which button is currently "pending" (mid-save) or "logged"
+  // (showing the confirmation tick). Keyed by list index so duplicate
+  // food names in different positions don't collide.
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+  const [loggedIndex, setLoggedIndex] = useState<number | null>(null);
+  // Hold the revert timeout so we can clear it if the component unmounts
+  // before the confirmation animation finishes (prevents state updates
+  // on an unmounted component).
+  const revertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (revertTimer.current) clearTimeout(revertTimer.current);
+    };
+  }, []);
+
+  // Handles a quick-add tap: marks the button as pending, awaits the
+  // parent insert, then flashes a "LOGGED" tick for ~1.2s so the user
+  // gets clear visual feedback that the food was saved.
+  async function handleQuickAdd(food: RecentFood, index: number) {
+    // Guard against double-taps while the previous save is in flight or
+    // while the confirmation tick is still showing.
+    if (pendingIndex !== null || loggedIndex === index) return;
+
+    setPendingIndex(index);
+    try {
+      await onQuickAdd({
+        food_name: food.food_name,
+        calories: food.calories,
+        protein_g: food.protein_g,
+        carbs_g: food.carbs_g,
+        fat_g: food.fat_g,
+        brand: food.brand ?? undefined,
+        source: "manual",
+      });
+      setLoggedIndex(index);
+      if (revertTimer.current) clearTimeout(revertTimer.current);
+      revertTimer.current = setTimeout(() => setLoggedIndex(null), 1200);
+    } catch {
+      // Parent surfaces its own error message; just clear local state so
+      // the user can retry the tap.
+    } finally {
+      setPendingIndex(null);
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -87,29 +134,57 @@ export default function RecentFoods({ onQuickAdd }: RecentFoodsProps) {
         <Clock size={10} /> RECENT & FREQUENT
       </p>
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-        {recentFoods.map((food, i) => (
-          <button
-            key={i}
-            onClick={() => onQuickAdd({
-              food_name: food.food_name,
-              calories: food.calories,
-              protein_g: food.protein_g,
-              carbs_g: food.carbs_g,
-              fat_g: food.fat_g,
-              brand: food.brand ?? undefined,
-              source: "manual",
-            })}
-            className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-bg-panel border border-green-dark/50
-                       hover:border-green-primary transition-colors min-h-[40px]"
-          >
-            <Plus size={12} className="text-green-primary" />
-            <div className="text-left">
-              <p className="text-xs text-text-primary whitespace-nowrap">{food.food_name}</p>
-              <p className="text-[0.5rem] font-mono text-text-secondary">{food.calories} kcal</p>
-            </div>
-            {food.count >= 3 && <Star size={10} className="text-xp-gold" />}
-          </button>
-        ))}
+        {recentFoods.map((food, i) => {
+          // "isLogged" shows the post-save confirmation tick + green flash.
+          // "isPending" covers the brief window while the insert is in
+          // flight so the user can't double-tap and double-log.
+          const isLogged = loggedIndex === i;
+          const isPending = pendingIndex === i;
+          const isBusy = isLogged || isPending;
+          return (
+            <button
+              key={i}
+              onClick={() => handleQuickAdd(food, i)}
+              disabled={isBusy}
+              aria-label={
+                isLogged
+                  ? `${food.food_name} logged`
+                  : `Add ${food.food_name} to diary`
+              }
+              className={
+                "flex-shrink-0 flex items-center gap-2 px-3 py-2 border transition-colors min-h-[40px] " +
+                (isLogged
+                  ? "bg-green-primary/15 border-green-primary"
+                  : "bg-bg-panel border-green-dark/50 hover:border-green-primary")
+              }
+            >
+              {isLogged ? (
+                <Check size={12} className="text-green-primary" />
+              ) : (
+                <Plus
+                  size={12}
+                  className={
+                    "text-green-primary " + (isPending ? "opacity-50" : "")
+                  }
+                />
+              )}
+              <div className="text-left">
+                <p className="text-xs text-text-primary whitespace-nowrap">{food.food_name}</p>
+                <p
+                  className={
+                    "text-[0.5rem] font-mono whitespace-nowrap " +
+                    (isLogged ? "text-green-primary" : "text-text-secondary")
+                  }
+                >
+                  {isLogged ? "LOGGED" : `${food.calories} kcal`}
+                </p>
+              </div>
+              {food.count >= 3 && !isLogged && (
+                <Star size={10} className="text-xp-gold" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
