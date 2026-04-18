@@ -67,6 +67,34 @@ interface PerformanceSnapshot {
 
 const PFT_ORDER: FitnessTestType[] = ["push_up_max", "plank_hold", "run_1500m"];
 
+// Human-friendly labels for personal-record category keys so the
+// Recent PRs list shows "Longest Workout" rather than the raw
+// snake_case value stored in the personal_records table.
+const PR_CATEGORY_LABELS: Record<string, string> = {
+  most_xp_week: "Most XP / Week",
+  fastest_1km: "Fastest 1 km",
+  fastest_5km: "Fastest 5 km (Pace)",
+  longest_run: "Longest Run",
+  fastest_1mi: "Fastest 1 Mile",
+  fastest_2p4km: "Fastest 2.4 km",
+  fastest_1500m: "Fastest 1.5 Mile (PFT)",
+  fastest_5km_total: "Fastest 5 km",
+  fastest_10km: "Fastest 10 km",
+  most_pushups: "Most Push-Ups",
+  longest_plank: "Longest Plank",
+  longest_workout: "Longest Workout",
+};
+
+// Fall back to a Title-Case version of the raw key so unknown
+// categories still display as normal words rather than snake_case.
+function formatPRCategory(category: string): string {
+  if (PR_CATEGORY_LABELS[category]) return PR_CATEGORY_LABELS[category];
+  return category
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 export default function PerformanceHubPage() {
   const supabase = createClient();
   const [data, setData] = useState<PerformanceSnapshot | null>(null);
@@ -249,7 +277,7 @@ export default function PerformanceHubPage() {
                 key={pr.id}
                 className="flex items-center justify-between py-1.5 border-b border-green-dark/50 last:border-0"
               >
-                <span className="text-xs text-text-primary">{pr.category}</span>
+                <span className="text-xs text-text-primary">{formatPRCategory(pr.category)}</span>
                 <span className="text-sm font-mono font-bold text-xp-gold tabular-nums">
                   {pr.value} {pr.unit}
                 </span>

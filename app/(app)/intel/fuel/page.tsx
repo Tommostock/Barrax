@@ -35,8 +35,6 @@ import {
   Utensils,
   Droplets,
   PieChart,
-  ShoppingCart,
-  Settings,
   ChevronRight,
 } from "lucide-react";
 import { calculateMacroTargets } from "@/lib/macros";
@@ -260,12 +258,6 @@ export default function FuelHubPage() {
         Detail
       </h3>
       <FuelLink
-        href="/rations/diary"
-        icon={Utensils}
-        title="Food Diary"
-        description="Full log of today's meals"
-      />
-      <FuelLink
         href="/intel/nutrition"
         icon={PieChart}
         title="Nutrition Trends"
@@ -276,18 +268,6 @@ export default function FuelHubPage() {
         icon={Droplets}
         title="Hydration Protocol"
         description="Log water, adjust target"
-      />
-      <FuelLink
-        href="/rations/shopping"
-        icon={ShoppingCart}
-        title="Shopping List"
-        description="Supply requisition from meal plan"
-      />
-      <FuelLink
-        href="/intel/settings"
-        icon={Settings}
-        title="Macro Split"
-        description="Calorie target + macro ratios"
       />
     </div>
   );
