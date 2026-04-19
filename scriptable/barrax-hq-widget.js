@@ -69,6 +69,28 @@ function fmtKm(metres) {
 }
 
 // Shortens rank title so it fits on one line ("Lance Corporal" -> "LCP").
+// ---------------------------------------------------------------------------
+// RANK THRESHOLDS
+// ---------------------------------------------------------------------------
+// Mirrored from types/index.ts so the widget can compute band-relative
+// progress ("4 XP into rank 3's 500-XP band", not "504 XP into 1,000")
+// without depending on current_rank_xp being present in the API payload.
+// Keep this array in sync with RANK_THRESHOLDS in the app.
+const RANK_THRESHOLDS = [
+  { rank: 1,  title: "Recruit",         xp: 0     },
+  { rank: 2,  title: "Private",         xp: 200   },
+  { rank: 3,  title: "Lance Corporal",  xp: 500   },
+  { rank: 4,  title: "Corporal",        xp: 1000  },
+  { rank: 5,  title: "Sergeant",        xp: 2000  },
+  { rank: 6,  title: "Staff Sergeant",  xp: 3500  },
+  { rank: 7,  title: "Warrant Officer", xp: 5500  },
+  { rank: 8,  title: "Lieutenant",      xp: 8000  },
+  { rank: 9,  title: "Captain",         xp: 12000 },
+  { rank: 10, title: "Major",           xp: 17000 },
+  { rank: 11, title: "Colonel",         xp: 24000 },
+  { rank: 12, title: "General",         xp: 33000 },
+];
+
 function shortRank(title) {
   if (!title) return "";
   const map = {
@@ -336,47 +358,71 @@ function buildMediumWidget(data) {
   return w;
 }
 
-// Row layout: `current_xp  [======      ]  next_rank_xp`
-// At max rank the right number falls back to "MAX" and the bar is fully
-// filled as a small "you made it" flourish.
+// Full-width rank progress bar pinned to the bottom of the widget.
+// Layout is two rows so the bar itself can occupy the entire inner
+// width with only the padding either side:
+//
+//   504                                             1,000
+//   ================================----------------------
+//
+// Band-relative progress is computed locally from RANK_THRESHOLDS so
+// it matches the in-app RankStrip component exactly -- "504 XP at
+// Lance Corporal" reads as "4 / 500 into the band", not "504 / 1000
+// from zero". The API's current_rank_xp is used when present, with a
+// local lookup as a safe fallback if the deploy hasn't caught up.
 function addRankBar(parent, rank) {
   const currentXp = rank?.total_xp ?? 0;
-  const rankStart = rank?.current_rank_xp ?? 0;
-  const rankEnd = rank?.next_rank_xp ?? null;
+  const currentRank = rank?.level ?? 1;
 
-  const row = parent.addStack();
-  row.layoutHorizontally();
-  row.centerAlignContent();
+  // Trust the API's current_rank_xp when it's present; otherwise look
+  // up the threshold for the user's current rank so the maths is still
+  // right. Same story for next_rank_xp.
+  const rankStart =
+    rank?.current_rank_xp ??
+    (RANK_THRESHOLDS[currentRank - 1]?.xp ?? 0);
+  const rankEnd =
+    rank?.next_rank_xp ??
+    (RANK_THRESHOLDS[currentRank]?.xp ?? null);
 
-  // Current XP on the left end of the bar.
-  const left = row.addText(currentXp.toLocaleString());
+  const atMaxRank = rankEnd == null;
+
+  // Numbers row: current XP flush left, next-rank threshold flush right.
+  const numbers = parent.addStack();
+  numbers.layoutHorizontally();
+
+  const left = numbers.addText(currentXp.toLocaleString());
   left.font = Font.regularMonospacedSystemFont(8);
   left.textColor = COL.textSec;
 
-  row.addSpacer(6);
+  numbers.addSpacer();
 
-  // The bar itself. Fixed width so the numbers sit at predictable
-  // positions regardless of their own length.
-  const barWidth = 180;
-  const barHeight = 3;
-  const bar = row.addImage(
+  const right = numbers.addText(atMaxRank ? "MAX" : rankEnd.toLocaleString());
+  right.font = Font.regularMonospacedSystemFont(8);
+  right.textColor = COL.xpGold;
+
+  // Tiny gap between the numbers and the bar.
+  parent.addSpacer(3);
+
+  // Bar row: image sized to the widget's inner width. Medium widget
+  // inner width is ~310pt after the 14pt left/right padding; 290pt
+  // leaves a little slack so it never overflows on smaller devices.
+  const barDisplayWidth = 290;
+  const barDisplayHeight = 3;
+
+  const barRow = parent.addStack();
+  barRow.layoutHorizontally();
+  barRow.addSpacer();
+  const barImg = barRow.addImage(
     drawRankBar({
       currentXp,
       rankStartXp: rankStart,
       rankEndXp: rankEnd,
-      width: barWidth * 3, // 3x oversample for retina crispness
-      height: barHeight * 3,
+      width: barDisplayWidth * 3, // oversample for retina crispness
+      height: barDisplayHeight * 3,
     }),
   );
-  bar.imageSize = new Size(barWidth, barHeight);
-
-  row.addSpacer(6);
-
-  // Next-rank threshold on the right end, or MAX when there isn't one.
-  const rightLabel = rankEnd != null ? rankEnd.toLocaleString() : "MAX";
-  const right = row.addText(rightLabel);
-  right.font = Font.regularMonospacedSystemFont(8);
-  right.textColor = COL.xpGold;
+  barImg.imageSize = new Size(barDisplayWidth, barDisplayHeight);
+  barRow.addSpacer();
 }
 
 // Vertical column: ring + "Calories" label + "value/target" readout.
