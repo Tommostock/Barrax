@@ -260,6 +260,11 @@ function buildMediumWidget(data) {
 // Vertical column: ring + "Calories" label + "value/target" readout.
 // Label and readout share typography across all four macros -- only
 // the ring fill colour differs -- so the row reads as one unit.
+//
+// Both text lines are wrapped in horizontal stacks with spacers on
+// either side. Scriptable's centerAlignContent() on a vertical stack
+// does not reliably centre narrower children under a wider sibling
+// (like our ring image), but spacer-sandwich stacks always do.
 function addMacroColumn(parent, def, ringSize) {
   const col = parent.addStack();
   col.layoutVertically();
@@ -284,18 +289,26 @@ function addMacroColumn(parent, def, ringSize) {
   // Small gap between ring and the text underneath.
   col.addSpacer(4);
 
-  // Macro name, mixed case, centred under the ring.
-  const lbl = col.addText(def.label);
+  // Macro name, mixed case. Sandwiched with spacers so it sits
+  // centred inside the column (the ring above defines the width).
+  const labelRow = col.addStack();
+  labelRow.layoutHorizontally();
+  labelRow.addSpacer();
+  const lbl = labelRow.addText(def.label);
   lbl.font = Font.mediumSystemFont(10);
   lbl.textColor = COL.textSec;
-  lbl.centerAlignText();
+  labelRow.addSpacer();
 
-  // Single-line "value/target" readout. Same font + colour for every
-  // macro so the row reads uniformly.
-  const readout = col.addText(`${Math.round(value)}/${Math.round(target)}`);
+  // Single-line "value/target" readout, same treatment.
+  const readoutRow = col.addStack();
+  readoutRow.layoutHorizontally();
+  readoutRow.addSpacer();
+  const readout = readoutRow.addText(
+    `${Math.round(value)}/${Math.round(target)}`,
+  );
   readout.font = Font.regularMonospacedSystemFont(10);
   readout.textColor = COL.textPrim;
-  readout.centerAlignText();
+  readoutRow.addSpacer();
 }
 
 // ---------------------------------------------------------------------------
