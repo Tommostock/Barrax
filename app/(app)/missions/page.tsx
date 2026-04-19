@@ -66,6 +66,10 @@ export default function MissionsPage() {
 
   const [programme, setProgramme] = useState<{ id: string; programme_data: ProgrammeDay[] } | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  // Set of YYYY-MM-DD dates in this week on which the user has a
+  // completed run. Run-type days don't generate a workout row, so we
+  // use this to tick them off on the calendar when a run is logged.
+  const [completedRunDates, setCompletedRunDates] = useState<Set<string>>(new Set());
   const [trainingSchedule, setTrainingSchedule] = useState<TrainingSchedule>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -157,6 +161,42 @@ export default function MissionsPage() {
 
       if (workoutData) setWorkouts(workoutData as Workout[]);
     }
+
+    // Fetch the set of dates this week that have at least one
+    // completed run, so run-type days on the calendar can be marked
+    // complete even though they don't have a workout row.
+    const currentWeekStart = new Date();
+    currentWeekStart.setHours(0, 0, 0, 0);
+    const dow = currentWeekStart.getDay();
+    const offsetToMonday = dow === 0 ? 6 : dow - 1;
+    currentWeekStart.setDate(currentWeekStart.getDate() - offsetToMonday);
+    const weekEnd = new Date(currentWeekStart);
+    weekEnd.setDate(currentWeekStart.getDate() + 7);
+
+    const { data: runData } = await supabase
+      .from("runs")
+      .select("completed_at")
+      .eq("user_id", user.id)
+      .gte("completed_at", currentWeekStart.toISOString())
+      .lt("completed_at", weekEnd.toISOString());
+
+    if (runData) {
+      const dates = new Set<string>();
+      for (const row of runData as { completed_at: string | null }[]) {
+        if (!row.completed_at) continue;
+        // Convert to local YYYY-MM-DD so we match against the
+        // local calendar cell the user is looking at.
+        const d = new Date(row.completed_at);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        dates.add(`${y}-${m}-${day}`);
+      }
+      setCompletedRunDates(dates);
+    } else {
+      setCompletedRunDates(new Set());
+    }
+
     setLoading(false);
   }, [supabase]);
 
@@ -298,6 +338,29 @@ export default function MissionsPage() {
     return trainingSchedule[dayName as keyof TrainingSchedule]?.type;
   }
 
+  // Format a Date as the local YYYY-MM-DD string we use as keys in
+  // the completedRunDates set. Keeping this local (not UTC) so it
+  // matches how the user thinks about "today".
+  function localDateKey(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  // True when the given weekday is a run day AND the user logged
+  // at least one run on that date this week. Lets us tick off run
+  // days on the Battle Plan calendar even though run days don't
+  // have a row in the workouts table.
+  function isRunDayComplete(dayName: string): boolean {
+    if (getEffectiveDayType(dayName) !== "run") return false;
+    const idx = DAY_NAMES.indexOf(dayName);
+    if (idx < 0) return false;
+    const dayDate = new Date(weekStart);
+    dayDate.setDate(weekStart.getDate() + idx);
+    return completedRunDates.has(localDateKey(dayDate));
+  }
+
   // Summarise what's on a day in one short word for the swap picker
   // (so the user can tell at a glance what they're swapping into).
   function describeDay(dayName: string): { label: string; icon: typeof Swords } {
@@ -309,6 +372,9 @@ export default function MissionsPage() {
     });
 
     if (workout?.status === "complete") return { label: "COMPLETE", icon: Check };
+    if (type === "run" && isRunDayComplete(dayName)) {
+      return { label: "COMPLETE", icon: Check };
+    }
     if (type === "run") return { label: "RUN", icon: Route };
     if (type === "activity") {
       const wd = workout?.workout_data as WorkoutData | undefined;
@@ -413,12 +479,22 @@ export default function MissionsPage() {
             const isToday = dayName === todayName;
             const isSelected = dayName === selectedDay;
             const isRest = dayData?.is_rest_day;
-            const isComplete = workout?.status === "complete";
+            // A run day is considered complete when a run was logged
+            // on that date, even though there's no workout row.
+            const runComplete = isRunDayComplete(dayName);
+            const isComplete = workout?.status === "complete" || runComplete;
 
-            // Missed = past workout day that was not completed
+            // Missed = past workout day that was not completed.
+            // Run days are only "missed" if the date is past AND no
+            // run was logged.
             const dayDate = new Date(weekStart);
             dayDate.setDate(weekStart.getDate() + i);
-            const isMissed = dayDate < todayDate && dayData !== undefined && !isRest && !isComplete;
+            const effectiveType = getEffectiveDayType(dayName);
+            const isRunDay = effectiveType === "run";
+            const isMissed =
+              dayDate < todayDate &&
+              !isComplete &&
+              ((dayData !== undefined && !isRest) || isRunDay);
 
             return (
               <div key={dayName} className="flex flex-col">
@@ -524,8 +600,31 @@ export default function MissionsPage() {
               // Use the effective type so per-week swap overrides win
               const effectiveType = getEffectiveDayType(selectedDay);
 
-              // Run day — prompt to go to the run tracker
+              // Run day — if a run was logged today, tick the day
+              // off on the Battle Plan. Otherwise, prompt the user
+              // to go to the run tracker.
               if (effectiveType === "run") {
+                if (isRunDayComplete(selectedDay)) {
+                  return (
+                    <Card tag="COMPLETE" tagVariant="complete">
+                      <div className="text-center py-6">
+                        <Check size={28} className="text-xp-gold mx-auto mb-3" />
+                        <h4 className="text-sm font-heading uppercase tracking-wider text-sand mb-1">
+                          Combat Run Complete
+                        </h4>
+                        <p className="text-xs text-text-secondary mb-4">
+                          Run logged. Mission accomplished, soldier.
+                        </p>
+                        <Button onClick={() => router.push("/intel/runs")}>
+                          <span className="flex items-center gap-2">
+                            <Route size={14} /> VIEW RUN HISTORY
+                          </span>
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                }
+
                 return (
                   <Card tag="COMBAT RUN" tagVariant="active">
                     <div className="text-center py-6">

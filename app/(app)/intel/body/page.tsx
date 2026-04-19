@@ -32,6 +32,45 @@ import type { WeightLog } from "@/types";
 // both formats so the viewer keeps working regardless.
 interface ProgressPhoto { id: string; photo_url: string; note: string | null; taken_at: string; }
 
+// ============================================================
+// Weight unit helpers
+// Weight is stored in kg in the database, but the UI lets users
+// view + log in kilograms, pounds, or stone. These conversions
+// are pure functions so they're easy to reason about and test.
+// ============================================================
+type WeightUnit = "kg" | "lb" | "st";
+
+const KG_PER_LB = 0.45359237;
+const KG_PER_STONE = 6.35029318;     // 1 stone = 14 lb
+const LB_PER_STONE = 14;
+
+/** Convert a value entered in the given unit into kilograms. */
+function toKg(value: number, unit: WeightUnit): number {
+  if (unit === "kg") return value;
+  if (unit === "lb") return value * KG_PER_LB;
+  return value * KG_PER_STONE;
+}
+
+/** Format a kilogram weight as pounds, rounded to 1 decimal. */
+function kgToLb(kg: number): number {
+  return kg / KG_PER_LB;
+}
+
+/** Format a kilogram weight as stone-and-pounds, e.g. 12 st 4.2 lb. */
+function formatStoneAndPounds(kg: number): string {
+  const totalLb = kgToLb(kg);
+  const stones = Math.floor(totalLb / LB_PER_STONE);
+  const pounds = totalLb - stones * LB_PER_STONE;
+  return `${stones} st ${pounds.toFixed(1)} lb`;
+}
+
+/** Placeholder text for the weight input based on the selected unit. */
+function placeholderForUnit(unit: WeightUnit): string {
+  if (unit === "kg") return "Weight in kg";
+  if (unit === "lb") return "Weight in lb";
+  return "Weight in stone (e.g. 12.5)";
+}
+
 /** Return a storage object path from either a raw path or a legacy full URL. */
 function extractStoragePath(value: string): string {
   if (!value) return "";
@@ -50,6 +89,10 @@ export default function BodyTrackingPage() {
   const [loading, setLoading] = useState(true);
   const [showInput, setShowInput] = useState(false);
   const [newWeight, setNewWeight] = useState("");
+  // Which unit the user is typing their weight in. KG is the
+  // default because weight is stored as kg in the database — the
+  // other units are converted at save time.
+  const [inputUnit, setInputUnit] = useState<WeightUnit>("kg");
 
   const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
   // Map of photo.id -> freshly signed URL. Regenerated on every
@@ -133,8 +176,12 @@ export default function BodyTrackingPage() {
   const { pullDistance, refreshing } = usePullToRefresh({ onRefresh: loadData });
 
   async function logWeight() {
-    const weight = parseFloat(newWeight);
-    if (isNaN(weight) || weight <= 0) return;
+    const rawValue = parseFloat(newWeight);
+    if (isNaN(rawValue) || rawValue <= 0) return;
+
+    // Always store as kilograms — convert from whichever unit the
+    // user entered so the database stays consistent.
+    const weightKg = Number(toKg(rawValue, inputUnit).toFixed(2));
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -147,7 +194,7 @@ export default function BodyTrackingPage() {
     const optimisticEntry: WeightLog = {
       id: `pending_${Date.now()}`,
       user_id: user.id,
-      weight_kg: weight,
+      weight_kg: weightKg,
       logged_at: new Date().toISOString(),
     };
     setWeightLogs((prev) => [optimisticEntry, ...prev]);
@@ -156,7 +203,7 @@ export default function BodyTrackingPage() {
 
     const { error } = await supabase.from("weight_logs").insert({
       user_id: user.id,
-      weight_kg: weight,
+      weight_kg: weightKg,
     });
 
     if (error) {
@@ -274,31 +321,78 @@ export default function BodyTrackingPage() {
         </Button>
       </div>
 
-      {/* Weight input */}
+      {/* Weight input -- user picks a unit (KG / LB / STONE) and
+          types the value. We convert to kg at save time so the DB
+          stays in a single unit. */}
       {showInput && (
         <Card tag="LOG WEIGHT" tagVariant="active">
+          {/* Unit picker: three-way toggle across the top of the
+              input. The selected unit drives the placeholder text
+              and the conversion applied when SAVE is tapped. */}
+          <div className="grid grid-cols-3 gap-1 mb-2">
+            {(["kg", "lb", "st"] as WeightUnit[]).map((unit) => {
+              const active = inputUnit === unit;
+              return (
+                <button
+                  key={unit}
+                  type="button"
+                  onClick={() => setInputUnit(unit)}
+                  className={`min-h-[44px] px-2 py-2 font-mono text-xs uppercase tracking-wider border transition-colors
+                    ${active
+                      ? "bg-green-primary/15 border-green-primary text-green-light"
+                      : "bg-bg-panel border-green-dark text-text-secondary hover:text-sand"}`}
+                  aria-pressed={active}
+                >
+                  {unit === "kg" ? "KG" : unit === "lb" ? "LB" : "STONE"}
+                </button>
+              );
+            })}
+          </div>
           <div className="flex gap-2">
             <input
               type="number"
               step="0.1"
               value={newWeight}
               onChange={(e) => setNewWeight(e.target.value)}
-              placeholder="Weight in kg"
+              placeholder={placeholderForUnit(inputUnit)}
               className="flex-1 px-4 py-3 bg-bg-input border border-green-dark text-text-primary focus:border-green-primary focus:outline-none text-sm"
             />
             <Button onClick={logWeight} className="px-4">SAVE</Button>
           </div>
+          {/* Show the converted value so the user can sanity-check
+              what's about to be saved, in all three units. */}
+          {newWeight && !isNaN(parseFloat(newWeight)) && parseFloat(newWeight) > 0 && (() => {
+            const enteredKg = toKg(parseFloat(newWeight), inputUnit);
+            return (
+              <p className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-wider mt-2">
+                = {enteredKg.toFixed(1)} KG · {kgToLb(enteredKg).toFixed(1)} LB · {formatStoneAndPounds(enteredKg).toUpperCase()}
+              </p>
+            );
+          })()}
         </Card>
       )}
 
-      {/* Current weight */}
+      {/* Current weight -- shown in all three units so the user
+          doesn't have to mentally convert regardless of which unit
+          they actually logged it in. */}
       <div className="bg-bg-panel border border-green-dark p-4 text-center">
         <Scale size={24} className="text-green-primary mx-auto mb-2" />
         <p className="text-3xl font-bold font-mono text-text-primary">
-          {latestWeight ? `${latestWeight} kg` : "-- kg"}
+          {latestWeight ? `${latestWeight.toFixed(1)} kg` : "-- kg"}
         </p>
+        {latestWeight ? (
+          <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
+            <span className="text-xs font-mono text-text-secondary">
+              {kgToLb(latestWeight).toFixed(1)} LB
+            </span>
+            <span className="text-text-secondary">·</span>
+            <span className="text-xs font-mono text-text-secondary">
+              {formatStoneAndPounds(latestWeight).toUpperCase()}
+            </span>
+          </div>
+        ) : null}
         {weightChange !== null && (
-          <p className={`text-sm font-mono mt-1 ${weightChange < 0 ? "text-green-light" : weightChange > 0 ? "text-danger" : "text-text-secondary"}`}>
+          <p className={`text-sm font-mono mt-2 ${weightChange < 0 ? "text-green-light" : weightChange > 0 ? "text-danger" : "text-text-secondary"}`}>
             {weightChange > 0 ? "+" : ""}{weightChange.toFixed(1)} kg
           </p>
         )}
@@ -543,7 +637,14 @@ export default function BodyTrackingPage() {
               <span className="text-xs font-mono text-text-secondary">
                 {formatDateCompact(log.logged_at)}
               </span>
-              <span className="text-sm font-mono font-bold text-text-primary">{log.weight_kg} kg</span>
+              <div className="text-right">
+                <span className="text-sm font-mono font-bold text-text-primary">
+                  {log.weight_kg.toFixed(1)} kg
+                </span>
+                <span className="block text-[0.55rem] font-mono text-text-secondary">
+                  {kgToLb(log.weight_kg).toFixed(1)} LB · {formatStoneAndPounds(log.weight_kg).toUpperCase()}
+                </span>
+              </div>
             </div>
           ))}
         </div>

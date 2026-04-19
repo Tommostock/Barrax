@@ -70,9 +70,9 @@ interface RunChallenge {
 
 const RUN_CHALLENGES: RunChallenge[] = [
   { id: "free", label: "FREE RUN", distanceM: null },
-  { id: "1mi", label: "1 MI", distanceM: 1609 },
-  { id: "2p4km", label: "2.4 KM", distanceM: 2400 },
-  { id: "1500m", label: "1.5 MI", distanceM: 2414 },
+  { id: "1km", label: "1 KM", distanceM: 1000 },
+  { id: "2km", label: "2 KM", distanceM: 2000 },
+  { id: "3km", label: "3 KM", distanceM: 3000 },
   { id: "5km", label: "5 KM", distanceM: 5000 },
   { id: "10km", label: "10 KM", distanceM: 10000 },
 ];
@@ -750,85 +750,152 @@ export default function RunTrackerPage() {
         </div>
       )}
 
-      {/* ========== RUNNING STATE ========== */}
+      {/* ========== RUNNING STATE ==========
+          Full-screen immersive layout: the map fills the entire
+          viewport, with the clock/stats HUD overlaid at the top
+          and the pause/stop/lock controls overlaid at the bottom.
+          z-[60] sits above the global BottomNav (z-50) so the
+          runner isn't distracted by the nav tabs mid-run. */}
       {runState === "running" && (
-        <div className="space-y-4">
-          {/* Large elapsed time display */}
-          <div className="text-center py-2">
-            <p className="text-[0.65rem] font-mono text-text-secondary uppercase tracking-widest mb-1">
-              Elapsed Time
-            </p>
-            <p className="text-5xl font-mono text-sand tracking-wider">
-              {formatDuration(elapsed)}
-            </p>
-            {/* Show a different tag depending on WHY the run is paused */}
-            {paused && !gpsPaused && (
-              <Tag variant="danger" className="mt-2">
-                PAUSED
-              </Tag>
-            )}
-            {gpsPaused && (
-              <Tag variant="danger" className="mt-2">
-                GPS SIGNAL LOST - RUN PAUSED
-              </Tag>
-            )}
+        <div className="fixed inset-0 z-[60] bg-bg-primary">
+          {/* Full-screen live map layer */}
+          <div className="absolute inset-0">
+            <RunMap points={points} isLive={!paused} height="h-full" />
           </div>
 
-          {/* Stats row: distance, current pace, average pace */}
-          <div className="grid grid-cols-3 gap-2">
-            {/* Distance */}
-            <Card className="text-center py-3">
-              <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
-                Distance
-              </p>
-              <p className="text-3xl font-mono text-sand mt-1">
-                {formatDistance(currentDistance)}
-              </p>
-              <p className="text-[0.55rem] font-mono text-text-secondary">km</p>
-            </Card>
+          {/* ---- TOP OVERLAY: clock + stats ---- */}
+          <div
+            className="absolute top-0 left-0 right-0 px-3 pointer-events-none"
+            style={{ paddingTop: "calc(env(safe-area-inset-top) + 8px)" }}
+          >
+            <div className="bg-bg-panel/90 backdrop-blur-sm border border-green-dark p-3 pointer-events-auto">
+              {/* Large elapsed time display */}
+              <div className="text-center">
+                <p className="text-[0.6rem] font-mono text-text-secondary uppercase tracking-widest mb-1">
+                  Elapsed Time
+                </p>
+                <p className="text-4xl font-mono text-sand tracking-wider">
+                  {formatDuration(elapsed)}
+                </p>
+                {/* Show a different tag depending on WHY the run is paused */}
+                {paused && !gpsPaused && (
+                  <Tag variant="danger" className="mt-2">
+                    PAUSED
+                  </Tag>
+                )}
+                {gpsPaused && (
+                  <Tag variant="danger" className="mt-2">
+                    GPS SIGNAL LOST - RUN PAUSED
+                  </Tag>
+                )}
+              </div>
 
-            {/* Current pace (live reading from last GPS segment) */}
-            <Card className="text-center py-3">
-              <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
-                Pace
-              </p>
-              <p className="text-3xl font-mono text-sand mt-1">
-                {formatPace(currentPace)}
-              </p>
-              <p className="text-[0.55rem] font-mono text-text-secondary">
-                min/km
-              </p>
-            </Card>
+              {/* Stats row: distance, current pace, average pace */}
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                {/* Distance */}
+                <div className="text-center">
+                  <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
+                    Distance
+                  </p>
+                  <p className="text-2xl font-mono text-sand mt-0.5">
+                    {formatDistance(currentDistance)}
+                  </p>
+                  <p className="text-[0.55rem] font-mono text-text-secondary">
+                    km
+                  </p>
+                </div>
 
-            {/* Average pace */}
-            <Card className="text-center py-3">
-              <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
-                Avg Pace
-              </p>
-              <p className="text-3xl font-mono text-sand mt-1">
-                {formatPace(avgPaceLive)}
-              </p>
-              <p className="text-[0.55rem] font-mono text-text-secondary">
-                min/km
-              </p>
-            </Card>
-          </div>
+                {/* Current pace (live reading from last GPS segment) */}
+                <div className="text-center border-l border-r border-green-dark/60">
+                  <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
+                    Pace
+                  </p>
+                  <p className="text-2xl font-mono text-sand mt-0.5">
+                    {formatPace(currentPace)}
+                  </p>
+                  <p className="text-[0.55rem] font-mono text-text-secondary">
+                    min/km
+                  </p>
+                </div>
 
-          {/* GPS signal warning */}
-          {gpsError && (
-            <div className="flex items-center gap-2 px-2 py-2 bg-bg-panel border border-danger">
-              <MapPin size={14} className="text-danger flex-shrink-0" />
-              <p className="text-[0.65rem] text-danger font-mono">{gpsError}</p>
+                {/* Average pace */}
+                <div className="text-center">
+                  <p className="text-[0.55rem] font-mono text-text-secondary uppercase tracking-wider">
+                    Avg Pace
+                  </p>
+                  <p className="text-2xl font-mono text-sand mt-0.5">
+                    {formatPace(avgPaceLive)}
+                  </p>
+                  <p className="text-[0.55rem] font-mono text-text-secondary">
+                    min/km
+                  </p>
+                </div>
+              </div>
+
+              {/* GPS signal warning — inside the HUD so the runner
+                  sees it without hunting for it */}
+              {gpsError && (
+                <div className="mt-2 flex items-center gap-2 px-2 py-2 bg-bg-panel border border-danger">
+                  <MapPin size={14} className="text-danger flex-shrink-0" />
+                  <p className="text-[0.65rem] text-danger font-mono">
+                    {gpsError}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
-          {/* Live map showing the route being drawn */}
-          <RunMap points={points} isLive={!paused} height="h-64" />
+          {/* ---- BOTTOM OVERLAY: pause / stop / lock ---- */}
+          <div
+            className="absolute bottom-0 left-0 right-0 px-3 pointer-events-none"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+          >
+            <div className="bg-bg-panel/90 backdrop-blur-sm border border-green-dark p-3 space-y-3 pointer-events-auto">
+              {/* Pause / Resume + Stop */}
+              <div className="grid grid-cols-2 gap-3">
+                {paused ? (
+                  <Button fullWidth onClick={resumeRun}>
+                    <span className="flex items-center justify-center gap-2">
+                      <Play size={18} />
+                      RESUME
+                    </span>
+                  </Button>
+                ) : (
+                  <Button fullWidth variant="secondary" onClick={pauseRun}>
+                    <span className="flex items-center justify-center gap-2">
+                      <Pause size={18} />
+                      PAUSE
+                    </span>
+                  </Button>
+                )}
 
-          {/* Lock overlay — blocks accidental taps on controls */}
+                {/* Stop button */}
+                <Button fullWidth variant="danger" onClick={stopRun}>
+                  <span className="flex items-center justify-center gap-2">
+                    <Square size={18} />
+                    STOP
+                  </span>
+                </Button>
+              </div>
+
+              {/* Lock toggle */}
+              <button
+                onClick={() => setLocked(true)}
+                className="w-full flex items-center justify-center gap-2 min-h-[44px]
+                           text-[0.65rem] font-mono text-text-secondary uppercase tracking-wider
+                           border border-green-dark bg-bg-panel hover:bg-bg-panel-alt transition-colors"
+              >
+                {locked ? <Unlock size={14} /> : <Lock size={14} />}
+                Lock Screen
+              </button>
+            </div>
+          </div>
+
+          {/* Lock overlay — blocks accidental taps on controls.
+              z-[70] to sit above the rest of the running HUD. */}
           {locked && (
             <div
-              className="fixed inset-0 bg-black/60 z-40 flex flex-col items-center justify-center gap-4"
+              className="fixed inset-0 bg-black/60 z-[70] flex flex-col items-center justify-center gap-4"
               onClick={() => setLocked(false)}
             >
               <Lock size={48} className="text-text-secondary" />
@@ -840,51 +907,6 @@ export default function RunTrackerPage() {
               </p>
             </div>
           )}
-
-          {/* Control buttons */}
-          <div className="space-y-3">
-            {/* Pause / Resume */}
-            <div className="grid grid-cols-2 gap-3">
-              {paused ? (
-                <Button fullWidth onClick={resumeRun}>
-                  <span className="flex items-center justify-center gap-2">
-                    <Play size={18} />
-                    RESUME
-                  </span>
-                </Button>
-              ) : (
-                <Button fullWidth variant="secondary" onClick={pauseRun}>
-                  <span className="flex items-center justify-center gap-2">
-                    <Pause size={18} />
-                    PAUSE
-                  </span>
-                </Button>
-              )}
-
-              {/* Stop button */}
-              <Button fullWidth variant="danger" onClick={stopRun}>
-                <span className="flex items-center justify-center gap-2">
-                  <Square size={18} />
-                  STOP
-                </span>
-              </Button>
-            </div>
-
-            {/* Lock toggle */}
-            <button
-              onClick={() => setLocked(true)}
-              className="w-full flex items-center justify-center gap-2 min-h-[44px]
-                         text-[0.65rem] font-mono text-text-secondary uppercase tracking-wider
-                         border border-green-dark bg-bg-panel hover:bg-bg-panel-alt transition-colors"
-            >
-              {locked ? (
-                <Unlock size={14} />
-              ) : (
-                <Lock size={14} />
-              )}
-              Lock Screen
-            </button>
-          </div>
         </div>
       )}
 
