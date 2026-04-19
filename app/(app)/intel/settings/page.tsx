@@ -18,6 +18,7 @@ import { ArrowLeft, Save, Trash2, LogOut } from "lucide-react";
 import useBackNav from "@/hooks/useBackNav";
 import type { Profile, FoodPreference, TrainingSchedule, ScheduleDay, DayType } from "@/types";
 import { MACRO_PRESETS, calculateMacroTargets, isValidMacroSplit } from "@/lib/macros";
+import WidgetTokensCard from "@/components/settings/WidgetTokensCard";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -385,6 +386,9 @@ export default function SettingsPage() {
         </span>
       </Button>
       {message && <p className="text-xs text-green-light font-mono text-center">{message}</p>}
+
+      {/* Home-screen widget tokens */}
+      <WidgetTokensCard />
 
       {/* Account management */}
       <Card tag="ACCOUNT" tagVariant="default">
