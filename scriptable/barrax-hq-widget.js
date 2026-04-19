@@ -387,21 +387,25 @@ function addRankBar(parent, rank) {
   const atMaxRank = rankEnd == null;
 
   // Single row: centerAlignContent() vertically centres the numbers
-  // with the bar so the three elements read as one line.
+  // with the bar so the three elements read as one line. Flex spacers
+  // on the outer edges keep the whole "504 === 1,000" trio centred in
+  // the widget instead of pinned to the left.
   const row = parent.addStack();
   row.layoutHorizontally();
   row.centerAlignContent();
 
-  // Current XP, flush left against the widget padding.
+  row.addSpacer();
+
+  // Current XP.
   const left = row.addText(currentXp.toLocaleString());
   left.font = Font.regularMonospacedSystemFont(8);
   left.textColor = COL.textSec;
 
-  // Small gap, then the bar fills the middle. 240pt leaves room for
-  // both numbers plus 6pt gaps within the medium widget's ~310pt
-  // inner width.
+  // Fixed gap between number and bar.
   row.addSpacer(6);
 
+  // The bar. 240pt keeps the established size; it's the outer spacers
+  // that now do the centring, not the bar itself.
   const barDisplayWidth = 240;
   const barDisplayHeight = 3;
   const barImg = row.addImage(
@@ -418,11 +422,12 @@ function addRankBar(parent, rank) {
 
   row.addSpacer(6);
 
-  // Next-rank threshold, flush right. Falls back to MAX when the user
-  // is at the top rank.
+  // Next-rank threshold, or MAX at the top rank.
   const right = row.addText(atMaxRank ? "MAX" : rankEnd.toLocaleString());
   right.font = Font.regularMonospacedSystemFont(8);
   right.textColor = COL.xpGold;
+
+  row.addSpacer();
 }
 
 // Vertical column: ring + "Calories" label + "value/target" readout.
