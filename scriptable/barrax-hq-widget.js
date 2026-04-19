@@ -94,6 +94,12 @@ function shortRank(title) {
 // Scriptable's DrawContext has no built-in arc primitive, so we approximate
 // an arc by drawing many short line segments around a circle. The result is
 // a clean ring that matches the in-app macro rings.
+//
+// Visual feedback when you hit or blow through a target:
+//   * pct >= 100%: a subtle tick mark is drawn inside the ring.
+//   * pct > 105%: the whole ring turns the brand danger red instead of
+//                 the macro's usual colour. The tick still renders so the
+//                 "you hit it" cue isn't lost.
 
 function drawRing({ value, target, size, fillColour, trackColour }) {
   const ctx = new DrawContext();
@@ -106,6 +112,17 @@ function drawRing({ value, target, size, fillColour, trackColour }) {
   const cx = size / 2;
   const cy = size / 2;
 
+  // Raw percentage (can exceed 1) drives the state feedback; we still
+  // clamp the visual arc to 100% so the sweep never wraps past the top.
+  const rawPct = target > 0 ? value / target : 0;
+  const pct = Math.min(1, rawPct);
+  const isHit = rawPct >= 1;
+  const isOver = rawPct > 1.05;
+
+  // Danger state replaces the macro colour so the over-target warning
+  // dominates the visual read.
+  const arcColour = isOver ? COL.danger : fillColour;
+
   // Track: full circle behind the progress fill
   ctx.setStrokeColor(trackColour);
   ctx.setLineWidth(stroke);
@@ -117,9 +134,8 @@ function drawRing({ value, target, size, fillColour, trackColour }) {
   ctx.strokePath();
 
   // Fill arc starting at 12 o'clock and sweeping clockwise. Capped at 100%.
-  const pct = target > 0 ? Math.min(1, value / target) : 0;
   if (pct > 0) {
-    ctx.setStrokeColor(fillColour);
+    ctx.setStrokeColor(arcColour);
     const segments = Math.max(8, Math.floor(pct * 96));
     const startA = -Math.PI / 2;
     const sweep = pct * Math.PI * 2;
@@ -132,6 +148,64 @@ function drawRing({ value, target, size, fillColour, trackColour }) {
       ctx.addPath(p);
       ctx.strokePath();
     }
+  }
+
+  // Tick overlay when the target has been hit. Two short lines forming
+  // the classic check shape, drawn at the centre of the ring.
+  if (isHit) {
+    // Scale the tick proportional to the ring so it reads the same at
+    // any size. Stroke is slightly thinner than the arc's own stroke.
+    const tickStroke = Math.max(2, Math.round(size * 0.045));
+    ctx.setStrokeColor(arcColour);
+    ctx.setLineWidth(tickStroke);
+
+    const r = size * 0.18;         // half-span of the tick
+    const dropY = size * 0.05;     // lower the whole tick a touch
+    const pivotX = cx - r * 0.25;  // the inner "V" point, slightly left of centre
+    const pivotY = cy + r * 0.55 + dropY;
+
+    const tick = new Path();
+    tick.move(new Point(pivotX - r, cy + dropY));             // left arm start
+    tick.addLine(new Point(pivotX, pivotY));                   // V
+    tick.addLine(new Point(pivotX + r * 1.25, cy - r * 0.6 + dropY)); // right arm up
+    ctx.addPath(tick);
+    ctx.strokePath();
+  }
+
+  return ctx.getImage();
+}
+
+// ---------------------------------------------------------------------------
+// RANK PROGRESS BAR
+// ---------------------------------------------------------------------------
+// Thin gold line along the bottom of the widget showing progress
+// from the user's current rank threshold to the next. Drawn as a
+// single bitmap so the filled portion sits flush with the track.
+function drawRankBar({ currentXp, rankStartXp, rankEndXp, width, height }) {
+  const ctx = new DrawContext();
+  ctx.size = new Size(width, height);
+  ctx.opaque = false;
+  ctx.respectScreenScale = true;
+
+  // Track (unfilled portion)
+  ctx.setFillColor(COL.greenDark);
+  ctx.fillRect(new Rect(0, 0, width, height));
+
+  // How far into the band we are. Guards against weird payloads
+  // (max rank where rankEndXp is null, or identical start/end).
+  if (rankEndXp != null && rankEndXp > rankStartXp) {
+    const pct = Math.max(
+      0,
+      Math.min(1, (currentXp - rankStartXp) / (rankEndXp - rankStartXp)),
+    );
+    if (pct > 0) {
+      ctx.setFillColor(COL.xpGold);
+      ctx.fillRect(new Rect(0, 0, Math.round(width * pct), height));
+    }
+  } else {
+    // Max rank: show a fully-filled bar as a "you made it" flourish.
+    ctx.setFillColor(COL.xpGold);
+    ctx.fillRect(new Rect(0, 0, width, height));
   }
 
   return ctx.getImage();
@@ -254,7 +328,55 @@ function buildMediumWidget(data) {
   // Breathing room under the rings so the readout doesn't hug the edge.
   w.addSpacer();
 
+  // --- Rank progress bar ---------------------------------------------------
+  // Thin gold line along the bottom with the current XP on the left and
+  // the next-rank threshold on the right.
+  addRankBar(w, data.rank);
+
   return w;
+}
+
+// Row layout: `current_xp  [======      ]  next_rank_xp`
+// At max rank the right number falls back to "MAX" and the bar is fully
+// filled as a small "you made it" flourish.
+function addRankBar(parent, rank) {
+  const currentXp = rank?.total_xp ?? 0;
+  const rankStart = rank?.current_rank_xp ?? 0;
+  const rankEnd = rank?.next_rank_xp ?? null;
+
+  const row = parent.addStack();
+  row.layoutHorizontally();
+  row.centerAlignContent();
+
+  // Current XP on the left end of the bar.
+  const left = row.addText(currentXp.toLocaleString());
+  left.font = Font.regularMonospacedSystemFont(8);
+  left.textColor = COL.textSec;
+
+  row.addSpacer(6);
+
+  // The bar itself. Fixed width so the numbers sit at predictable
+  // positions regardless of their own length.
+  const barWidth = 180;
+  const barHeight = 3;
+  const bar = row.addImage(
+    drawRankBar({
+      currentXp,
+      rankStartXp: rankStart,
+      rankEndXp: rankEnd,
+      width: barWidth * 3, // 3x oversample for retina crispness
+      height: barHeight * 3,
+    }),
+  );
+  bar.imageSize = new Size(barWidth, barHeight);
+
+  row.addSpacer(6);
+
+  // Next-rank threshold on the right end, or MAX when there isn't one.
+  const rightLabel = rankEnd != null ? rankEnd.toLocaleString() : "MAX";
+  const right = row.addText(rightLabel);
+  right.font = Font.regularMonospacedSystemFont(8);
+  right.textColor = COL.xpGold;
 }
 
 // Vertical column: ring + "Calories" label + "value/target" readout.

@@ -165,6 +165,11 @@ export async function GET(request: NextRequest) {
         level: currentRank,
         title: rankInfo?.title ?? "Recruit",
         total_xp: rankRes.data?.total_xp ?? 0,
+        // The XP that gets the user into the CURRENT rank. The widget's
+        // progress bar uses this as the left anchor so "504 / 1000 XP"
+        // at rank 3 renders as "4 XP into a 500 XP band" rather than
+        // "504 XP into a 1000 XP band" -- which would overstate progress.
+        current_rank_xp: rankInfo?.xp ?? 0,
         next_rank_xp: nextRankInfo?.xp ?? null,
       },
       streak: {
