@@ -18,7 +18,7 @@ export function createAdminClient(): SupabaseClient {
   if (cached) return cached;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = process.env.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvdXd5cWJ1aWZnenV2cHV6a3J2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTQxOTc1NSwiZXhwIjoyMDkwOTk1NzU1fQ.Wamw_dhZXo4ccGhSL88P2VjdrefkSHcuoWdkAqvxIxY;
 
   if (!url || !serviceKey) {
     throw new Error(
