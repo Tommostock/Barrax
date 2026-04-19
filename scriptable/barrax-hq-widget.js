@@ -261,36 +261,46 @@ function buildMediumWidget(data) {
 // Label and readout share typography across all four macros -- only
 // the ring fill colour differs -- so the row reads as one unit.
 //
-// Both text lines are wrapped in horizontal stacks with spacers on
-// either side. Scriptable's centerAlignContent() on a vertical stack
-// does not reliably centre narrower children under a wider sibling
-// (like our ring image), but spacer-sandwich stacks always do.
+// The column is pinned to a fixed width so all four columns are the
+// same size regardless of label length ("Calories" is wider than
+// "Fat"). Inside that fixed box, spacer-sandwich stacks centre the
+// ring, label, and readout precisely on the column's midline.
 function addMacroColumn(parent, def, ringSize) {
+  // Width must comfortably hold the ring AND the widest text line.
+  // "1405/2500" at mono-10 is the longest readout we'll show; plus
+  // a small buffer so it never hugs the spacers between columns.
+  const colWidth = Math.max(ringSize, 72);
+
   const col = parent.addStack();
   col.layoutVertically();
+  col.size = new Size(colWidth, 0); // height 0 = auto
   col.centerAlignContent();
 
   const value = def.data?.value ?? 0;
   const target = def.data?.target ?? 0;
 
-  // The ring itself -- drawn at 3x and downsized for retina crispness.
-  const ring = col.addImage(
+  // Ring row -- spacer-sandwich so the ring sits on the column's
+  // centre even though the ring image (58) is narrower than the
+  // column box (72).
+  const ringRow = col.addStack();
+  ringRow.layoutHorizontally();
+  ringRow.addSpacer();
+  const ring = ringRow.addImage(
     drawRing({
       value,
       target,
-      size: ringSize * 3,
+      size: ringSize * 3, // draw at 3x and downsize for retina crispness
       fillColour: def.colour,
       trackColour: COL.greenDark,
     }),
   );
   ring.imageSize = new Size(ringSize, ringSize);
-  ring.centerAlignImage();
+  ringRow.addSpacer();
 
   // Small gap between ring and the text underneath.
   col.addSpacer(4);
 
-  // Macro name, mixed case. Sandwiched with spacers so it sits
-  // centred inside the column (the ring above defines the width).
+  // Macro name, mixed case, sandwiched so it sits dead-centre.
   const labelRow = col.addStack();
   labelRow.layoutHorizontally();
   labelRow.addSpacer();
