@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import BodyHeatmap from "@/components/intel/BodyHeatmap";
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import useBackNav from "@/hooks/useBackNav";
 import {
   BarChart,
   Bar,
@@ -137,6 +137,7 @@ interface MuscleStats {
 const MUSCLE_ORDER = ["chest", "shoulders", "back", "arms", "core", "glutes", "legs", "cardio", "other"];
 
 export default function VolumePage() {
+  const goBack = useBackNav("/intel");
   const supabase = createClient();
   const [data, setData] = useState<MuscleStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,12 +197,14 @@ export default function VolumePage() {
     <div className="px-4 py-4 space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link
-          href="/intel"
+        <button
+          type="button"
+          onClick={goBack}
+          aria-label="Back"
           className="text-text-secondary hover:text-green-light transition-colors min-h-[44px] flex items-center"
         >
           <ArrowLeft size={24} />
-        </Link>
+        </button>
         <h2 className="text-lg font-heading uppercase tracking-wider text-sand">
           Muscle Volume
         </h2>

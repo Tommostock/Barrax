@@ -15,7 +15,7 @@ import Button from "@/components/ui/Button";
 import Tag from "@/components/ui/Tag";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { ArrowLeft, Plus, Trophy } from "lucide-react";
-import Link from "next/link";
+import useBackNav from "@/hooks/useBackNav";
 
 // ──────────────────────────────────────────────
 // Types
@@ -48,6 +48,7 @@ function formatDate(dateStr: string): string {
 }
 
 export default function ChallengesPage() {
+  const goBack = useBackNav("/intel");
   const supabase = createClient();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,12 +135,14 @@ export default function ChallengesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link
-            href="/intel"
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label="Back"
             className="text-text-secondary hover:text-green-light transition-colors min-h-[44px] flex items-center"
           >
             <ArrowLeft size={24} />
-          </Link>
+          </button>
           <h2 className="text-lg font-heading uppercase tracking-wider text-sand">
             Challenge Events
           </h2>

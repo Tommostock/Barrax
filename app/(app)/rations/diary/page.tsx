@@ -14,8 +14,8 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import useBackNav from "@/hooks/useBackNav";
 import MacroRings from "@/components/nutrition/MacroRings";
 import AddFoodSheet from "@/components/nutrition/AddFoodSheet";
 import BottomSheet from "@/components/ui/BottomSheet";
@@ -100,6 +100,7 @@ function getSourceTag(source: string): { label: string; variant: "active" | "def
 // Main Page Component
 // ====================================================
 export default function FoodDiaryPage() {
+  const goBack = useBackNav("/rations");
   const supabase = createClient();
 
   // ── State ──────────────────────────────────
@@ -469,15 +470,17 @@ export default function FoodDiaryPage() {
   return (
     <div className="bg-bg-primary min-h-screen pb-24">
       <PullToRefresh pullDistance={pullDistance} refreshing={refreshing} />
-      {/* ── Back link to /rations ── */}
+      {/* ── Back link — honours browser history ── */}
       <div className="px-4 pt-4">
-        <Link
-          href="/rations"
+        <button
+          type="button"
+          onClick={goBack}
+          aria-label="Back"
           className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]"
         >
           <ArrowLeft size={18} />
           <span className="text-xs font-mono uppercase">Rations</span>
-        </Link>
+        </button>
       </div>
 
       {/* ── Date Selector ── */}

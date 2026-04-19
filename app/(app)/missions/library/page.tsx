@@ -11,7 +11,7 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import useBackNav from "@/hooks/useBackNav";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Tag from "@/components/ui/Tag";
@@ -75,7 +75,7 @@ const MUSCLE_KEYWORDS: Record<MuscleGroup, string[]> = {
    MAIN COMPONENT
    ============================================== */
 export default function ExerciseLibraryPage() {
-  const router = useRouter();
+  const goBack = useBackNav("/missions");
   const supabase = createClient();
 
   // ---- State: data from the database ----
@@ -280,9 +280,9 @@ export default function ExerciseLibraryPage() {
       {/* ---- HEADER: Back link + title ---- */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => router.push("/missions")}
+          onClick={goBack}
           className="text-text-secondary hover:text-green-light transition-colors"
-          aria-label="Back to missions"
+          aria-label="Back"
         >
           <ArrowLeft size={20} />
         </button>

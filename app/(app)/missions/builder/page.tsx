@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import useBackNav from "@/hooks/useBackNav";
 import { createClient } from "@/lib/supabase/client";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -76,6 +77,7 @@ type WorkoutType = (typeof WORKOUT_TYPES)[number]["value"];
    ============================================== */
 export default function WorkoutBuilderPage() {
   const router = useRouter();
+  const goBack = useBackNav("/missions");
   const supabase = createClient();
 
   // ---- State: access control ----
@@ -361,7 +363,8 @@ export default function WorkoutBuilderPage() {
       <div className="px-4 py-4 space-y-6 pb-24">
         {/* Back button */}
         <button
-          onClick={() => router.push("/missions")}
+          onClick={goBack}
+          aria-label="Back"
           className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]"
         >
           <ArrowLeft size={18} />
@@ -398,7 +401,8 @@ export default function WorkoutBuilderPage() {
     <div className="px-4 py-4 space-y-6 pb-24">
       {/* ---- BACK BUTTON ---- */}
       <button
-        onClick={() => router.push("/missions")}
+        onClick={goBack}
+        aria-label="Back"
         className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]"
       >
         <ArrowLeft size={18} />

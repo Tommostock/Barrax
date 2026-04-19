@@ -524,16 +524,31 @@ export default function MissionsPage() {
                       return <Swords size={12} className={activeColor} />;
                     })()}
                   </div>
-                  {/* Muscle group / workout type label — colour follows the day state */}
+                  {/* Label under the day icon — picks the right word
+                      for each day type so the calendar reads the same
+                      way across workouts (UPPER/LEGS…), runs (RUN),
+                      and completed days (DONE). */}
                   {(() => {
                     const labelColor = isSelected ? "text-green-light"
                       : isComplete ? "text-xp-gold"
                       : isMissed ? "text-danger"
                       : isToday ? "text-white"
                       : "text-text-secondary";
+
+                    // Decide what the label says. Complete wins first,
+                    // then run days, then workout muscle-group label.
+                    let labelText: string | null = null;
+                    if (isComplete) {
+                      labelText = "DONE";
+                    } else if (isRunDay) {
+                      labelText = "RUN";
+                    } else if (dayData?.workout?.focus && !isRest) {
+                      labelText = getWorkoutLabel(dayData.workout.focus).label;
+                    }
+
                     return (
-                      <p className={`text-[0.6rem] font-mono font-bold mt-1 truncate ${dayData?.workout?.focus && !isRest ? labelColor : "invisible"}`}>
-                        {dayData?.workout?.focus && !isRest ? getWorkoutLabel(dayData.workout.focus).label : "X"}
+                      <p className={`text-[0.6rem] font-mono font-bold mt-1 truncate ${labelText ? labelColor : "invisible"}`}>
+                        {labelText ?? "X"}
                       </p>
                     );
                   })()}

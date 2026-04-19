@@ -2,22 +2,25 @@
    BackLink
    Shared back-navigation button used on every
    sub-screen. Renders a left arrow + label in the
-   tactical military style and pushes the given
-   href (or calls router.back() if no href).
+   tactical military style.
 
-   Before this component existed, every screen had
-   its own ad-hoc back button: some used [BACK], some
-   used just an arrow, some used ArrowLeft + label.
-   Standardising keeps the app feeling coherent.
+   Behaviour:
+   - If the browser has history to go back to, use it
+     (router.back()) so the user returns to the exact
+     page they came from — even if that's not the
+     "parent" route of the current page.
+   - Otherwise (direct landing, fresh tab) fall back
+     to the optional `href` so the user still ends up
+     somewhere sensible.
    ============================================ */
 
 "use client";
 
-import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import useBackNav from "@/hooks/useBackNav";
 
 interface BackLinkProps {
-  /** Destination href. If omitted, calls router.back() instead. */
+  /** Fallback href used ONLY when there's no browser history to pop. */
   href?: string;
   /** The label text shown next to the arrow (rendered in uppercase). */
   label: string;
@@ -25,15 +28,7 @@ interface BackLinkProps {
 }
 
 export default function BackLink({ href, label, className = "" }: BackLinkProps) {
-  const router = useRouter();
-
-  const handleClick = () => {
-    if (href) {
-      router.push(href);
-    } else {
-      router.back();
-    }
-  };
+  const handleClick = useBackNav(href);
 
   return (
     <button

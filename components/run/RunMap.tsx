@@ -127,17 +127,20 @@ export default function RunMap({ points, isLive = false, height = "h-48" }: RunM
         )}
 
         {/* Current-position marker. Rendered as a CircleMarker so it
-            stays the same visible size regardless of zoom, with a
-            dark outline so it remains obvious on light tiles. */}
+            stays the same visible size regardless of zoom. The
+            `run-position-dot` class applies a CSS drop-shadow glow
+            (see globals.css) so the dot is obvious on light tiles
+            without needing a heavy black outline. */}
         {currentPosition && (
           <CircleMarker
             center={currentPosition}
-            radius={7}
+            radius={5}
             pathOptions={{
-              color: "#1A1A1A",
-              weight: 2,
+              color: POSITION_GOLD,
+              weight: 0,
               fillColor: POSITION_GOLD,
               fillOpacity: 1,
+              className: "run-position-dot",
             }}
           />
         )}

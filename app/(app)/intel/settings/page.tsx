@@ -15,13 +15,14 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import BottomSheet from "@/components/ui/BottomSheet";
 import { ArrowLeft, Save, Trash2, LogOut } from "lucide-react";
-import Link from "next/link";
+import useBackNav from "@/hooks/useBackNav";
 import type { Profile, FoodPreference, TrainingSchedule, ScheduleDay, DayType } from "@/types";
 import { MACRO_PRESETS, calculateMacroTargets, isValidMacroSplit } from "@/lib/macros";
 
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createClient();
+  const goBack = useBackNav("/intel");
 
   const [profile, setProfile] = useState<Partial<Profile>>({});
   const [foods, setFoods] = useState<FoodPreference[]>([]);
@@ -203,9 +204,9 @@ export default function SettingsPage() {
     <div className="px-4 py-4 space-y-4 pb-24">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link href="/intel" className="text-text-secondary hover:text-text-primary min-w-[44px] min-h-[44px] flex items-center justify-center">
+        <button type="button" onClick={goBack} aria-label="Back" className="text-text-secondary hover:text-text-primary min-w-[44px] min-h-[44px] flex items-center justify-center">
           <ArrowLeft size={20} />
-        </Link>
+        </button>
         <h2 className="text-lg font-heading uppercase tracking-wider text-sand">
           Base Operations
         </h2>

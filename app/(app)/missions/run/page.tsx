@@ -15,9 +15,10 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import nextDynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
+import useBackNav from "@/hooks/useBackNav";
 import {
   totalDistance,
   calculatePace,
@@ -89,9 +90,12 @@ interface RunStats {
 }
 
 export default function RunTrackerPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
+  // Prefer browser back so the user returns to the exact page they
+  // came from (e.g. Battle Plan run-day card) rather than a fixed
+  // /missions destination.
+  const goBack = useBackNav("/missions");
 
   // ===================== STATE =====================
 
@@ -625,9 +629,9 @@ export default function RunTrackerPage() {
           {/* Header with back button */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.push("/missions")}
+              onClick={goBack}
               className="text-text-secondary hover:text-sand transition-colors"
-              aria-label="Back to missions"
+              aria-label="Back"
             >
               <ArrowLeft size={20} />
             </button>
@@ -1078,10 +1082,11 @@ export default function RunTrackerPage() {
             />
           </div>
 
-          {/* Dismiss button — returns to missions page */}
+          {/* Dismiss button — returns to wherever the user started
+              the run from (Battle Plan, PFT hub, etc). */}
           <Button
             fullWidth
-            onClick={() => router.push("/missions")}
+            onClick={goBack}
             className="text-base py-4"
           >
             <span className="flex items-center justify-center gap-2">
