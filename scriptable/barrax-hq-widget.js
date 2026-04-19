@@ -173,21 +173,23 @@ function buildErrorWidget(message) {
 // ---------------------------------------------------------------------------
 // MEDIUM WIDGET LAYOUT
 // ---------------------------------------------------------------------------
-// Layout (roughly):
+// Macro circles are the main feature -- no side panel. Four rings
+// (Calories, Protein, Carbs, Fat) spread across the full width, each
+// with a centred label and a single "value/target" readout in a
+// unified style.
 //
-//   BARRAX HQ                     LCP  504 / 1000 XP
-//   ----------------------------  ----------------
-//   [O]   [O]   [O]   [O]         STREAK   0 DAYS
-//   CAL   PRO   CRB   FAT         RUN      1.4 km
-//   1405  98    130   53          PACE     8:03/km
-//   2500  188   250   83
+//   BARRAX HQ                              LCP  504 / 1,000 XP
+//
+//      [O]         [O]         [O]         [O]
+//    Calories    Protein      Carbs         Fat
+//    1405/2500   98/188      130/250       53/83
 //
 // ---------------------------------------------------------------------------
 
 function buildMediumWidget(data) {
   const w = new ListWidget();
   w.backgroundColor = COL.bg;
-  w.setPadding(10, 12, 10, 12);
+  w.setPadding(10, 14, 10, 14);
 
   // Nudge iOS to refresh in ~10 minutes. Actual cadence is iOS's call.
   w.refreshAfterDate = new Date(Date.now() + 10 * 60 * 1000);
@@ -222,110 +224,78 @@ function buildMediumWidget(data) {
   xpText.textColor = COL.textSec;
   xpText.rightAlignText();
 
-  w.addSpacer(8);
+  // Vertically centre the rings in the remaining space.
+  w.addSpacer();
 
-  // --- Main body: rings on the left, stats on the right -------------------
-  const body = w.addStack();
-  body.layoutHorizontally();
-  body.spacing = 10;
-
-  // ----- Rings column ---------------------------------------------------
-  const rings = body.addStack();
+  // --- Macro rings row: fills the full width, evenly spaced ---------------
+  const rings = w.addStack();
   rings.layoutHorizontally();
-  rings.spacing = 8;
+  rings.centerAlignContent();
 
-  const ringSize = 44;
+  // Larger rings now that they own the whole row.
+  const ringSize = 58;
+
   const macros = data.macros ?? {};
   const ringDefs = [
-    { key: "CAL", data: macros.calories, colour: COL.greenLight },
-    { key: "PRO", data: macros.protein,  colour: COL.greenPrim  },
-    { key: "CRB", data: macros.carbs,    colour: COL.xpGold     },
-    { key: "FAT", data: macros.fat,      colour: COL.sand       },
+    { label: "Calories", data: macros.calories, colour: COL.greenLight },
+    { label: "Protein",  data: macros.protein,  colour: COL.greenPrim  },
+    { label: "Carbs",    data: macros.carbs,    colour: COL.xpGold     },
+    { label: "Fat",      data: macros.fat,      colour: COL.sand       },
   ];
 
+  // Flexible spacers around every ring column push them into equal
+  // columns across the row regardless of the ring or label widths.
+  rings.addSpacer();
   for (const def of ringDefs) {
-    const col = rings.addStack();
-    col.layoutVertically();
-    col.centerAlignContent();
-
-    const value = def.data?.value ?? 0;
-    const target = def.data?.target ?? 0;
-
-    // The ring itself
-    const ring = col.addImage(
-      drawRing({
-        value,
-        target,
-        size: ringSize * 3, // draw at 3x for crisp result on retina
-        fillColour: def.colour,
-        trackColour: COL.greenDark,
-      }),
-    );
-    ring.imageSize = new Size(ringSize, ringSize);
-
-    // Ring label (CAL / PRO / etc.)
-    const lbl = col.addText(def.key);
-    lbl.font = Font.boldMonospacedSystemFont(8);
-    lbl.textColor = COL.textSec;
-    lbl.centerAlignText();
-
-    // Current value
-    const cur = col.addText(String(Math.round(value)));
-    cur.font = Font.regularMonospacedSystemFont(10);
-    cur.textColor = COL.textPrim;
-    cur.centerAlignText();
-
-    // Target (small, muted)
-    const tgt = col.addText(`/${Math.round(target)}`);
-    tgt.font = Font.regularMonospacedSystemFont(8);
-    tgt.textColor = COL.textSec;
-    tgt.centerAlignText();
+    addMacroColumn(rings, def, ringSize);
+    rings.addSpacer();
   }
 
-  body.addSpacer();
-
-  // ----- Stats column ---------------------------------------------------
-  const stats = body.addStack();
-  stats.layoutVertically();
-  stats.spacing = 4;
-
-  addStatRow(stats, "STREAK", `${data.streak?.current ?? 0} d`);
-
-  // Today's workout. Mirrors the dashboard's "No orders" fallback.
-  const w_ = data.today_workout;
-  const workoutLabel = w_
-    ? (w_.status === "complete" ? "DONE" : (w_.name || "ORDERS").toUpperCase())
-    : "NO ORDERS";
-  addStatRow(stats, "TODAY", workoutLabel);
-
-  // Last run: distance + pace on two lines for readability.
-  const run = data.last_run;
-  if (run) {
-    addStatRow(stats, "LAST RUN", fmtKm(run.distance_metres));
-    addStatRow(stats, "PACE", `${fmtMinSec(run.avg_pace_seconds_per_km)}/km`);
-  } else {
-    addStatRow(stats, "LAST RUN", "--");
-  }
+  // Breathing room under the rings so the readout doesn't hug the edge.
+  w.addSpacer();
 
   return w;
 }
 
-// Small helper: adds a "LABEL  value" row to a vertical stack.
-function addStatRow(parent, label, value) {
-  const row = parent.addStack();
-  row.layoutHorizontally();
-  row.centerAlignContent();
-  row.spacing = 6;
+// Vertical column: ring + "Calories" label + "value/target" readout.
+// Label and readout share typography across all four macros -- only
+// the ring fill colour differs -- so the row reads as one unit.
+function addMacroColumn(parent, def, ringSize) {
+  const col = parent.addStack();
+  col.layoutVertically();
+  col.centerAlignContent();
 
-  const lbl = row.addText(label);
-  lbl.font = Font.boldMonospacedSystemFont(8);
+  const value = def.data?.value ?? 0;
+  const target = def.data?.target ?? 0;
+
+  // The ring itself -- drawn at 3x and downsized for retina crispness.
+  const ring = col.addImage(
+    drawRing({
+      value,
+      target,
+      size: ringSize * 3,
+      fillColour: def.colour,
+      trackColour: COL.greenDark,
+    }),
+  );
+  ring.imageSize = new Size(ringSize, ringSize);
+  ring.centerAlignImage();
+
+  // Small gap between ring and the text underneath.
+  col.addSpacer(4);
+
+  // Macro name, mixed case, centred under the ring.
+  const lbl = col.addText(def.label);
+  lbl.font = Font.mediumSystemFont(10);
   lbl.textColor = COL.textSec;
+  lbl.centerAlignText();
 
-  row.addSpacer();
-
-  const val = row.addText(value);
-  val.font = Font.boldMonospacedSystemFont(11);
-  val.textColor = COL.textPrim;
+  // Single-line "value/target" readout. Same font + colour for every
+  // macro so the row reads uniformly.
+  const readout = col.addText(`${Math.round(value)}/${Math.round(target)}`);
+  readout.font = Font.regularMonospacedSystemFont(10);
+  readout.textColor = COL.textPrim;
+  readout.centerAlignText();
 }
 
 // ---------------------------------------------------------------------------
