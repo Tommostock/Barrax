@@ -359,11 +359,11 @@ function buildMediumWidget(data) {
 }
 
 // Full-width rank progress bar pinned to the bottom of the widget.
-// Layout is two rows so the bar itself can occupy the entire inner
-// width with only the padding either side:
+// All three elements (left XP number, bar, right-rank threshold) live
+// in a single horizontal row and are vertically centred, so the
+// numbers sit exactly on the line of the bar at each end:
 //
-//   504                                             1,000
-//   ================================----------------------
+//   504  =================================================  1,000
 //
 // Band-relative progress is computed locally from RANK_THRESHOLDS so
 // it matches the in-app RankStrip component exactly -- "504 XP at
@@ -375,8 +375,8 @@ function addRankBar(parent, rank) {
   const currentRank = rank?.level ?? 1;
 
   // Trust the API's current_rank_xp when it's present; otherwise look
-  // up the threshold for the user's current rank so the maths is still
-  // right. Same story for next_rank_xp.
+  // up the threshold for the user's current rank. Same story for
+  // next_rank_xp.
   const rankStart =
     rank?.current_rank_xp ??
     (RANK_THRESHOLDS[currentRank - 1]?.xp ?? 0);
@@ -386,33 +386,25 @@ function addRankBar(parent, rank) {
 
   const atMaxRank = rankEnd == null;
 
-  // Numbers row: current XP flush left, next-rank threshold flush right.
-  const numbers = parent.addStack();
-  numbers.layoutHorizontally();
+  // Single row: centerAlignContent() vertically centres the numbers
+  // with the bar so the three elements read as one line.
+  const row = parent.addStack();
+  row.layoutHorizontally();
+  row.centerAlignContent();
 
-  const left = numbers.addText(currentXp.toLocaleString());
+  // Current XP, flush left against the widget padding.
+  const left = row.addText(currentXp.toLocaleString());
   left.font = Font.regularMonospacedSystemFont(8);
   left.textColor = COL.textSec;
 
-  numbers.addSpacer();
+  // Small gap, then the bar fills the middle. 240pt leaves room for
+  // both numbers plus 6pt gaps within the medium widget's ~310pt
+  // inner width.
+  row.addSpacer(6);
 
-  const right = numbers.addText(atMaxRank ? "MAX" : rankEnd.toLocaleString());
-  right.font = Font.regularMonospacedSystemFont(8);
-  right.textColor = COL.xpGold;
-
-  // Tiny gap between the numbers and the bar.
-  parent.addSpacer(3);
-
-  // Bar row: image sized to the widget's inner width. Medium widget
-  // inner width is ~310pt after the 14pt left/right padding; 290pt
-  // leaves a little slack so it never overflows on smaller devices.
-  const barDisplayWidth = 290;
+  const barDisplayWidth = 240;
   const barDisplayHeight = 3;
-
-  const barRow = parent.addStack();
-  barRow.layoutHorizontally();
-  barRow.addSpacer();
-  const barImg = barRow.addImage(
+  const barImg = row.addImage(
     drawRankBar({
       currentXp,
       rankStartXp: rankStart,
@@ -422,7 +414,15 @@ function addRankBar(parent, rank) {
     }),
   );
   barImg.imageSize = new Size(barDisplayWidth, barDisplayHeight);
-  barRow.addSpacer();
+  barImg.centerAlignImage();
+
+  row.addSpacer(6);
+
+  // Next-rank threshold, flush right. Falls back to MAX when the user
+  // is at the top rank.
+  const right = row.addText(atMaxRank ? "MAX" : rankEnd.toLocaleString());
+  right.font = Font.regularMonospacedSystemFont(8);
+  right.textColor = COL.xpGold;
 }
 
 // Vertical column: ring + "Calories" label + "value/target" readout.
