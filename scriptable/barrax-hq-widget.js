@@ -32,6 +32,12 @@ const API_BASE = "https://barraxapp.vercel.app";
 // proves to the server that it is you asking.
 const TOKEN = "PASTE_YOUR_FRESH_TOKEN_HERE";
 
+// Tap target: iOS opens this when the widget is pressed. Goes straight
+// to the food diary. If BARRAX is installed as a PWA on the home
+// screen the URL launches the standalone app; otherwise it opens
+// Safari. No URL-scheme setup required.
+const TAP_URL = `${API_BASE}/rations/diary`;
+
 // ---------------------------------------------------------------------------
 // BRAND COLOURS -- matches app/globals.css
 // ---------------------------------------------------------------------------
@@ -289,6 +295,9 @@ function buildMediumWidget(data) {
 
   // Nudge iOS to refresh in ~10 minutes. Actual cadence is iOS's call.
   w.refreshAfterDate = new Date(Date.now() + 10 * 60 * 1000);
+
+  // Whole-widget tap target -- opens the food diary.
+  w.url = TAP_URL;
 
   // --- Top strip: app mark on the left, rank + XP on the right ------------
   const top = w.addStack();
