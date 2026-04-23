@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import BottomSheet from "@/components/ui/BottomSheet";
 import Button from "@/components/ui/Button";
@@ -188,14 +188,15 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
     setSavedFoods(prev => prev.filter(f => f.id !== id));
   }
 
-  // Search Open Food Facts for matching products
-  async function handleSearch() {
-    if (!searchQuery.trim()) return;
+  // Core search function — extracted so both the GO button and the
+  // auto-search debounce can call it without duplicating fetch logic
+  const runSearch = useCallback(async (q: string) => {
+    if (!q.trim()) return;
     setSearching(true);
     // Clear any previous error so stale messages don't linger
     setSearchError(null);
     try {
-      const res = await fetch(`/api/food-lookup?query=${encodeURIComponent(searchQuery)}`);
+      const res = await fetch(`/api/food-lookup?query=${encodeURIComponent(q.trim())}`);
       const data = await res.json();
       setSearchResults(data.products || []);
     } catch {
@@ -203,8 +204,28 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
       // returning empty results (which looks like "no matches")
       setSearchResults([]);
       setSearchError("Network error. Check your connection and try again.");
+    } finally {
+      setSearching(false);
     }
-    finally { setSearching(false); }
+  // setSearching / setSearchError / setSearchResults are stable React setters,
+  // so useCallback with an empty dep array is safe here
+  }, []);
+
+  // Auto-search: fires 700ms after the user stops typing (if query is 3+ chars).
+  // This removes the need to tap GO for every search, just like MyFitnessPal.
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    // Don't trigger on very short strings — wait until there's something meaningful
+    if (trimmed.length < 3) return;
+
+    const timer = setTimeout(() => runSearch(trimmed), 700);
+    // Cancel the pending search if the user keeps typing before 700ms is up
+    return () => clearTimeout(timer);
+  }, [searchQuery, runSearch]);
+
+  // GO button / Enter key — runs search immediately without the debounce delay
+  async function handleSearch() {
+    await runSearch(searchQuery);
   }
 
   // Barcode
@@ -452,35 +473,94 @@ export default function AddFoodSheet({ isOpen, onClose, mealType, onAddFood }: A
                   {searching ? <Loader2 size={16} className="animate-spin" /> : "GO"}
                 </Button>
               </div>
-              <div className="max-h-64 overflow-y-auto space-y-1">
-                {searchResults.map((food, i) => (
-                  <button key={i} onClick={() => selectFood({
-                    food_name: food.food_name, brand: food.brand, barcode: food.barcode,
-                    calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g,
-                    fibre_g: food.fibre_g, sugar_g: food.sugar_g, salt_g: food.salt_g,
-                    serving_size: food.serving_size, source: "search",
-                  })}
-                    className="w-full flex items-center justify-between p-3 bg-bg-panel border border-green-dark/50 text-left hover:bg-bg-panel-alt transition-colors min-h-[44px]">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-text-primary truncate">{food.food_name}</p>
-                      {food.brand && <p className="text-[0.6rem] text-text-secondary">{food.brand}</p>}
+              {/* Result count — shown once results arrive so user knows how many matched.
+                  When results are dominated by one brand (e.g. the user typed "Nando's"
+                  and got back 45 Nando's items), also show which brand. */}
+              {searchResults.length > 0 && !searching && (() => {
+                // Find the most-represented brand in the result set
+                const brandCounts = searchResults.reduce<Record<string, number>>((acc, r) => {
+                  if (r.brand) acc[r.brand] = (acc[r.brand] || 0) + 1;
+                  return acc;
+                }, {});
+                const topBrand = Object.entries(brandCounts).sort((a, b) => b[1] - a[1])[0];
+                // If one brand accounts for 60%+ of the results, show it as a hint
+                const brandHint = topBrand && (topBrand[1] / searchResults.length) >= 0.6
+                  ? ` (mostly ${topBrand[0].toUpperCase()})`
+                  : "";
+                return (
+                  <p className="text-[0.55rem] font-mono text-text-secondary">
+                    {searchResults.length} RESULT{searchResults.length !== 1 ? "S" : ""}{brandHint}
+                  </p>
+                );
+              })()}
+
+              {/* Bigger scrollable area so a full chain menu (50+ items) is actually usable.
+                  Uses viewport-height units so the list can grow taller on bigger phones
+                  without stretching the bottom sheet off-screen on small ones. */}
+              <div className="max-h-[55vh] overflow-y-auto space-y-1">
+                {/* Render the list with optional brand section headers.
+                    When consecutive items share a brand we show the brand name once
+                    as a small sticky header — makes a 50-item Nando's menu easy to scan. */}
+                {searchResults.map((food, i) => {
+                  // Restaurant chain meals come from our curated catalogue — flag them
+                  // with a small badge so the user knows the item is from a chain menu
+                  // rather than a packaged product
+                  const isRestaurant = food.source === "restaurant";
+                  // Show a brand header whenever the brand changes from the previous row.
+                  // This turns a long flat list into clearly-grouped menu sections.
+                  const prevBrand = i > 0 ? searchResults[i - 1].brand : null;
+                  const showBrandHeader = Boolean(food.brand) && food.brand !== prevBrand;
+                  return (
+                    <div key={i}>
+                      {showBrandHeader && (
+                        <p className="text-[0.55rem] font-mono uppercase text-green-light tracking-wider pt-2 pb-1 sticky top-0 bg-bg-panel-alt z-10 px-1">
+                          {food.brand}
+                        </p>
+                      )}
+                      <button onClick={() => selectFood({
+                        food_name: food.food_name, brand: food.brand, barcode: food.barcode,
+                        calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g,
+                        fibre_g: food.fibre_g, sugar_g: food.sugar_g, salt_g: food.salt_g,
+                        serving_size: food.serving_size, source: "search",
+                      })}
+                        className="w-full flex items-center justify-between p-3 bg-bg-panel border border-green-dark/50 text-left hover:bg-bg-panel-alt transition-colors min-h-[44px]">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            {/* MENU badge — tiny text tag shown only for chain meals */}
+                            {isRestaurant && (
+                              <span className="text-[0.45rem] font-mono uppercase bg-green-primary text-text-primary px-1.5 py-0.5 tracking-wider flex-shrink-0">
+                                MENU
+                              </span>
+                            )}
+                            <p className="text-sm text-text-primary truncate">{food.food_name}</p>
+                          </div>
+                          {/* Serving size only here — brand is already in the header above */}
+                          <p className="text-[0.6rem] text-text-secondary truncate">
+                            {food.serving_size}
+                          </p>
+                        </div>
+                        <div className="text-right ml-3 flex-shrink-0">
+                          <p className="text-sm font-mono font-bold text-text-primary">{food.calories}</p>
+                          <p className="text-[0.45rem] font-mono text-text-secondary">kcal</p>
+                        </div>
+                      </button>
                     </div>
-                    <div className="text-right ml-3 flex-shrink-0">
-                      <p className="text-sm font-mono font-bold text-text-primary">{food.calories}</p>
-                      <p className="text-[0.45rem] font-mono text-text-secondary">kcal</p>
-                    </div>
-                  </button>
-                ))}
+                  );
+                })}
                 {/* Network error — shown when the fetch itself failed */}
                 {searchError && !searching && (
                   <div className="bg-bg-panel border border-danger/50 p-3 mt-1">
                     <p className="text-xs text-danger font-mono">{searchError}</p>
                   </div>
                 )}
-                {/* No results — only shown when the search succeeded but
-                    returned nothing (not when there was a network error) */}
-                {searchResults.length === 0 && searchQuery && !searching && !searchError && (
-                  <p className="text-xs text-text-secondary text-center py-4">No results found for &quot;{searchQuery}&quot;.</p>
+                {/* No results — only shown when the search succeeded but returned nothing */}
+                {searchResults.length === 0 && searchQuery.trim().length >= 3 && !searching && !searchError && (
+                  <div className="text-center py-4 space-y-1">
+                    <p className="text-xs text-text-secondary">No results for &quot;{searchQuery.trim()}&quot;.</p>
+                    <p className="text-[0.6rem] text-text-secondary font-mono">
+                      Try: fewer words, a chain name (e.g. &quot;mcdonalds&quot;, &quot;nandos&quot;), or scan the barcode.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
