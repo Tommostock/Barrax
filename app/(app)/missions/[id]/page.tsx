@@ -152,9 +152,13 @@ export default function WorkoutDetailPage() {
         </div>
       )}
 
-      {/* Deploy button */}
+      {/* Deploy button — sticky so it's always visible above the bottom nav.
+          `above-bottom-nav` lifts it above the nav + the home-indicator safe
+          area (critical on iPhone 17 where the nav extends ~34px higher than
+          on older iPhones). `safe-bottom` kept for internal content breathing
+          room below the button. */}
       {!isComplete && (
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-bg-primary/95 backdrop-blur-sm border-t border-green-dark safe-bottom">
+        <div className="sticky above-bottom-nav left-0 right-0 p-4 bg-bg-primary/95 backdrop-blur-sm border-t border-green-dark safe-bottom">
           <Button fullWidth onClick={() => router.push(`/missions/player/${workoutId}`)}>
             <span className="flex items-center justify-center gap-2">
               <Play size={18} /> DEPLOY

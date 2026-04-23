@@ -78,9 +78,12 @@ export default function InstallPrompt() {
 
   if (!show) return null;
 
-  // Positioned above the bottom nav (bottom-[4.5rem]) to avoid overlap
+  // `.above-bottom-nav` positions this above the nav + the home-indicator
+  // safe area, which is essential on iPhone 17 where the nav extends ~34px
+  // further up than on older iPhones. Without this, the prompt gets partially
+  // covered by the nav bar.
   return (
-    <div className="fixed bottom-[4.5rem] left-3 right-3 z-[60] bg-bg-panel border border-green-primary p-3 animate-slide-up safe-bottom">
+    <div className="fixed above-bottom-nav left-3 right-3 z-[60] bg-bg-panel border border-green-primary p-3 animate-slide-up">
       <div className="flex items-center gap-3">
         <Download size={18} className="text-green-primary flex-shrink-0" />
         <div className="flex-1 min-w-0">

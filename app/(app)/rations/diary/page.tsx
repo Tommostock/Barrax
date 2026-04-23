@@ -468,7 +468,7 @@ export default function FoodDiaryPage() {
   // Render
   // ====================================================
   return (
-    <div className="bg-bg-primary min-h-screen pb-24">
+    <div className="bg-bg-primary min-h-dvh pb-24">
       <PullToRefresh pullDistance={pullDistance} refreshing={refreshing} />
       {/* ── Back link — honours browser history ── */}
       <div className="px-4 pt-4">

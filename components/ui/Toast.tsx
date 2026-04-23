@@ -28,7 +28,10 @@ interface ToastProps {
   stackOffset?: number;
 }
 
-// Base bottom offset (matches the old `bottom-20` class = 5rem).
+// Base bottom offset (5rem above the bottom nav). On iPhone 17 the nav's own
+// `safe-bottom` padding makes the nav extend ~34px further up than on older
+// iPhones, so we add env(safe-area-inset-bottom) into the positioning below
+// to keep toasts visible above the nav rather than hidden behind it.
 // Each stacked toast rises by its own height + a small gap.
 const BASE_BOTTOM_REM = 5;
 const TOAST_HEIGHT_PX = 68;
@@ -70,10 +73,13 @@ export default function Toast({
         flex items-center justify-between gap-3
         transition-all duration-200
         ${visible ? "animate-slide-up" : ""}
-        safe-bottom
       `}
       style={{
-        bottom: `calc(${BASE_BOTTOM_REM}rem + ${stackOffset * (TOAST_HEIGHT_PX + GAP_PX)}px)`,
+        // Position: 5rem above the nav, PLUS the home-indicator safe area
+        // (~34px on iPhone 17). Without env(), stacked toasts sit inside the
+        // nav on iPhone 17. The safe-bottom class used to live here but it
+        // added padding inside the element, which didn't solve the overlap.
+        bottom: `calc(${BASE_BOTTOM_REM}rem + env(safe-area-inset-bottom, 0px) + ${stackOffset * (TOAST_HEIGHT_PX + GAP_PX)}px)`,
         opacity: visible ? Math.max(0.55, 1 - stackOffset * 0.2) : 0,
       }}
     >

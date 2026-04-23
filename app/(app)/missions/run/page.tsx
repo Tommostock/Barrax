@@ -622,7 +622,7 @@ export default function RunTrackerPage() {
   // ===================== RENDER =====================
 
   return (
-    <div className="min-h-screen bg-bg-primary px-4 py-4 pb-24">
+    <div className="min-h-dvh bg-bg-primary px-4 py-4 pb-24">
       {/* ========== READY STATE ========== */}
       {runState === "ready" && (
         <div className="space-y-4">

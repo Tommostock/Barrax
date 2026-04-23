@@ -202,6 +202,23 @@ h1, h2, h3, h4, h5, h6 {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* ─── iPhone 17 layout helpers ───────────────────────────────
+   The bottom nav is 64px tall plus the home-indicator safe area
+   (env(safe-area-inset-bottom)). On iPhone 17 that total is ~98px.
+   Any fixed-positioned UI that should sit ABOVE the nav (install
+   prompt, toasts, floating actions) uses `.above-bottom-nav` so
+   it doesn't get covered on iPhone 17's longer screen. */
+.above-bottom-nav {
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Main-content bottom padding that always clears the nav.
+   64px nav + ~34px home indicator + 12px breathing room.
+   Use on `<main>` instead of a static pb-28. */
+.pb-bottom-nav {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* Hide scrollbars but keep scroll functionality */
 .no-scrollbar {
   -ms-overflow-style: none;

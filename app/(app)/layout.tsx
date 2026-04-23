@@ -33,7 +33,11 @@ export default function AppLayout({
           instantly from the last snapshot instead of re-fetching. */}
       <HQDataProvider>
         <Header />
-        <main className="flex-1 pb-28 animate-page-enter">{children}</main>
+        {/* `pb-bottom-nav` dynamically clears the nav (64px) + the home-indicator
+            safe area (env(safe-area-inset-bottom)) + a 12px breathing gap.
+            This avoids the iPhone 17 issue where the static pb-28 left content
+            partially hidden behind the extended nav. */}
+        <main className="flex-1 pb-bottom-nav animate-page-enter">{children}</main>
         <BottomNav />
         <InstallPrompt />
         <NotificationPermission />

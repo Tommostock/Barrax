@@ -1086,7 +1086,7 @@ export default function WorkoutPlayerPage() {
   // — Loading state —
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+      <div className="min-h-dvh bg-bg-primary flex items-center justify-center">
         <p className="font-mono text-text-secondary text-sm uppercase tracking-wider animate-pulse">
           Preparing orders, soldier...
         </p>
@@ -1097,7 +1097,7 @@ export default function WorkoutPlayerPage() {
   // — Error state —
   if (error || !workoutData) {
     return (
-      <div className="min-h-screen bg-bg-primary flex flex-col items-center justify-center gap-4 px-4">
+      <div className="min-h-dvh bg-bg-primary flex flex-col items-center justify-center gap-4 px-4">
         <p className="font-mono text-danger text-sm">{error ?? "Mission failed to load"}</p>
         <Button variant="secondary" onClick={() => router.push("/missions")}>
           <span className="flex items-center gap-2">
@@ -1114,7 +1114,7 @@ export default function WorkoutPlayerPage() {
 
   if (phase === "briefing") {
     return (
-      <div className="min-h-screen bg-bg-primary flex flex-col">
+      <div className="min-h-dvh bg-bg-primary flex flex-col">
         {/* ── Crash recovery prompt ──
             Shown when we find a recent snapshot in localStorage.
             Full-screen overlay so the user must choose before continuing. */}
